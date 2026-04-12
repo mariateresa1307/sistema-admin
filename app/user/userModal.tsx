@@ -13,23 +13,24 @@ import {
   Visibility, 
   VisibilityOff 
 } from "@mui/icons-material";
+import api from '@/lib/api';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: any) => Promise<void>;
   title?: string;
   isEditMode?: boolean;
   initialData?: any;
+  onSubmit: () => Promise<void>;
 }
 
 export const FullScreenUserDialog = ({
   isOpen,
   onClose,
-  onSubmit,
   title = "Nuevo Usuario",
   isEditMode = false,
   initialData,
+  onSubmit
 }: Props) => {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -65,13 +66,22 @@ export const FullScreenUserDialog = ({
     }
 
     try {
-      await onSubmit(data);
+      await sendForm(data);
       onClose();
     } catch (err: any) {
       setError(err.response?.data?.message || "Error al procesar la solicitud");
     } finally {
       setLoading(false);
     }
+  };
+
+  const sendForm = async (data) => {
+    if (initialData) {
+      await api.put(`/user/${initialData.id}`, data);
+    } else {
+      await api.post("/user", data);
+    }
+    onSubmit();
   };
 
   return (

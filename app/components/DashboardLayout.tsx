@@ -342,44 +342,20 @@ export default function DashboardLayout({
             </List>
           </Collapse>
 
-          <ListItemButton onClick={() => setServicesOpen(!servicesOpen)}>
+          <ListItemButton
+            onClick={() => router.push("/servicios")}
+            selected={pathname === "/servicios"}
+          >
             <ListItemIcon sx={{ color: "#fff" }}>
-              <People />
+              <People fontSize="small" />
             </ListItemIcon>
             {open && (
               <ListItemText
-                primary="Servicios"
+                primary="servicios"
                 sx={{ "& span": { fontWeight: 500 } }}
               />
             )}
-            {open && (servicesOpen ? <ExpandLess /> : <ExpandMore />)}
           </ListItemButton>
-          <Collapse in={servicesOpen && open} timeout="auto">
-            <List component="div" disablePadding>
-              <ListItemButton
-                sx={{ pl: 4 }}
-                onClick={() => router.push("/services/rbs")}
-              >
-                <ListItemIcon sx={{ color: "rgba(255,255,255,0.7)" }}>
-                  <People fontSize="small" />
-                </ListItemIcon>
-                <ListItemText primary="RBS" />
-              </ListItemButton>
-            </List>
-          </Collapse>
-          <Collapse in={servicesOpen && open} timeout="auto">
-            <List component="div" disablePadding>
-              <ListItemButton
-                sx={{ pl: 4 }}
-                onClick={() => router.push("/services/dog")}
-              >
-                <ListItemIcon sx={{ color: "rgba(255,255,255,0.7)" }}>
-                  <People fontSize="small" />
-                </ListItemIcon>
-                <ListItemText primary="DOG" />
-              </ListItemButton>
-            </List>
-          </Collapse>
         </List>
 
         <Box sx={{ mt: "auto", pb: 2 }}>
