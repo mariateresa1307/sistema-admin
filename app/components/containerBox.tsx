@@ -12,16 +12,16 @@ const ContainerBox = (props: Props) => {
   return (
     <>
       <DashboardLayout>
-        <Typography variant="h4" sx={{ fontWeight: 800, color: "#080769" }}>
+        <Typography variant="h4" sx={{ fontWeight: 800, color: "primary.main" }}>
           {props.title}
         </Typography>
-        { props.subtitle ?? <Typography variant="body2" color="textSecondary">{props.subtitle}</Typography> }
+        { props.subtitle ?? <Typography variant="body2" sx={{ color: "primary.text" }}>{props.subtitle}dede</Typography> }
 
          <Divider sx={{ mb: 3, mt: 2 }} />
 
         <Box
           sx={{
-            bgcolor: "white",
+            backgroundColor: "background.paper",
             borderRadius: 3,
             p: { xs: 2, md: 4 },
             marginTop: 3,

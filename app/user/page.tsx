@@ -121,6 +121,7 @@ export default function UsuariosPage() {
       >
         <CustomDataGrid rows={usuarios} columns={columns} loading={loading} />
       </ContainerBox>
+
       <FloatingAddButton
         onClick={() => {
           setSelectedUser(null);

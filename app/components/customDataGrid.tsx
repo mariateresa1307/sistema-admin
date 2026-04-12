@@ -27,9 +27,9 @@ const CustomDataGrid = (props: props) => {
       checkboxSelection
       disableRowSelectionOnClick
       sx={{
-          border: "1px solid #E2E8F0",
+         
           borderRadius: "12px",
-          "& .MuiDataGrid-columnHeader": { bgcolor: "#080769" },
+          "& .MuiDataGrid-columnHeader": { bgcolor: "primary.main" },
           "& .MuiDataGrid-columnHeaderTitle": {
             fontWeight: 700,
             color: "#FFFFFF",
