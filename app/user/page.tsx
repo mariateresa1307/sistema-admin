@@ -42,10 +42,11 @@ export default function UsuariosPage() {
     }
   }, []);
 
-  const handleEdit = (usuario: Usuario) => {
-    setSelectedUser(usuario);
-    setIsDialogOpen(true);
-  };
+const handleEdit = (usuario: Usuario) => {
+  console.log("Datos del usuario a editar:", usuario); // <-- Agrega este log
+  setSelectedUser(usuario);
+  setIsDialogOpen(true);
+};
 
   const handleDelete = async (id: string) => {
     if (window.confirm("¿Estás seguro de que deseas eliminar este usuario?")) {
@@ -175,6 +176,7 @@ export default function UsuariosPage() {
         onClose={() => setIsDialogOpen(false)} 
         title={selectedUser ? "Editar Usuario" : "Nuevo Usuario"}
         isEditMode={!!selectedUser}
+        initialData={selectedUser}
         onSubmit={async (data) => { 
             if (selectedUser) {
               await api.put(`/user/${selectedUser.id}`, data);
