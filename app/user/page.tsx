@@ -2,7 +2,8 @@
 import { ContainerBox } from "../components/containerBox";
 import { CustomDataGrid } from "../components/customDataGrid";
 import { useState, useCallback, useEffect } from "react";
-import api from "@/lib/api";
+import { getUsers, deleteUser } from '@/lib/api'; 
+
 import ButtonGroup from "@mui/material/ButtonGroup";
 import Tooltip from "@mui/material/Tooltip";
 import Button from "@mui/material/Button";
@@ -29,7 +30,7 @@ export default function UsuariosPage() {
   const fetchUsuarios = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await api.get("/user");
+      const response = await getUsers();
       setUsuarios(Array.isArray(response.data) ? response.data : []);
     } catch (err: any) {
       setUsuarios([]);
@@ -100,7 +101,7 @@ export default function UsuariosPage() {
   const handleDelete = async (id: string) => {
     if (window.confirm("¿Estás seguro de que deseas eliminar este usuario?")) {
       try {
-        await api.delete(`/user/${id}`);
+        await deleteUser(id);
         fetchUsuarios();
       } catch (err) {
         alert("Error al eliminar el usuario");

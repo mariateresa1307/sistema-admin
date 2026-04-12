@@ -1,19 +1,33 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import { 
-  Dialog, AppBar, Toolbar, IconButton, Typography, Button, 
-  DialogContent, Container, TextField, Grid, LinearProgress, 
-  Alert, Paper, Box, FormControl, InputLabel, OutlinedInput, 
-  InputAdornment 
+import * as React from "react";
+import {
+  Dialog,
+  AppBar,
+  Toolbar,
+  IconButton,
+  Typography,
+  Button,
+  DialogContent,
+  Container,
+  TextField,
+  Grid,
+  LinearProgress,
+  Alert,
+  Paper,
+  Box,
+  FormControl,
+  InputLabel,
+  OutlinedInput,
+  InputAdornment,
 } from "@mui/material";
-import { 
-  Close as CloseIcon, 
-  Save as SaveIcon, 
-  Visibility, 
-  VisibilityOff 
+import {
+  Close as CloseIcon,
+  Save as SaveIcon,
+  Visibility,
+  VisibilityOff,
 } from "@mui/icons-material";
-import api from '@/lib/api';
+import { createUser, updateUser } from '@/lib/api';
 
 interface Props {
   isOpen: boolean;
@@ -21,7 +35,7 @@ interface Props {
   title?: string;
   isEditMode?: boolean;
   initialData?: any;
-  onSubmit: () => Promise<void>;
+  onSubmit: () => Promise<void>; // TODO: Renombrar. 
 }
 
 export const FullScreenUserDialog = ({
@@ -35,7 +49,7 @@ export const FullScreenUserDialog = ({
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [showPassword, setShowPassword] = React.useState(false);
-  
+
   // Referencia para resetear el formulario físicamente
   const formRef = React.useRef<HTMLFormElement>(null);
 
@@ -48,8 +62,10 @@ export const FullScreenUserDialog = ({
   }, [isOpen, initialData]);
 
   const handleClickShowPassword = () => setShowPassword((show) => !show);
-  
-  const handleMouseDownPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
+
+  const handleMouseDownPassword = (
+    event: React.MouseEvent<HTMLButtonElement>,
+  ) => {
     event.preventDefault();
   };
 
@@ -69,7 +85,9 @@ export const FullScreenUserDialog = ({
       await sendForm(data);
       onClose();
     } catch (err: any) {
-      setError(err.response?.data?.message || "Error al procesar la solicitud");
+      setError(
+        err.response?.data?.message || "Error interno del servidor (500)",
+      );
     } finally {
       setLoading(false);
     }
@@ -77,9 +95,9 @@ export const FullScreenUserDialog = ({
 
   const sendForm = async (data) => {
     if (initialData) {
-      await api.put(`/user/${initialData.id}`, data);
+      await updateUser(initialData.id, data);
     } else {
-      await api.post("/user", data);
+      createUser(data);
     }
     onSubmit();
   };
@@ -89,8 +107,7 @@ export const FullScreenUserDialog = ({
       fullScreen
       open={isOpen}
       onClose={onClose}
-      // La key fuerza a React a tratar el componente como nuevo si el ID cambia
-      key={initialData?.id || 'new-user'} 
+      key={initialData?.id || "new-user"}
     >
       <Box
         component="form"
@@ -100,7 +117,7 @@ export const FullScreenUserDialog = ({
           display: "flex",
           flexDirection: "column",
           height: "100%",
-          backgroundColor: "#F0F4F8", 
+          backgroundColor: "#F0F4F8",
         }}
       >
         <AppBar
@@ -112,7 +129,7 @@ export const FullScreenUserDialog = ({
           }}
           elevation={0}
         >
-          <Toolbar >
+          <Toolbar>
             <IconButton
               edge="start"
               color="inherit"
@@ -133,7 +150,7 @@ export const FullScreenUserDialog = ({
                 bgcolor: "#5d6a9f",
                 "&:hover": { bgcolor: "#52509d" },
                 px: 4,
-                borderRadius: '8px'
+                borderRadius: "8px",
               }}
             >
               {loading ? "Guardando..." : "Guardar"}
@@ -143,16 +160,16 @@ export const FullScreenUserDialog = ({
 
         {loading && <LinearProgress sx={{ height: 3 }} />}
 
-        <DialogContent sx={{ p: 0 , backgroundColor: '#c5d2df'}}>
+        <DialogContent sx={{ p: 0, backgroundColor: "#c5d2df" }}>
           <Container maxWidth="md" sx={{ py: { xs: 4, md: 8 } }}>
             <Paper
               elevation={0}
-              sx={{ 
-                p: { xs: 3, md: 5 }, 
-                borderRadius: 4, 
+              sx={{
+                p: { xs: 3, md: 5 },
+                borderRadius: 4,
                 border: "1px solid #e2e8f0",
-                bgcolor: 'white',
-                boxShadow: '0 10px 25px rgba(0,0,0,0.02)'
+                bgcolor: "white",
+                boxShadow: "0 10px 25px rgba(0,0,0,0.02)",
               }}
             >
               {error && (
@@ -168,7 +185,7 @@ export const FullScreenUserDialog = ({
                     label="Primer Nombre"
                     fullWidth
                     required
-                    defaultValue={initialData?.primerNombre || ''}
+                    defaultValue={initialData?.primerNombre || ""}
                   />
                 </Grid>
                 <Grid size={{ xs: 12, sm: 6 }}>
@@ -176,7 +193,7 @@ export const FullScreenUserDialog = ({
                     name="segundoNombre"
                     label="Segundo Nombre"
                     fullWidth
-                    defaultValue={initialData?.segundoNombre || ''}
+                    defaultValue={initialData?.segundoNombre || ""}
                   />
                 </Grid>
                 <Grid size={{ xs: 12, sm: 6 }}>
@@ -185,7 +202,7 @@ export const FullScreenUserDialog = ({
                     label="Primer Apellido"
                     fullWidth
                     required
-                    defaultValue={initialData?.primerApellido || ''}
+                    defaultValue={initialData?.primerApellido || ""}
                   />
                 </Grid>
                 <Grid size={{ xs: 12, sm: 6 }}>
@@ -193,7 +210,7 @@ export const FullScreenUserDialog = ({
                     name="segundoApellido"
                     label="Segundo Apellido"
                     fullWidth
-                    defaultValue={initialData?.segundoApellido || ''}
+                    defaultValue={initialData?.segundoApellido || ""}
                   />
                 </Grid>
                 <Grid size={{ xs: 12 }}>
@@ -203,7 +220,7 @@ export const FullScreenUserDialog = ({
                     type="email"
                     fullWidth
                     required
-                    defaultValue={initialData?.email || ''}
+                    defaultValue={initialData?.email || ""}
                   />
                 </Grid>
                 <Grid size={{ xs: 12, sm: 6 }}>
@@ -212,33 +229,44 @@ export const FullScreenUserDialog = ({
                     label="Nombre de Usuario"
                     fullWidth
                     required
-                    defaultValue={initialData?.username || ''}
+                    defaultValue={initialData?.username || ""}
                   />
                 </Grid>
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <FormControl variant="outlined" fullWidth required={!isEditMode}>
-                    <InputLabel htmlFor="outlined-adornment-password">
-                      {isEditMode ? "Contraseña (dejar en blanco para no cambiar)" : "Contraseña"}
-                    </InputLabel>
-                    <OutlinedInput
-                      id="outlined-adornment-password"
-                      name="clave"
-                      type={showPassword ? "text" : "password"}
-                      label={isEditMode ? "Contraseña (dejar en blanco para no cambiar)" : "Contraseña"}
-                      endAdornment={
-                        <InputAdornment position="end">
-                          <IconButton
-                            onClick={handleClickShowPassword}
-                            onMouseDown={handleMouseDownPassword}
-                            edge="end"
-                          >
-                            {showPassword ? <VisibilityOff /> : <Visibility />}
-                          </IconButton>
-                        </InputAdornment>
-                      }
-                    />
-                  </FormControl>
-                </Grid>
+
+                {!isEditMode && (
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <FormControl
+                      variant="outlined"
+                      fullWidth
+                      required={!isEditMode}
+                    >
+                      <InputLabel htmlFor="clave">Contraseña</InputLabel>
+                      <OutlinedInput
+                        id="clave"
+                        name="clave" 
+                        type={showPassword ? "text" : "password"}
+                        label="Contraseña"
+                        placeholder={
+                          isEditMode ? "Dejar en blanco para no cambiar" : ""
+                        }
+                        endAdornment={
+                          <InputAdornment position="end">
+                            <IconButton
+                              onClick={handleClickShowPassword}
+                              edge="end"
+                            >
+                              {showPassword ? (
+                                <VisibilityOff />
+                              ) : (
+                                <Visibility />
+                              )}
+                            </IconButton>
+                          </InputAdornment>
+                        }
+                      />
+                    </FormControl>
+                  </Grid>
+                )}
               </Grid>
             </Paper>
           </Container>
