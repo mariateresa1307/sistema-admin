@@ -1,0 +1,28 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: admin_db
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password123
+      POSTGRES_DB: sistema_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  app:
+    build: .
+    container_name: admin_app
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: "postgresql://admin:password123@db:5432/sistema_db"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:

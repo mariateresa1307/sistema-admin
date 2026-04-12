@@ -1,0 +1,61 @@
+
+:root {
+  /* Definición de la paleta Netuno para uso global */
+  --netuno-azul-profundo: #080742;
+  --netuno-verde: #1ECB5C;
+  --netuno-blanco: #ffffff;
+  --netuno-azul-oscuro-border: #04033d;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+body {
+  /* Forzamos el fondo azul marino para evitar destellos blancos */
+  background-color: var(--netuno-azul-profundo);
+  color: var(--netuno-blanco);
+  
+  /* Tipografía estándar que complementa a MUI */
+  font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif;
+  
+  /* Mejora de renderizado de fuentes en fondos oscuros */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Personalización del Scrollbar para que combine con el diseño Netuno */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--netuno-azul-oscuro-border);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #177cb0; /* Azul eléctrico sutil */
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--netuno-verde);
+}
+
+/* Eliminar resaltado de selección en móviles */
+input, button, textarea {
+  -webkit-tap-highlight-color: transparent;
+}
