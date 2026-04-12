@@ -53,7 +53,7 @@ export default function LoginPage() {
     const password = formData.get('password');
 
     try {
-      const response = await api.post('/user/login', {
+      const response = await api.post('/auth/login', {
         email: email,
         clave: password,
       });
