@@ -1,12 +1,13 @@
 'use client';
 
 import * as React from 'react';
-import api from '@/lib/api'; 
+// Importamos las funciones específicas desde tu api.ts para mayor claridad
+import { getUsers, createUser, updateUser, deleteUser } from '@/lib/api'; 
 import { FloatingAddButton } from '../components/FloatingAddButton';
 import { FullScreenUserDialog } from './AddUserModal'; 
 import DashboardLayout from '../components/DashboardLayout';
-import { 
-  Grid, Box, Typography, Paper, Alert, Divider, ButtonGroup, Button, Tooltip 
+import {  Grid, // Usando Grid2 para soportar la prop 'size' correctamente
+  Box, Typography, Paper, Alert, Divider, ButtonGroup, Button, Tooltip 
 } from '@mui/material';
 import { DataGrid, GridColDef, GridToolbar, GridRenderCellParams } from '@mui/x-data-grid';
 import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
@@ -32,7 +33,7 @@ export default function UsuariosPage() {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.get('/user'); 
+      const response = await getUsers(); 
       setUsuarios(Array.isArray(response.data) ? response.data : []);
     } catch (err: any) {
       setError("No se pudo cargar la lista de usuarios.");
@@ -42,16 +43,20 @@ export default function UsuariosPage() {
     }
   }, []);
 
-const handleEdit = (usuario: Usuario) => {
-  console.log("Datos del usuario a editar:", usuario); // <-- Agrega este log
-  setSelectedUser(usuario);
-  setIsDialogOpen(true);
-};
+  const handleEdit = (usuario: Usuario) => {
+    setSelectedUser(usuario);
+    setIsDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false);
+    setSelectedUser(null); // Limpiamos el usuario seleccionado al cerrar
+  };
 
   const handleDelete = async (id: string) => {
     if (window.confirm("¿Estás seguro de que deseas eliminar este usuario?")) {
       try {
-        await api.delete(`/user/${id}`);
+        await deleteUser(id);
         fetchUsuarios();
       } catch (err) {
         alert("Error al eliminar el usuario");
@@ -63,7 +68,7 @@ const handleEdit = (usuario: Usuario) => {
     fetchUsuarios();
   }, [fetchUsuarios]);
 
-  // --- Definición de Columnas (Dentro del componente para acceder a handleEdit/Delete) ---
+  // --- Definición de Columnas ---
   const columns: GridColDef[] = [
     { field: 'username', headerName: 'Usuario', flex: 1, minWidth: 120 },
     { 
@@ -173,17 +178,25 @@ const handleEdit = (usuario: Usuario) => {
       
       <FullScreenUserDialog 
         isOpen={isDialogOpen} 
-        onClose={() => setIsDialogOpen(false)} 
+        onClose={handleCloseDialog} 
         title={selectedUser ? "Editar Usuario" : "Nuevo Usuario"}
         isEditMode={!!selectedUser}
         initialData={selectedUser}
         onSubmit={async (data) => { 
-            if (selectedUser) {
-              await api.put(`/user/${selectedUser.id}`, data);
-            } else {
-              await api.post('/user', data); 
+            try {
+              if (selectedUser) {
+                // Ahora usamos la función específica definida en tu api.ts
+                await updateUser(selectedUser.id, data);
+              } else {
+                await createUser(data); 
+              }
+              await fetchUsuarios();
+              handleCloseDialog(); 
+            } catch (err: any) {
+              console.error("Error al guardar:", err);
+              // Podrías lanzar el error para que AddUserModal lo muestre
+              throw err; 
             }
-            fetchUsuarios(); 
         }} 
       />
     </DashboardLayout>
