@@ -2,7 +2,7 @@
 import { ContainerBox } from "../components/containerBox";
 import { CustomDataGrid } from "../components/customDataGrid";
 import { useState, useCallback, useEffect } from "react";
-import { getUsers, deleteUser } from '@/lib/api'; 
+import { getUsers, deleteUser } from "@/lib/api";
 
 import ButtonGroup from "@mui/material/ButtonGroup";
 import Tooltip from "@mui/material/Tooltip";

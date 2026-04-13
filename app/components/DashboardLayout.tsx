@@ -42,7 +42,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = React.useState(true);
   const [usersOpen, setUsersOpen] = React.useState(true);
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
-  const { toggleTheme } = useTheme();
+  const { toggleTheme, isDark } = useTheme();
 
   const [userData, setUserData] = React.useState({
     primerNombre: "U",
@@ -74,7 +74,15 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
       >
         <Toolbar sx={{ justifyContent: "space-between" }}>
           <Box sx={{ display: "flex", alignItems: "center" }}>
-            <Image src="/NETUNO_logo.png" alt="Logo" width={120} height={40} />
+            <Image
+              src="/NETUNO_logo.png"
+              alt="Logo"
+              width={120}
+              height={40}
+              style={{
+                filter: "brightness(0) invert(1)",
+              }}
+            />
           </Box>
 
           <Box sx={{ display: "flex", alignItems: "center" }}>
@@ -150,10 +158,12 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                     justifyContent: "center",
                     flexDirection: "column",
                     py: 1,
-                    bgcolor: "background.default",
-
+                    bgcolor: isDark ? "background.default" : "primary.main",
+                    color: isDark ? "secondary.main" : "secondary.main",
                     "&:hover": {
-                      bgcolor: "background.default",
+                      bgcolor: isDark
+                        ? "background.default"
+                        : "background.default",
                     },
                   }}
                 >
@@ -174,7 +184,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                     justifyContent: "center",
                     flexDirection: "column",
                     py: 1,
-                    bgcolor: "primary.main",
+                    bgcolor: !isDark ? "background.default" : "primary.main",
                     color: "secondary.main",
                     "&:hover": {
                       bgcolor: "primary.main",
@@ -209,16 +219,15 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
       <Drawer
         variant="permanent"
         sx={{
-          width: open ? drawerWidth : 70,
+          width: drawerWidth,
           flexShrink: 0,
           "& .MuiDrawer-paper": {
-            width: open ? drawerWidth : 70,
-            bgcolor: "background.paper",
+            width: drawerWidth,
             color: "text.primary",
             marginTop: "64px",
             height: "calc(100% - 64px)",
             border: "none",
-            transition: "width 0.3s ease, background-color 0.4s",
+            transition: "width 0.3s ease",
             overflowX: "hidden",
           },
         }}
@@ -292,12 +301,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             <ListItemIcon sx={{ color: "secondary.main" }}>
               <People fontSize="small" />
             </ListItemIcon>
-            {open && (
-              <ListItemText
-                primary="servicios"
-             
-              />
-            )}
+            {open && <ListItemText primary="servicios" />}
           </ListItemButton>
         </List>
 

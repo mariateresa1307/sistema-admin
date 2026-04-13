@@ -93,7 +93,7 @@ export const FullScreenUserDialog = ({
     }
   };
 
-  const sendForm = async (data) => {
+  const sendForm = async (data: any) => {
     if (initialData) {
       await updateUser(initialData.id, data);
     } else {
@@ -117,13 +117,12 @@ export const FullScreenUserDialog = ({
           display: "flex",
           flexDirection: "column",
           height: "100%",
-          backgroundColor: "#F0F4F8",
         }}
       >
         <AppBar
           sx={{
             position: "relative",
-            bgcolor: "#080769",
+          
             color: "#ffffff",
             boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
           }}
@@ -147,8 +146,8 @@ export const FullScreenUserDialog = ({
               disabled={loading}
               startIcon={loading ? null : <SaveIcon />}
               sx={{
-                bgcolor: "#5d6a9f",
-                "&:hover": { bgcolor: "#52509d" },
+              
+                
                 px: 4,
                 borderRadius: "8px",
               }}
@@ -160,16 +159,13 @@ export const FullScreenUserDialog = ({
 
         {loading && <LinearProgress sx={{ height: 3 }} />}
 
-        <DialogContent sx={{ p: 0, backgroundColor: "#c5d2df" }}>
+        <DialogContent sx={{ p: 0}}>
           <Container maxWidth="md" sx={{ py: { xs: 4, md: 8 } }}>
             <Paper
               elevation={0}
               sx={{
                 p: { xs: 3, md: 5 },
-                borderRadius: 4,
-                border: "1px solid #e2e8f0",
-                bgcolor: "white",
-                boxShadow: "0 10px 25px rgba(0,0,0,0.02)",
+                borderRadius: 4
               }}
             >
               {error && (

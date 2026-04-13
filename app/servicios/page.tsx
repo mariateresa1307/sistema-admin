@@ -1,6 +1,5 @@
 "use client";
 import { CustomDataGrid } from "app/components/customDataGrid";
-import DashboardLayout from "../components/DashboardLayout";
 import { Box, Typography } from "@mui/material";
 import { ContainerBox } from "../components/containerBox";
 
