@@ -24,7 +24,6 @@ import {
 import {
   Dashboard,
   People,
-  ChevronLeft,
   Menu as MenuIcon,
   ExpandLess,
   ExpandMore,
@@ -42,7 +41,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = React.useState(true);
   const [usersOpen, setUsersOpen] = React.useState(true);
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
-  const { toggleTheme } = useTheme();
+  const { theme, toggleTheme } = useTheme();
 
   const [userData, setUserData] = React.useState({
     primerNombre: "U",
@@ -126,6 +125,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                   mb: 1,
                   fontWeight: 600,
                   letterSpacing: 1,
+                  opacity: 0.7,
                 }}
               >
                 MODO DE INTERFAZ
@@ -150,10 +150,13 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                     justifyContent: "center",
                     flexDirection: "column",
                     py: 1,
-                    bgcolor: "background.default",
 
+                    bgcolor:
+                      theme === "corporate" ? "primary.main" : "transparent",
+                    color: theme === "corporate" ? "white" : "text.secondary",
                     "&:hover": {
-                      bgcolor: "background.default",
+                      bgcolor:
+                        theme === "corporate" ? "primary.main" : "action.hover",
                     },
                   }}
                 >
@@ -167,25 +170,24 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                 <ListItemButton
                   onClick={() => {
                     toggleTheme("dark");
-                    setAnchorEl(null);
+                    // setAnchorEl(null);
                   }}
                   sx={{
                     borderRadius: "8px",
                     justifyContent: "center",
-                    flexDirection: "column",
                     py: 1,
-                    bgcolor: "primary.main",
-                    color: "secondary.main",
+                    // MODIFICACIÓN AQUÍ:
+                    bgcolor: theme === "dark" ? "primary.main" : "transparent",
+                    color: theme === "dark" ? "white" : "text.secondary",
                     "&:hover": {
-                      bgcolor: "primary.main",
+                      bgcolor:
+                        theme === "dark" ? "primary.main" : "action.hover",
                     },
                   }}
                 >
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      Dark
-                    </Typography>
-                  </Box>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    Dark
+                  </Typography>
                 </ListItemButton>
               </Box>
 
@@ -274,6 +276,18 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                   sx={{ "& span": { color: "text.secondary" } }}
                 />
               </ListItemButton>
+               <ListItemButton
+                sx={{ pl: 4 }}
+                onClick={() => router.push("/admin")}
+              >
+                <ListItemIcon sx={{ color: "primary.main" }}>
+                  <People fontSize="small" />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Auditoría"
+                  sx={{ "& span": { color: "text.secondary" } }}
+                />
+              </ListItemButton>
             </List>
           </Collapse>
 
@@ -292,12 +306,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             <ListItemIcon sx={{ color: "secondary.main" }}>
               <People fontSize="small" />
             </ListItemIcon>
-            {open && (
-              <ListItemText
-                primary="servicios"
-             
-              />
-            )}
+            {open && <ListItemText primary="servicios" />}
           </ListItemButton>
         </List>
 

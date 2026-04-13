@@ -15,11 +15,12 @@ import {
 } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 
-export type ThemeMode = "corporate" | "dark";
+export type ThemeMode = 'corporate' | 'dark';
 
 interface ThemeContextType {
   themeMode: ThemeMode;
   isDark: boolean;
+  theme: ThemeMode;
   toggleTheme: (mode: ThemeMode) => void;
 }
 
@@ -91,7 +92,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const muiTheme = useMemo(() => createAppTheme(themeMode), [themeMode]);
 
   return (
-    <ThemeContext.Provider value={{ themeMode, isDark, toggleTheme }}>
+    <ThemeContext.Provider value={{ themeMode, isDark, toggleTheme, theme: themeMode }}>
       <MuiThemeProvider theme={muiTheme}>
         <CssBaseline />
         {children}

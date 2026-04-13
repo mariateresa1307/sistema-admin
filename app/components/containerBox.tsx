@@ -15,7 +15,7 @@ const ContainerBox = (props: Props) => {
         <Typography variant="h4" sx={{ fontWeight: 800, color: "primary.main" }}>
           {props.title}
         </Typography>
-        { props.subtitle ?? <Typography variant="body2" sx={{ color: "primary.text" }}>{props.subtitle}dede</Typography> }
+        { props.subtitle ?? <Typography variant="body2" sx={{ color: "primary.text" }}>{props.subtitle}</Typography> }
 
          <Divider sx={{ mb: 3, mt: 2 }} />
 
