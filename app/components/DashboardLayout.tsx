@@ -24,7 +24,6 @@ import {
 import {
   Dashboard,
   People,
-  ChevronLeft,
   Menu as MenuIcon,
   ExpandLess,
   ExpandMore,
@@ -134,6 +133,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                   mb: 1,
                   fontWeight: 600,
                   letterSpacing: 1,
+                  opacity: 0.7,
                 }}
               >
                 MODO DE INTERFAZ
@@ -177,25 +177,23 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                 <ListItemButton
                   onClick={() => {
                     toggleTheme("dark");
-                    setAnchorEl(null);
+                    // setAnchorEl(null);
                   }}
                   sx={{
                     borderRadius: "8px",
                     justifyContent: "center",
-                    flexDirection: "column",
                     py: 1,
                     bgcolor: !isDark ? "background.default" : "primary.main",
                     color: "secondary.main",
                     "&:hover": {
-                      bgcolor: "primary.main",
+                      bgcolor:
+                        isDark ? "primary.main" : "action.hover",
                     },
                   }}
                 >
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      Dark
-                    </Typography>
-                  </Box>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    Dark
+                  </Typography>
                 </ListItemButton>
               </Box>
 
@@ -280,6 +278,18 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                 </ListItemIcon>
                 <ListItemText
                   primary="Usuarios"
+                  sx={{ "& span": { color: "text.secondary" } }}
+                />
+              </ListItemButton>
+               <ListItemButton
+                sx={{ pl: 4 }}
+                onClick={() => router.push("/admin")}
+              >
+                <ListItemIcon sx={{ color: "primary.main" }}>
+                  <People fontSize="small" />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Auditoría"
                   sx={{ "& span": { color: "text.secondary" } }}
                 />
               </ListItemButton>
