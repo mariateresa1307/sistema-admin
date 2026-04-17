@@ -10,6 +10,7 @@ import {
   ReportProblem as WarningIcon, 
   History as HistoryIcon 
 } from "@mui/icons-material";
+import { ThemeProvider } from '../context/ThemeContext';
 
 const cardsConfig = [
   {
@@ -126,7 +127,7 @@ export default function AdminPage() {
         })}
       </Grid>
 
-      <AuditFilters/>
+      <AuditFilters/> 
     </ContainerBox>
   );
 }

@@ -8,7 +8,7 @@ interface Props {
   subtitle?: string | undefined,
   children: React.ReactNode;
 }
-const ContainerBox = (props: Props) => {
+export const ContainerBox = (props: Props) => {
   const { isDark } = useTheme();
 
   return (
@@ -39,4 +39,3 @@ const ContainerBox = (props: Props) => {
 };
 
 
-export { ContainerBox }
