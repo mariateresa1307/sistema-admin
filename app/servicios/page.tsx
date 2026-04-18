@@ -2,8 +2,57 @@
 import { CustomDataGrid } from "app/components/customDataGrid";
 import { Box, Typography } from "@mui/material";
 import { ContainerBox } from "../components/containerBox";
+import { useState, useCallback, useEffect } from "react";
+import { FloatingAddButton } from "../components/FloatingAddButton";
+import { FullScreenServiceDialog } from "./serviceModal";
+import { getService, deleteService } from "@/lib/api";
+
+type Service = {
+  idNetuno: string;
+  name: string;
+  instalado: string;
+  idRBS: string;
+  city: string;
+  nodeA: string;
+  nodeB: string;
+  oltnode: string;
+  serialONT: string;
+};
 
 export default function RBSPage() {
+   const [service, setService] = useState<Service[]>([]);
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [loading, setLoading] = useState(true);
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
+
+const fetchService = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await getService();
+      setService(Array.isArray(response.data) ? response.data : []);
+    } catch (err: any) {
+      setService([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+
+  const handleDelete = async (id: string) => {
+      if (window.confirm("¿Estás seguro de que deseas eliminar este servicio?")) {
+        try {
+          await deleteService(id);
+          fetchService();
+        } catch (err) {
+          alert("Error al eliminar el servicio");
+        }
+      }
+    };
+  
+
+useEffect(() => {
+    fetchService();
+  }, [fetchService]);
   return (
     <>
       <ContainerBox title="Gestión de Servicios">
@@ -36,6 +85,23 @@ export default function RBSPage() {
           loading={false}
         />
       </ContainerBox>
+
+        <FloatingAddButton
+              onClick={() => {
+                setSelectedService(null);
+                setIsDialogOpen(true);
+              }}
+            />
+               <FullScreenServiceDialog
+                    isOpen={isDialogOpen}
+                    onClose={() => setIsDialogOpen(false)}
+                    title={selectedService ? "Editar Servicio" : "Nuevo Servicio"}
+                    isEditMode={!!selectedService}
+                    initialData={selectedService}
+                    onSubmit={async () => {
+                      fetchService();
+                    }}
+                  />
     </>
   );
 }
