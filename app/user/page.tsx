@@ -8,9 +8,10 @@ import ButtonGroup from "@mui/material/ButtonGroup";
 import Tooltip from "@mui/material/Tooltip";
 import Button from "@mui/material/Button";
 import { Edit as EditIcon, Delete as DeleteIcon } from "@mui/icons-material";
-import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
+import { GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import { FloatingAddButton } from "../components/FloatingAddButton";
 import { FullScreenUserDialog } from "./userModal";
+import { ConfirmDialog } from "../components/ConfirmDialog"; 
 
 type Usuario = {
   id: string;
@@ -26,6 +27,10 @@ export default function UsuariosPage() {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<Usuario | null>(null);
+
+  // Estados para el Modal de Confirmación
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [userIdToDelete, setUserIdToDelete] = useState<string | null>(null);
 
   const fetchUsuarios = useCallback(async () => {
     try {
@@ -93,19 +98,28 @@ export default function UsuariosPage() {
   ];
 
   const handleEdit = (usuario: Usuario) => {
-    console.log("Datos del usuario a editar:", usuario); // <-- Agrega este log
+    console.log("Datos del usuario a editar:", usuario);
     setSelectedUser(usuario);
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm("¿Estás seguro de que deseas eliminar este usuario?")) {
-      try {
-        await deleteUser(id);
-        fetchUsuarios();
-      } catch (err) {
-        alert("Error al eliminar el usuario");
-      }
+  // Solo abre el modal y guarda el ID
+  const handleDelete = (id: string) => {
+    setUserIdToDelete(id);
+    setDeleteConfirmOpen(true);
+  };
+
+  // Función que se ejecuta al confirmar en el modal
+  const handleConfirmDelete = async () => {
+    if (!userIdToDelete) return;
+    try {
+      await deleteUser(userIdToDelete);
+      fetchUsuarios();
+    } catch (err) {
+      alert("Error al eliminar el usuario");
+    } finally {
+      setDeleteConfirmOpen(false);
+      setUserIdToDelete(null);
     }
   };
 
@@ -138,6 +152,15 @@ export default function UsuariosPage() {
         onSubmit={async () => {
           fetchUsuarios();
         }}
+      />
+
+   
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="¿Confirmar eliminación?"
+        description="Esta acción eliminará al usuario de forma permanente. ¿Deseas continuar?"
       />
     </>
   );

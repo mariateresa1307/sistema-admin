@@ -3,23 +3,22 @@
 import * as React from "react";
 import {
   Dialog,
-  AppBar,
-  Toolbar,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
   IconButton,
   Typography,
   Button,
-  DialogContent,
-  Container,
   TextField,
   Grid,
   LinearProgress,
   Alert,
-  Paper,
   Box,
   FormControl,
   InputLabel,
   OutlinedInput,
   InputAdornment,
+  styled,
 } from "@mui/material";
 import {
   Close as CloseIcon,
@@ -29,13 +28,31 @@ import {
 } from "@mui/icons-material";
 import { createUser, updateUser } from '@/lib/api';
 
+
+const BootstrapDialog = styled(Dialog)(({ theme }) => ({
+  '& .MuiDialogContent-root': {
+    padding: theme.spacing(8),
+  },
+  '& .MuiDialogActions-root': {
+    padding: theme.spacing(2),
+    borderTop: `1px solid ${theme.palette.divider}`,
+  },
+  '& .MuiPaper-root': {
+    
+    maxHeight: '100%',
+    maxWidth: '100%',
+    width: '77%',
+  height: '60%',
+  },
+}));
+
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   title?: string;
   isEditMode?: boolean;
   initialData?: any;
-  onSubmit: () => Promise<void>; // TODO: Renombrar. 
+  onSubmit: () => Promise<void>;
 }
 
 export const FullScreenUserDialog = ({
@@ -50,10 +67,8 @@ export const FullScreenUserDialog = ({
   const [error, setError] = React.useState<string | null>(null);
   const [showPassword, setShowPassword] = React.useState(false);
 
-  // Referencia para resetear el formulario físicamente
   const formRef = React.useRef<HTMLFormElement>(null);
 
-  // Sincroniza el formulario cuando el modal se abre o cambia el usuario
   React.useEffect(() => {
     if (isOpen && formRef.current) {
       formRef.current.reset();
@@ -97,177 +112,186 @@ export const FullScreenUserDialog = ({
     if (initialData) {
       await updateUser(initialData.id, data);
     } else {
-      createUser(data);
+      await createUser(data);
     }
     onSubmit();
   };
 
   return (
-    <Dialog
-      fullScreen
-      open={isOpen}
+    <BootstrapDialog
       onClose={onClose}
+      open={isOpen}
       key={initialData?.id || "new-user"}
+      aria-labelledby="customized-dialog-title"
+      maxWidth="md"
+      fullWidth
     >
-      <Box
-        component="form"
-        ref={formRef}
-        onSubmit={handleSubmit}
-        sx={{
-          display: "flex",
-          flexDirection: "column",
-          height: "100%",
-        }}
-      >
-        <AppBar
+      <Box component="form" ref={formRef} onSubmit={handleSubmit}>
+        {/* 🔹 Header con título y botón de cerrar */}
+        <DialogTitle sx={{ m: 0, p: 2, bgcolor: '#080769', color: 'white' }} id="customized-dialog-title">
+          <Typography variant="h6" component="div" sx={{ fontWeight: 700, pr: 4 }}>
+            {isEditMode ? `Editar Usuario: ${initialData?.username}` : title}
+          </Typography>
+        </DialogTitle>
+        
+        {/* 🔹 Botón de cerrar en esquina superior derecha */}
+        <IconButton
+          aria-label="close"
+          onClick={onClose}
+          disabled={loading}
           sx={{
-            position: "relative",
-          
-            color: "#ffffff",
-            boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+            position: 'absolute',
+            right: 8,
+            top: 8,
+            color: 'white',
+            bgcolor: 'rgba(255,255,255,0.1)',
+            '&:hover': {
+              bgcolor: 'rgba(255,255,255,0.2)',
+            },
           }}
-          elevation={0}
         >
-          <Toolbar>
-            <IconButton
-              edge="start"
-              color="inherit"
-              onClick={onClose}
-              aria-label="close"
-            >
-              <CloseIcon />
-            </IconButton>
-            <Typography sx={{ ml: 2, flex: 1, fontWeight: 700 }} variant="h6">
-              {title}
-            </Typography>
-            <Button
-              type="submit"
-              variant="contained"
-              disabled={loading}
-              startIcon={loading ? null : <SaveIcon />}
-              sx={{
-              
-                
-                px: 4,
-                borderRadius: "8px",
-              }}
-            >
-              {loading ? "Guardando..." : "Guardar"}
-            </Button>
-          </Toolbar>
-        </AppBar>
+          <CloseIcon />
+        </IconButton>
 
-        {loading && <LinearProgress sx={{ height: 3 }} />}
+        {loading && <LinearProgress />}
 
-        <DialogContent sx={{ p: 0}}>
-          <Container maxWidth="md" sx={{ py: { xs: 4, md: 8 } }}>
-            <Paper
-              elevation={0}
-              sx={{
-                p: { xs: 3, md: 5 },
-                borderRadius: 4
-              }}
-            >
-              {error && (
-                <Alert severity="error" sx={{ mb: 4, borderRadius: 2 }}>
-                  {error}
-                </Alert>
-              )}
+        <DialogContent dividers>
+          {error && (
+            <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
+              {error}
+            </Alert>
+          )}
 
-              <Grid container spacing={3}>
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <TextField
-                    name="primerNombre"
-                    label="Primer Nombre"
-                    fullWidth
-                    required
-                    defaultValue={initialData?.primerNombre || ""}
-                  />
-                </Grid>
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <TextField
-                    name="segundoNombre"
-                    label="Segundo Nombre"
-                    fullWidth
-                    defaultValue={initialData?.segundoNombre || ""}
-                  />
-                </Grid>
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <TextField
-                    name="primerApellido"
-                    label="Primer Apellido"
-                    fullWidth
-                    required
-                    defaultValue={initialData?.primerApellido || ""}
-                  />
-                </Grid>
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <TextField
-                    name="segundoApellido"
-                    label="Segundo Apellido"
-                    fullWidth
-                    defaultValue={initialData?.segundoApellido || ""}
-                  />
-                </Grid>
-                <Grid size={{ xs: 12 }}>
-                  <TextField
-                    name="email"
-                    label="Correo Electrónico"
-                    type="email"
-                    fullWidth
-                    required
-                    defaultValue={initialData?.email || ""}
-                  />
-                </Grid>
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <TextField
-                    name="username"
-                    label="Nombre de Usuario"
-                    fullWidth
-                    required
-                    defaultValue={initialData?.username || ""}
-                  />
-                </Grid>
+          <Grid container spacing={2}>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                name="primerNombre"
+                label="Primer Nombre"
+                fullWidth
+                required
+                defaultValue={initialData?.primerNombre || ""}
+                size="small"
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                name="segundoNombre"
+                label="Segundo Nombre"
+                fullWidth
+                defaultValue={initialData?.segundoNombre || ""}
+                size="small"
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                name="primerApellido"
+                label="Primer Apellido"
+                fullWidth
+                required
+                defaultValue={initialData?.primerApellido || ""}
+                size="small"
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                name="segundoApellido"
+                label="Segundo Apellido"
+                fullWidth
+                defaultValue={initialData?.segundoApellido || ""}
+                size="small"
+              />
+            </Grid>
+            <Grid size={{ xs: 12 }}>
+              <TextField
+                name="email"
+                label="Correo Electrónico"
+                type="email"
+                fullWidth
+                required
+                defaultValue={initialData?.email || ""}
+                size="small"
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                name="username"
+                label="Nombre de Usuario"
+                fullWidth
+                required
+                defaultValue={initialData?.username || ""}
+                size="small"
+              />
+            </Grid>
 
-                {!isEditMode && (
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <FormControl
-                      variant="outlined"
-                      fullWidth
-                      required={!isEditMode}
-                    >
-                      <InputLabel htmlFor="clave">Contraseña</InputLabel>
-                      <OutlinedInput
-                        id="clave"
-                        name="clave" 
-                        type={showPassword ? "text" : "password"}
-                        label="Contraseña"
-                        placeholder={
-                          isEditMode ? "Dejar en blanco para no cambiar" : ""
-                        }
-                        endAdornment={
-                          <InputAdornment position="end">
-                            <IconButton
-                              onClick={handleClickShowPassword}
-                              edge="end"
-                            >
-                              {showPassword ? (
-                                <VisibilityOff />
-                              ) : (
-                                <Visibility />
-                              )}
-                            </IconButton>
-                          </InputAdornment>
-                        }
-                      />
-                    </FormControl>
-                  </Grid>
-                )}
+            {!isEditMode && (
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <FormControl
+                  variant="outlined"
+                  fullWidth
+                  required={!isEditMode}
+                  size="small"
+                >
+                  <InputLabel htmlFor="clave">Contraseña</InputLabel>
+                  <OutlinedInput
+                    id="clave"
+                    name="clave"
+                    type={showPassword ? "text" : "password"}
+                    label="Contraseña"
+                    endAdornment={
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={handleClickShowPassword}
+                          onMouseDown={handleMouseDownPassword}
+                          edge="end"
+                          size="small"
+                        >
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    }
+                  />
+                </FormControl>
               </Grid>
-            </Paper>
-          </Container>
+            )}
+          </Grid>
         </DialogContent>
+
+        {/* 🔹 Footer con botones de acción */}
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button 
+            onClick={onClose} 
+            color="inherit" 
+            disabled={loading}
+            sx={{ 
+              fontWeight: 600,
+              px: 3,
+            }}
+          >
+            Cancelar
+          </Button>
+          <Button 
+            type="submit"
+            variant="contained"
+            disabled={loading}
+            startIcon={<SaveIcon />}
+            sx={{
+              bgcolor: '#080769',
+              color: 'white',
+              fontWeight: 600,
+              px: 4,
+              borderRadius: 2,
+              '&:hover': {
+                bgcolor: '#06055a',
+              },
+              '&:disabled': {
+                bgcolor: 'rgba(8,7,105,0.5)',
+              },
+            }}
+          >
+            {loading ? "Guardando..." : "Guardar"}
+          </Button>
+        </DialogActions>
       </Box>
-    </Dialog>
+    </BootstrapDialog>
   );
 };

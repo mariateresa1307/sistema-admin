@@ -15,7 +15,7 @@ import { createService, updateService } from '@/lib/api';
 
 const CIUDADES_VENEZUELA = ["Caracas", "Maracaibo", "Valencia", "Barquisimeto", "Maracay", "Barcelona", "Maturín", "San Cristóbal", "Mérida", "Puerto Ordaz", "Coro"].sort();
 const TIPOS_SERVICIO = ["DOG", "METROLAN", "RBS"];
-const PROVEEDORES = ["Netuno", "Cantv", "Inter", "Movistar", "CenturyLink"];
+const PROVEEDORES = ["Netuno", "Inter", "Telefonica", "Galanet"];
 
 interface Props {
   isOpen: boolean;
@@ -34,7 +34,7 @@ export const FullScreenServiceDialog = ({
   const [imagePreview, setImagePreview] = React.useState<string | null>(null);
   
   // ESTADO PARA LA LÓGICA DINÁMICA
-  const [tipoServicio, setTipoServicio] = React.useState("");
+  const [tipoServicio, setTipoServicio] = React.useState("RBS");
   
   const formRef = React.useRef<HTMLFormElement>(null);
 
@@ -42,7 +42,7 @@ export const FullScreenServiceDialog = ({
     if (isOpen) {
       if (formRef.current) formRef.current.reset();
       setImagePreview(initialData?.imageUrl || null);
-      setTipoServicio(initialData?.tipoServicio || ""); // Inicializar el tipo
+      setTipoServicio(initialData?.tipoServicio || "RBS"); // Inicializar el tipo
       setError(null);
     }
   }, [isOpen, initialData]);
@@ -95,14 +95,14 @@ export const FullScreenServiceDialog = ({
               <Grid size={{ xs: 12, md: 4 }}>
                 <Paper elevation={0} sx={{ p: 3, textAlign: 'center', borderRadius: 4, border: '1px solid #E2E8F0' }}>
                   <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2 }}>
-                    "DIAGRAMA DE RED" "
+                    "DIAGRAMA DE RED"
                   </Typography>
                   <Avatar 
                     src={imagePreview || ""} 
                     variant="rounded"
                     sx={{ width: '100%', height: 280, mb: 2, bgcolor: '#F8FAFC', border: '2px dashed #CBD5E1' }}
                   >
-                    {tipoServicio === "METROLAN" ? <DiagramIcon sx={{ fontSize: 40 }} /> : <PhotoCamera sx={{ fontSize: 40 }} />}
+                  {tipoServicio === "METROLAN" ? <DiagramIcon sx={{ fontSize: 40 }} /> : <PhotoCamera sx={{ fontSize: 40 }} />}
                   </Avatar>
                   <Button component="label" variant="outlined" startIcon={<UploadIcon />} fullWidth>
                     {imagePreview ? "Cambiar Imagen" : "Subir Imagen"}
@@ -144,49 +144,99 @@ export const FullScreenServiceDialog = ({
                     </Grid>
                   </Grid>
 
-                  <Box sx={{ mt: 4 }}>
-                    {/* --- LÓGICA DINÁMICA --- */}
+                
+                 {/* --- LÓGICA DINÁMICA DE SERVICIOS --- */}
+<Box sx={{ mt: 2 }}>
+  {/* TÍTULO DINÁMICO SEGÚN EL SERVICIO */}
+  <Typography variant="h6" sx={{ mb: 2, fontWeight: 700, color: '#080769', display: 'flex', alignItems: 'center', gap: 1 }}>
+    {tipoServicio === "METROLAN" && <><NodeIcon fontSize="small" /> Configuración METROLAN</>}
+    {tipoServicio === "RBS" && <><RouterIcon fontSize="small" /> Configuración RBS</>}
+    {tipoServicio === "DOG" && <><BusinessIcon fontSize="small" /> Configuración DOG (Dedicado)</>}
+    {!tipoServicio && "Seleccione un tipo de servicio"}
+  </Typography>
 
-                    {tipoServicio === "METROLAN" ? (
-                      // CAMPOS PARA METROLAN
-                      <Grid container spacing={2}>
-                        <Grid size={{ xs: 12 }}><Typography variant="h6" color="primary">Configuración METROLAN</Typography></Grid>
-                        <Grid size={{ xs: 12 }}>
-                          <TextField name="idServicio" label="ID SERVICIO" fullWidth required defaultValue={initialData?.idServicio || ""} size="small" />
-                        </Grid>
-                        <Grid size={{ xs: 12, sm: 6 }}>
-                          <TextField name="nodeA" label="NODO A" fullWidth required defaultValue={initialData?.nodeA || ""} size="small" />
-                        </Grid>
-                        <Grid size={{ xs: 12, sm: 6 }}>
-                          <TextField name="nodeB" label="NODO B" fullWidth required defaultValue={initialData?.nodeB || ""} size="small" />
-                        </Grid>
-                      </Grid>
-                    ) : (
-                      // CAMPOS PARA RBS (O POR DEFECTO)
-                      <Grid container spacing={2}>
-                        <Grid size={{ xs: 12 }}><Typography variant="h6" color="secondary">Configuración RBS / Estándar</Typography></Grid>
-                        <Grid size={{ xs: 12, sm: 6 }}>
-                          <TextField name="idRBS" label="ID RBS" fullWidth required defaultValue={initialData?.idRBS || ""} size="small" />
-                        </Grid>
-                        <Grid size={{ xs: 12, sm: 6 }}>
-                          <TextField name="serialONT" label="Serial ONT" fullWidth defaultValue={initialData?.serialONT || ""} size="small" />
-                        </Grid>
-                        <Grid size={{ xs: 12, sm: 6 }}>
-                          <TextField name="oltnode" label="Nodo OLT" fullWidth defaultValue={initialData?.oltnode || ""} size="small" />
-                        </Grid>
-                        <Grid size={{ xs: 12, sm: 6 }}>
-                          <TextField name="instalado" label="Fecha Instalación" type="date" fullWidth InputLabelProps={{ shrink: true }} defaultValue={initialData?.instalado || ""} size="small" />
-                        </Grid>
-                      </Grid>
-                    )}
-                  </Box>
+  <Grid container spacing={2.5}>
+    {/* VISTA PARA METROLAN */}
+    {tipoServicio === "METROLAN" && (
+      <>
+        <Grid size={{ xs: 12 }}>
+          <TextField name="idServicio" label="ID SERVICIO METROLAN" fullWidth required defaultValue={initialData?.idServicio || ""} size="small" />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField name="nodeA" label="NODO A" fullWidth required defaultValue={initialData?.nodeA || ""} size="small" />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField name="nodeB" label="NODO B" fullWidth required defaultValue={initialData?.nodeB || ""} size="small" />
+        </Grid>
+        <Grid size={{ xs: 12 }}>
+          <TextField name="vlan" label="VLAN / Segmento" fullWidth defaultValue={initialData?.vlan || ""} size="small" />
+        </Grid>
+      </>
+    )}
 
-                  <Box sx={{ mt: 4 }}>
-                    <Divider sx={{ mb: 2 }} />
-                    <TextField select name="proveedor" label="Proveedor" fullWidth required defaultValue={initialData?.proveedor || ""} size="small">
-                      {PROVEEDORES.map((p) => <MenuItem key={p} value={p}>{p}</MenuItem>)}
-                    </TextField>
-                  </Box>
+    {/* VISTA PARA RBS */}
+    {tipoServicio === "RBS" && (
+      <>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField name="idNetuno" label="ID Netuno" fullWidth required defaultValue={initialData?.idNetuno || ""} size="small" />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField name="idRBS" label="ID RBS" fullWidth required defaultValue={initialData?.idRBS || ""} size="small" />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField name="serialONT" label="Serial ONT" fullWidth defaultValue={initialData?.serialONT || ""} size="small" />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField name="nodoA" label="Nodo A y Puerto" fullWidth defaultValue={initialData?.nodoA || ""} size="small" />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField name="nodoB" label="Nodo B" fullWidth defaultValue={initialData?.nodoB || ""} size="small" />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField name="oltnode" label="Nodo OLT" fullWidth defaultValue={initialData?.oltnode || ""} size="small" />
+        </Grid>
+        <Grid size={{ xs: 12 }}>
+          <TextField name="instalado" label="Fecha Instalación" type="date" fullWidth InputLabelProps={{ shrink: true }} defaultValue={initialData?.instalado || ""} size="small" />
+        </Grid>
+      </>
+    )}
+
+    {/* VISTA PARA DOG (Internet Dedicado / GPON Business) */}
+    {tipoServicio === "DOG" && (
+      <>
+
+      <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField name="idNETUNO" label="ID Netuno" fullWidth required defaultValue={initialData?.idNETUNO || ""} size="small" />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField name="idDOG" label="ID Circuito" fullWidth required defaultValue={initialData?.idDOG || ""} size="small" />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField name="contrato" label="Contrato" fullWidth required defaultValue={initialData?.contrato || ""} size="small" />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField name="vlan" label="Vlan" fullWidth required defaultValue={initialData?.vlan || ""} size="small" />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField name="nodoA" label="Nodo A y Puerto" fullWidth defaultValue={initialData?.nodoA || ""} size="small" />
+        </Grid>
+         <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField name="nodoB" label="Nodo B" fullWidth defaultValue={initialData?.nodoB || ""} size="small" />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField name="oltnode" label="Nodo OLT" fullWidth defaultValue={initialData?.oltnode || ""} size="small" />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6  }}>
+          <TextField name="idont" label="ID ONT" fullWidth defaultValue={initialData?.idont || ""} size="small" />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField name="serialONT" label="Serial ONT" fullWidth defaultValue={initialData?.serialONT || ""} size="small" />
+        </Grid>
+
+      </>
+    )}
+  </Grid>
+</Box>
 
                 </Paper>
               </Grid>
