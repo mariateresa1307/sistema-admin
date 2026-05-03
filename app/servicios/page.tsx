@@ -59,7 +59,7 @@ useEffect(() => {
         <CustomDataGrid
           rows={[
             {
-              id: "123",
+              _id: "123",
               idNetuno: "ID_266262_TMV_montecristo_CSS_1G",
               name: "monte cristo oeste",
               instalado: true,

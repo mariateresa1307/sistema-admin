@@ -63,7 +63,7 @@ export const FullScreenServiceDialog = ({
     const data = Object.fromEntries(formData.entries());
 
     try {
-      isEditMode && initialData ? await updateService(initialData.id, data) : await createService(data);
+      isEditMode && initialData ? await updateService(initialData._id, data) : await createService(data);
       await onSubmit();
       onClose();
     } catch (err: any) {

@@ -132,6 +132,7 @@ const CustomDataGrid = (props: props) => {
       </Box>
 
       <DataGrid
+        getRowId={(row) => row._id}
         rows={searchResults}
         columns={props.columns}
         loading={props.loading || isSearching}

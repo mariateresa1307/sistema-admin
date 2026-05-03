@@ -14,7 +14,7 @@ import { FullScreenUserDialog } from "./userModal";
 import { ConfirmDialog } from "../components/ConfirmDialog"; 
 
 type Usuario = {
-  id: string;
+  _id: string;
   username: string;
   email: string;
   primerNombre: string;
@@ -47,7 +47,7 @@ export default function UsuariosPage() {
   const columns: GridColDef[] = [
     { field: "username", headerName: "Usuario", flex: 1, minWidth: 120 },
     {
-      field: "fullName",
+      field: "primerNombre",
       headerName: "Nombre Completo",
       flex: 1.5,
       minWidth: 200,
@@ -61,14 +61,14 @@ export default function UsuariosPage() {
       minWidth: 200,
     },
     {
-      field: "is_active",
+      field: "isActive",
       headerName: "Estado",
       flex: 1,
       minWidth: 120,
       renderCell: (params) => (params.value ? "Activo" : "Inactivo"),
     },
     {
-      field: "Action",
+      field: "",
       headerName: "Acciones",
       minWidth: 150,
       sortable: false,
@@ -88,7 +88,7 @@ export default function UsuariosPage() {
             </Button>
           </Tooltip>
           <Tooltip title="Eliminar">
-            <Button onClick={() => handleDelete(params.row.id)}>
+            <Button onClick={() => handleDelete(params.row._id)}>
               <DeleteIcon fontSize="small" sx={{ color: "#d32f2f" }} />
             </Button>
           </Tooltip>

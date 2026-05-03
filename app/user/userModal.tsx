@@ -110,7 +110,7 @@ export const FullScreenUserDialog = ({
 
   const sendForm = async (data: any) => {
     if (initialData) {
-      await updateUser(initialData.id, data);
+      await updateUser(initialData._id, data);
     } else {
       await createUser(data);
     }
@@ -121,7 +121,7 @@ export const FullScreenUserDialog = ({
     <BootstrapDialog
       onClose={onClose}
       open={isOpen}
-      key={initialData?.id || "new-user"}
+      key={initialData?._id || "new-user"}
       aria-labelledby="customized-dialog-title"
       maxWidth="md"
       fullWidth
