@@ -19,7 +19,7 @@ import {
   MenuItem,
   Tooltip,
   Divider,
-  Grid,
+  Stack,
 } from "@mui/material";
 import {
   Dashboard,
@@ -29,29 +29,344 @@ import {
   ExpandMore,
   Logout,
   Settings,
+  VerifiedUser,
 } from "@mui/icons-material";
 import { ThemeProvider, useTheme } from "../context/ThemeContext";
 import Image from "next/image";
 
-const drawerWidth = 260;
+// ============ CONSTANTES ============
+const DRAWER_WIDTH = 260;
+const APP_BAR_HEIGHT = 64;
 
-function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const [open, setOpen] = React.useState(true);
-  const [usersOpen, setUsersOpen] = React.useState(true);
-  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
-  const { toggleTheme, isDark } = useTheme();
+// ============ TIPOS ============
+type ThemeMode = "light" | "dark";
+type MenuItem = {
+  label: string;
+  path: string;
+  icon: React.ReactElement;
+  children?: { label: string; path: string; icon: React.ReactElement }[];
+};
 
-  const [userData, setUserData] = React.useState({
+type UserData = {
+  primerNombre: string;
+  primerApellido: string;
+};
+
+// ============ DATOS DEL MENÚ ============
+const MENU_ITEMS: MenuItem[] = [
+  {
+    label: "Dashboard",
+    path: "/home",
+    icon: <Dashboard />,
+  },
+  {
+    label: "Gestión",
+    path: "#",
+    icon: <People />,
+    children: [
+      { label: "Usuarios", path: "/user", icon: <People fontSize="small" /> },
+      { label: "Auditoría", path: "/admin", icon: <VerifiedUser fontSize="small" /> },
+    ],
+  },
+  {
+    label: "Servicios",
+    path: "/servicios",
+    icon: <People fontSize="small" />,
+  },
+];
+
+// ============ ESTILOS COMPARTIDOS ============
+const sharedStyles = {
+  selectedButton: {
+    "&.Mui-selected": {
+      borderRadius: "8px",
+      marginLeft: 1,
+      marginRight: 1,
+      backgroundColor: "primary.main",
+      "&:hover": { backgroundColor: "primary.main" },
+    },
+  },
+  iconPrimary: { color: "primary.main" },
+  iconSecondary: { color: "secondary.main" },
+  textSecondary: { "& span": { color: "text.secondary" } },
+};
+
+// ============ HOOKS PERSONALIZADOS ============
+function useUserData() {
+  const [userData, setUserData] = React.useState<UserData>({
     primerNombre: "U",
     primerApellido: "S",
   });
+  const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => {
-    const storedUser = localStorage.getItem("userData");
-    if (storedUser) setUserData(JSON.parse(storedUser));
+    setMounted(true);
+    const stored = localStorage.getItem("userData");
+    if (stored) {
+      try {
+        setUserData(JSON.parse(stored));
+      } catch (err) {
+        console.error("Error parsing userData:", err);
+      }
+    }
   }, []);
+
+  return { userData, mounted };
+}
+
+// ============ SUBCOMPONENTES ============
+const Logo = React.memo(() => (
+  <Image
+    src="/NETUNO_logo.png"
+    alt="NETUNO Logo"
+    width={120}
+    height={40}
+    priority
+    style={{ filter: "brightness(0) invert(1)" }}
+  />
+));
+Logo.displayName = "Logo";
+
+const ThemeSwitcher = React.memo<{
+  isDark: boolean;
+  onToggle: (mode: ThemeMode) => void;
+  onClose: () => void;
+}>(({ isDark, onToggle, onClose }) => (
+  <Box
+    sx={{
+      display: "flex",
+      gap: 1,
+      p: 0.5,
+      borderRadius: "12px",
+      bgcolor: "background.default",
+    }}
+  >
+    {(["light", "dark"] as ThemeMode[]).map((mode) => {
+      const isActive = (mode === "dark" && isDark) || (mode === "light" && !isDark);
+      return (
+        <ListItemButton
+          key={mode}
+          onClick={() => {
+            onToggle(mode);
+            onClose();
+          }}
+          sx={{
+            borderRadius: "8px",
+            justifyContent: "center",
+            py: 1,
+            bgcolor: isActive ? "primary.main" : "background.default",
+            color: "secondary.main",
+            "&:hover": { bgcolor: isActive ? "primary.main" : "action.hover" },
+          }}
+        >
+          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+            {mode === "light" ? "Light" : "Dark"}
+          </Typography>
+        </ListItemButton>
+      );
+    })}
+  </Box>
+));
+ThemeSwitcher.displayName = "ThemeSwitcher";
+
+const UserMenu = React.memo<{
+  userData: UserData;
+  onThemeToggle: (mode: ThemeMode) => void;
+  isDark: boolean;
+  onNavigate: (path: string) => void;
+}>(({ userData, onThemeToggle, isDark, onNavigate }) => {
+  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+  const open = Boolean(anchorEl);
+
+  return (
+    <Box sx={{ display: "flex", alignItems: "center" }}>
+      <Avatar sx={{ bgcolor: "secondary.main", width: 38, height: 38, ml: 2 }}>
+        {userData.primerNombre[0]?.toUpperCase()}
+      </Avatar>
+
+      <Tooltip title="Configuración de Interfaz">
+        <IconButton
+          onClick={(e) => setAnchorEl(e.currentTarget)}
+          sx={{ color: "inherit", mx: 1 }}
+          aria-label="Abrir menú de configuración"
+          aria-controls={open ? "settings-menu" : undefined}
+          aria-haspopup="true"
+          aria-expanded={open ? "true" : undefined}
+        >
+          <Settings />
+        </IconButton>
+      </Tooltip>
+
+      <Menu
+        id="settings-menu"
+        anchorEl={anchorEl}
+        open={open}
+        onClose={() => setAnchorEl(null)}
+        PaperProps={{
+          sx: {
+            mt: 1.5,
+            p: 2,
+            width: 280,
+            borderRadius: "16px",
+            bgcolor: "background.paper",
+            backdropFilter: "blur(10px)",
+          },
+        }}
+      >
+        <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 700, opacity: 0.8 }}>
+          CONFIGURACIÓN
+        </Typography>
+
+        <Typography
+          variant="caption"
+          sx={{ display: "block", mb: 1, fontWeight: 600, letterSpacing: 1, opacity: 0.7 }}
+        >
+          MODO DE INTERFAZ
+        </Typography>
+
+        <ThemeSwitcher isDark={isDark} onToggle={onThemeToggle} onClose={() => setAnchorEl(null)} />
+
+        <Divider sx={{ my: 2 }} />
+
+        <MenuItem
+          onClick={() => {
+            setAnchorEl(null);
+            onNavigate("/perfil");
+          }}
+          sx={{ borderRadius: "8px" }}
+        >
+          <ListItemIcon>
+            <Settings fontSize="small" sx={{ color: "inherit" }} />
+          </ListItemIcon>
+          Ajustes de Cuenta
+        </MenuItem>
+      </Menu>
+    </Box>
+  );
+});
+UserMenu.displayName = "UserMenu";
+
+const SidebarItem = React.memo<{
+  item: MenuItem;
+  pathname: string;
+  isOpen: boolean;
+  onNavigate: (path: string) => void;
+}>(({ item, pathname, isOpen, onNavigate }) => {
+  const [subOpen, setSubOpen] = React.useState(true);
+  const hasChildren = !!item.children;
+  const isSelected = pathname === item.path;
+
+  const handleClick = () => {
+    if (hasChildren) {
+      setSubOpen((prev) => !prev);
+    } else {
+      onNavigate(item.path);
+    }
+  };
+
+  return (
+    <>
+      <ListItemButton
+        onClick={handleClick}
+        selected={isSelected}
+        sx={sharedStyles.selectedButton}
+      >
+        <ListItemIcon sx={sharedStyles.iconSecondary}>{item.icon}</ListItemIcon>
+        {isOpen && (
+          <ListItemText primary={item.label} sx={{ "& span": { fontWeight: 500 } }} />
+        )}
+        {isOpen && hasChildren && (subOpen ? <ExpandLess /> : <ExpandMore />)}
+      </ListItemButton>
+
+      {hasChildren && (
+        <Collapse in={subOpen && isOpen} timeout="auto" unmountOnExit>
+          <List component="div" disablePadding>
+            {item.children!.map((child) => (
+              <ListItemButton
+                key={child.path}
+                sx={{ pl: 4 }}
+                onClick={() => onNavigate(child.path)}
+                selected={pathname === child.path}
+              >
+                <ListItemIcon sx={sharedStyles.iconPrimary}>{child.icon}</ListItemIcon>
+                <ListItemText primary={child.label} sx={sharedStyles.textSecondary} />
+              </ListItemButton>
+            ))}
+          </List>
+        </Collapse>
+      )}
+    </>
+  );
+});
+SidebarItem.displayName = "SidebarItem";
+
+const Sidebar = React.memo<{
+  pathname: string;
+  onNavigate: (path: string) => void;
+  onLogout: () => void;
+}>(({ pathname, onNavigate, onLogout }) => {
+  const [open] = React.useState(true); // Considera exponerlo si necesitas responsive
+
+  return (
+    <Drawer
+      variant="permanent"
+      sx={{
+        width: DRAWER_WIDTH,
+        flexShrink: 0,
+        "& .MuiDrawer-paper": {
+          width: DRAWER_WIDTH,
+          color: "text.primary",
+          marginTop: `${APP_BAR_HEIGHT}px`,
+          height: `calc(100% - ${APP_BAR_HEIGHT}px)`,
+          border: "none",
+          transition: "width 0.3s ease",
+          overflowX: "hidden",
+        },
+      }}
+    >
+      <List sx={{ pt: 2, flexGrow: 1 }}>
+        {MENU_ITEMS.map((item) => (
+          <SidebarItem
+            key={item.path}
+            item={item}
+            pathname={pathname}
+            isOpen={open}
+            onNavigate={onNavigate}
+          />
+        ))}
+      </List>
+
+      <Box sx={{ pb: 2 }}>
+        <ListItemButton
+          onClick={onLogout}
+          sx={{ color: "error.main", "&:hover": { bgcolor: "error.main", color: "white" } }}
+        >
+          <ListItemIcon sx={{ color: "inherit" }}>
+            <Logout />
+          </ListItemIcon>
+          {open && <ListItemText primary="Cerrar Sesión" />}
+        </ListItemButton>
+      </Box>
+    </Drawer>
+  );
+});
+Sidebar.displayName = "Sidebar";
+
+// ============ COMPONENTE PRINCIPAL ============
+function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const { toggleTheme, isDark } = useTheme();
+  const { userData } = useUserData();
+
+  const handleNavigate = React.useCallback((path: string) => {
+    router.push(path);
+  }, [router]);
+
+  const handleLogout = React.useCallback(() => {
+    localStorage.clear();
+    router.push("/");
+  }, [router]);
 
   return (
     <Box
@@ -61,7 +376,6 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
       }}
     >
-      {/* HEADER BAR */}
       <AppBar
         elevation={0}
         position="fixed"
@@ -72,280 +386,41 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         }}
       >
         <Toolbar sx={{ justifyContent: "space-between" }}>
-          <Box sx={{ display: "flex", alignItems: "center" }}>
-            <Image
-              src="/NETUNO_logo.png"
-              alt="Logo"
-              width={120}
-              height={40}
-              style={{
-                filter: "brightness(0) invert(1)",
-              }}
-            />
-          </Box>
-
-          <Box sx={{ display: "flex", alignItems: "center" }}>
-            <Avatar
-              sx={{
-                bgcolor: "secondary.main",
-                width: 38,
-                height: 38,
-                ml: 2,
-              }}
-            >
-              {userData.primerNombre[0]}
-            </Avatar>
-            <Tooltip title="Configuración de Interfaz">
-              <IconButton
-                onClick={(e) => setAnchorEl(e.currentTarget)}
-                sx={{ color: "inherit", mx: 1 }}
-              >
-                <Settings />
-              </IconButton>
-            </Tooltip>
-
-            <Menu
-              anchorEl={anchorEl}
-              open={Boolean(anchorEl)}
-              onClose={() => setAnchorEl(null)}
-              PaperProps={{
-                sx: {
-                  mt: 1.5,
-                  p: 2,
-                  width: 280,
-                  borderRadius: "16px",
-                  bgcolor: "background.paper",
-                  backdropFilter: "blur(10px)",
-                },
-              }}
-            >
-              <Typography
-                variant="subtitle2"
-                sx={{ mb: 2, fontWeight: 700, opacity: 0.8 }}
-              >
-                CONFIGURACIÓN
-              </Typography>
-
-              <Typography
-                variant="caption"
-                sx={{
-                  display: "block",
-                  mb: 1,
-                  fontWeight: 600,
-                  letterSpacing: 1,
-                  opacity: 0.7,
-                }}
-              >
-                MODO DE INTERFAZ
-              </Typography>
-
-              <Box
-                sx={{
-                  display: "flex",
-                  gap: 1,
-                  p: 0.5,
-                  borderRadius: "12px",
-                  bgcolor: "background.default",
-                }}
-              >
-                <ListItemButton
-                  onClick={() => {
-                    toggleTheme("corporate");
-                    setAnchorEl(null);
-                  }}
-                  sx={{
-                    borderRadius: "8px",
-                    justifyContent: "center",
-                    flexDirection: "column",
-                    py: 1,
-                    bgcolor: isDark ? "background.default" : "primary.main",
-                    color: isDark ? "secondary.main" : "secondary.main",
-                    "&:hover": {
-                      bgcolor: isDark
-                        ? "background.default"
-                        : "background.default",
-                    },
-                  }}
-                >
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      Light
-                    </Typography>
-                  </Box>
-                </ListItemButton>
-
-                <ListItemButton
-                  onClick={() => {
-                    toggleTheme("dark");
-                    // setAnchorEl(null);
-                  }}
-                  sx={{
-                    borderRadius: "8px",
-                    justifyContent: "center",
-                    py: 1,
-                    bgcolor: !isDark ? "background.default" : "primary.main",
-                    color: "secondary.main",
-                    "&:hover": {
-                      bgcolor:
-                        isDark ? "primary.main" : "action.hover",
-                    },
-                  }}
-                >
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    Dark
-                  </Typography>
-                </ListItemButton>
-              </Box>
-
-              <Divider sx={{ my: 2 }} />
-
-              <MenuItem
-                onClick={() => router.push("/perfil")}
-                sx={{ borderRadius: "8px" }}
-              >
-                <ListItemIcon>
-                  <Settings fontSize="small" sx={{ color: "inherit" }} />
-                </ListItemIcon>
-                Ajustes de Cuenta
-              </MenuItem>
-            </Menu>
-          </Box>
+          <Logo />
+          <UserMenu
+            userData={userData}
+            isDark={isDark}
+            onThemeToggle={toggleTheme}
+            onNavigate={handleNavigate}
+          />
         </Toolbar>
       </AppBar>
 
-      {/* SIDEBAR */}
-      <Drawer
-        variant="permanent"
+      <Sidebar pathname={pathname} onNavigate={handleNavigate} onLogout={handleLogout} />
+
+      <Box
+        component="main"
         sx={{
-          width: drawerWidth,
-          flexShrink: 0,
-          "& .MuiDrawer-paper": {
-            width: drawerWidth,
-            color: "text.primary",
-            marginTop: "64px",
-            height: "calc(100% - 64px)",
-            border: "none",
-            transition: "width 0.3s ease",
-            overflowX: "hidden",
-          },
+          paddingTop: `${APP_BAR_HEIGHT + 32}px`,
+          // paddingLeft: `${DRAWER_WIDTH + 16}px`,
+          width: "100%",
+          minHeight: "100vh",
+          boxSizing: "border-box",
         }}
       >
-        <List sx={{ pt: 2 }}>
-          <ListItemButton
-            onClick={() => router.push("/home")}
-            selected={pathname === "/home"}
-            sx={{
-              "&.Mui-selected": {
-                backgroundColor: "primary.main",
-                "&:hover": {
-                  backgroundColor: "primary.main",
-                },
-              },
-            }}
-          >
-            <ListItemIcon sx={{ color: "secondary.main" }}>
-              <Dashboard />
-            </ListItemIcon>
-            {open && (
-              <ListItemText
-                primary="Dashboard"
-                sx={{ "& span": { fontWeight: 500 } }}
-              />
-            )}
-          </ListItemButton>
-
-          <ListItemButton onClick={() => setUsersOpen(!usersOpen)}>
-            <ListItemIcon sx={{ color: "secondary.main" }}>
-              <People />
-            </ListItemIcon>
-            {open && (
-              <ListItemText
-                primary="Gestión"
-                sx={{ "& span": { fontWeight: 500 } }}
-              />
-            )}
-            {open && (usersOpen ? <ExpandLess /> : <ExpandMore />)}
-          </ListItemButton>
-
-          <Collapse in={usersOpen && open} timeout="auto">
-            <List component="div" disablePadding>
-              <ListItemButton
-                sx={{ pl: 4 }}
-                onClick={() => router.push("/user")}
-              >
-                <ListItemIcon sx={{ color: "primary.main" }}>
-                  <People fontSize="small" />
-                </ListItemIcon>
-                <ListItemText
-                  primary="Usuarios"
-                  sx={{ "& span": { color: "text.secondary" } }}
-                />
-              </ListItemButton>
-               <ListItemButton
-                sx={{ pl: 4 }}
-                onClick={() => router.push("/admin")}
-              >
-                <ListItemIcon sx={{ color: "primary.main" }}>
-                  <People fontSize="small" />
-                </ListItemIcon>
-                <ListItemText
-                  primary="Auditoría"
-                  sx={{ "& span": { color: "text.secondary" } }}
-                />
-              </ListItemButton>
-            </List>
-          </Collapse>
-
-          <ListItemButton
-            onClick={() => router.push("/servicios")}
-            selected={pathname === "/servicios"}
-            sx={{
-              "&.Mui-selected": {
-                backgroundColor: "primary.main",
-                "&:hover": {
-                  backgroundColor: "primary.main",
-                },
-              },
-            }}
-          >
-            <ListItemIcon sx={{ color: "secondary.main" }}>
-              <People fontSize="small" />
-            </ListItemIcon>
-            {open && <ListItemText primary="servicios" />}
-          </ListItemButton>
-        </List>
-
-        <Box sx={{ mt: "auto", pb: 2 }}>
-          <ListItemButton
-            onClick={() => {
-              localStorage.clear();
-              router.push("/");
-            }}
-            sx={{ color: "error.main" }}
-          >
-            <ListItemIcon sx={{ color: "error.main" }}>
-              <Logout />
-            </ListItemIcon>
-            {open && <ListItemText primary="Cerrar Sesión" />}
-          </ListItemButton>
-        </Box>
-      </Drawer>
-
-      {/* ÁREA DE CONTENIDO DINÁMICO */}
-      <Box id="test" component="main" sx={{ paddingTop: 10, width: "100%" }}>
-        <Grid container justifyContent={"center"}>
-          <Grid size={11}>{children}</Grid>
-        </Grid>
+        <Stack
+          direction="row"
+          justifyContent="center"
+          sx={{ maxWidth: 1400, mx: "auto", px: 2 }}
+        >
+          <Box sx={{ width: "91.666%" /* 11/12 */ }}>{children}</Box>
+        </Stack>
       </Box>
     </Box>
   );
 }
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider>
       <DashboardLayoutContent>{children}</DashboardLayoutContent>
