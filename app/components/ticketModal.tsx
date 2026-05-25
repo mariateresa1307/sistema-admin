@@ -14,6 +14,7 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import SaveIcon from '@mui/icons-material/Save';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 
 const modalStyle = {
   position: 'absolute' as 'absolute',
@@ -253,7 +254,7 @@ export default function TicketModal({ open, onClose, onSave }: TicketModalProps)
           <Grid size={{ xs: 12, sm: 3 }}>
             <TextField 
               fullWidth disabled label="Número de Caso (Auto)" name="numeroTicket" value={form.numeroTicket} placeholder="Defina Categoría..." size="small" 
-              InputProps={{ startAdornment: <AutoAwesomeIcon sx={{ color: '#000027', mr: 1, fontSize: '1.1rem' }} /> }}
+              InputProps={{ startAdornment: <ConfirmationNumberIcon sx={{ color: '#000027', mr: 1, fontSize: '1.1rem' }} /> }}
               sx={{ bgcolor: '#f0f4f8', input: { fontWeight: 'bold', color: '#000027' }, "& .MuiInputLabel-root.Mui-disabled": { color: '#000027' } }} 
             />
           </Grid>

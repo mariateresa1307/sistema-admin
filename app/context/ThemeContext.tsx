@@ -34,6 +34,7 @@ const createAppTheme = (mode: ThemeMode) => {
       mode: isDark ? "dark" : "light",
       primary: {
         main: isDark ? "#080769" : "#080769",
+        light: isDark ? "#424293" : "#6f6fff",
       },
       secondary: {
         main: isDark ? "#bcbff7" : "#bcbff7",

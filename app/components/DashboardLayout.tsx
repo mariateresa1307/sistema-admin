@@ -1,10 +1,11 @@
 "use client";
 
-import * as React from "react";
+import React, { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import {
   Box,
   Drawer,
+  Button,
   AppBar,
   Toolbar,
   List,
@@ -31,15 +32,20 @@ import {
   Settings,
   VerifiedUser,
 } from "@mui/icons-material";
-import { ThemeProvider, useTheme } from "../context/ThemeContext";
+import {
+  ThemeProvider,
+  useTheme,
+  type ThemeMode,
+} from "../context/ThemeContext";
 import Image from "next/image";
+import TicketModal from "../components/ticketModal";
+import { motion } from "motion/react";
+import AddCircleIcon from "@mui/icons-material/AddCircle";
 
-// ============ CONSTANTES ============
+import SettingsSuggestIcon from "@mui/icons-material/SettingsSuggest";
 const DRAWER_WIDTH = 260;
 const APP_BAR_HEIGHT = 64;
 
-// ============ TIPOS ============
-type ThemeMode = "light" | "dark";
 type MenuItem = {
   label: string;
   path: string;
@@ -52,7 +58,6 @@ type UserData = {
   primerApellido: string;
 };
 
-// ============ DATOS DEL MENÚ ============
 const MENU_ITEMS: MenuItem[] = [
   {
     label: "Dashboard",
@@ -65,7 +70,11 @@ const MENU_ITEMS: MenuItem[] = [
     icon: <People />,
     children: [
       { label: "Usuarios", path: "/user", icon: <People fontSize="small" /> },
-      { label: "Auditoría", path: "/admin", icon: <VerifiedUser fontSize="small" /> },
+      {
+        label: "Auditoría",
+        path: "/admin",
+        icon: <VerifiedUser fontSize="small" />,
+      },
     ],
   },
   {
@@ -93,12 +102,12 @@ const sharedStyles = {
 
 // ============ HOOKS PERSONALIZADOS ============
 function useUserData() {
+  const [modalOpen, setModalOpen] = useState(false);
   const [userData, setUserData] = React.useState<UserData>({
     primerNombre: "U",
     primerApellido: "S",
   });
   const [mounted, setMounted] = React.useState(false);
-
   React.useEffect(() => {
     setMounted(true);
     const stored = localStorage.getItem("userData");
@@ -141,8 +150,9 @@ const ThemeSwitcher = React.memo<{
       bgcolor: "background.default",
     }}
   >
-    {(["light", "dark"] as ThemeMode[]).map((mode) => {
-      const isActive = (mode === "dark" && isDark) || (mode === "light" && !isDark);
+    {(["corporate", "dark"] as ThemeMode[]).map((mode) => {
+      const isActive =
+        (mode === "dark" && isDark) || (mode === "corporate" && !isDark);
       return (
         <ListItemButton
           key={mode}
@@ -160,7 +170,7 @@ const ThemeSwitcher = React.memo<{
           }}
         >
           <Typography variant="body2" sx={{ fontWeight: 600 }}>
-            {mode === "light" ? "Light" : "Dark"}
+            {mode === "corporate" ? "Light" : "Dark"}
           </Typography>
         </ListItemButton>
       );
@@ -177,9 +187,44 @@ const UserMenu = React.memo<{
 }>(({ userData, onThemeToggle, isDark, onNavigate }) => {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
+  const [modalOpen, setModalOpen] = React.useState(false);
+
+  const handleSaveTicket = (data?: any) => {
+    // Close modal after save; actual save handled inside TicketModal
+    setModalOpen(false);
+  };
 
   return (
     <Box sx={{ display: "flex", alignItems: "center" }}>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 1 }}
+      >
+        <Box sx={{ display: "flex", justifyContent: "center" }}>
+          <Button
+            variant="contained"
+            startIcon={<AddCircleIcon fontSize="large" />}
+            onClick={() => setModalOpen(true)}
+            sx={{
+              backgroundColor: "primary.light",
+              borderRadius: "9px",
+              px: 2,
+              py: 1,
+              "&:hover": { bgcolor: "#5757c7" },
+            }}
+          >
+            Ticket
+          </Button>
+        </Box>
+      </motion.div>
+
+      {/* Llamada al componente Modal */}
+      <TicketModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSave={handleSaveTicket}
+      />
       <Avatar sx={{ bgcolor: "secondary.main", width: 38, height: 38, ml: 2 }}>
         {userData.primerNombre[0]?.toUpperCase()}
       </Avatar>
@@ -187,13 +232,13 @@ const UserMenu = React.memo<{
       <Tooltip title="Configuración de Interfaz">
         <IconButton
           onClick={(e) => setAnchorEl(e.currentTarget)}
-          sx={{ color: "inherit", mx: 1 }}
+          sx={{ color: "inherit", mx: 2 }}
           aria-label="Abrir menú de configuración"
           aria-controls={open ? "settings-menu" : undefined}
           aria-haspopup="true"
           aria-expanded={open ? "true" : undefined}
         >
-          <Settings />
+          <SettingsSuggestIcon fontSize="large" />
         </IconButton>
       </Tooltip>
 
@@ -213,18 +258,31 @@ const UserMenu = React.memo<{
           },
         }}
       >
-        <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 700, opacity: 0.8 }}>
+        <Typography
+          variant="subtitle2"
+          sx={{ mb: 2, fontWeight: 700, opacity: 0.8 }}
+        >
           CONFIGURACIÓN
         </Typography>
 
         <Typography
           variant="caption"
-          sx={{ display: "block", mb: 1, fontWeight: 600, letterSpacing: 1, opacity: 0.7 }}
+          sx={{
+            display: "block",
+            mb: 1,
+            fontWeight: 600,
+            letterSpacing: 1,
+            opacity: 0.7,
+          }}
         >
           MODO DE INTERFAZ
         </Typography>
 
-        <ThemeSwitcher isDark={isDark} onToggle={onThemeToggle} onClose={() => setAnchorEl(null)} />
+        <ThemeSwitcher
+          isDark={isDark}
+          onToggle={onThemeToggle}
+          onClose={() => setAnchorEl(null)}
+        />
 
         <Divider sx={{ my: 2 }} />
 
@@ -273,7 +331,10 @@ const SidebarItem = React.memo<{
       >
         <ListItemIcon sx={sharedStyles.iconSecondary}>{item.icon}</ListItemIcon>
         {isOpen && (
-          <ListItemText primary={item.label} sx={{ "& span": { fontWeight: 500 } }} />
+          <ListItemText
+            primary={item.label}
+            sx={{ "& span": { fontWeight: 500 } }}
+          />
         )}
         {isOpen && hasChildren && (subOpen ? <ExpandLess /> : <ExpandMore />)}
       </ListItemButton>
@@ -288,8 +349,13 @@ const SidebarItem = React.memo<{
                 onClick={() => onNavigate(child.path)}
                 selected={pathname === child.path}
               >
-                <ListItemIcon sx={sharedStyles.iconPrimary}>{child.icon}</ListItemIcon>
-                <ListItemText primary={child.label} sx={sharedStyles.textSecondary} />
+                <ListItemIcon sx={sharedStyles.iconPrimary}>
+                  {child.icon}
+                </ListItemIcon>
+                <ListItemText
+                  primary={child.label}
+                  sx={sharedStyles.textSecondary}
+                />
               </ListItemButton>
             ))}
           </List>
@@ -339,7 +405,10 @@ const Sidebar = React.memo<{
       <Box sx={{ pb: 2 }}>
         <ListItemButton
           onClick={onLogout}
-          sx={{ color: "error.main", "&:hover": { bgcolor: "error.main", color: "white" } }}
+          sx={{
+            color: "error.main",
+            "&:hover": { bgcolor: "error.main", color: "white" },
+          }}
         >
           <ListItemIcon sx={{ color: "inherit" }}>
             <Logout />
@@ -359,9 +428,12 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const { toggleTheme, isDark } = useTheme();
   const { userData } = useUserData();
 
-  const handleNavigate = React.useCallback((path: string) => {
-    router.push(path);
-  }, [router]);
+  const handleNavigate = React.useCallback(
+    (path: string) => {
+      router.push(path);
+    },
+    [router],
+  );
 
   const handleLogout = React.useCallback(() => {
     localStorage.clear();
@@ -396,7 +468,11 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         </Toolbar>
       </AppBar>
 
-      <Sidebar pathname={pathname} onNavigate={handleNavigate} onLogout={handleLogout} />
+      <Sidebar
+        pathname={pathname}
+        onNavigate={handleNavigate}
+        onLogout={handleLogout}
+      />
 
       <Box
         component="main"
@@ -420,7 +496,11 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <ThemeProvider>
       <DashboardLayoutContent>{children}</DashboardLayoutContent>
