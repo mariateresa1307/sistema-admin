@@ -37,8 +37,8 @@ import {
   useTheme,
   type ThemeMode,
 } from "../context/ThemeContext";
-import Image from "next/image";
-import TicketModal from "../components/ticketModal";
+import AcUnitIcon from '@mui/icons-material/AcUnit';
+import TicketModal from "../home/ticketModal";
 import { motion } from "motion/react";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
 
@@ -124,17 +124,7 @@ function useUserData() {
 }
 
 // ============ SUBCOMPONENTES ============
-const Logo = React.memo(() => (
-  <Image
-    src="/NETUNO_logo.png"
-    alt="NETUNO Logo"
-    width={120}
-    height={40}
-    priority
-    style={{ filter: "brightness(0) invert(1)" }}
-  />
-));
-Logo.displayName = "Logo";
+
 
 const ThemeSwitcher = React.memo<{
   isDark: boolean;
@@ -458,7 +448,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         }}
       >
         <Toolbar sx={{ justifyContent: "space-between" }}>
-          <Logo />
+          <AcUnitIcon />
           <UserMenu
             userData={userData}
             isDark={isDark}

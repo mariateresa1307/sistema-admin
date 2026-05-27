@@ -1,0 +1,459 @@
+'use client';
+import React, { useState, useEffect } from 'react';
+import { 
+  Modal, Box, Typography, TextField, Button, Grid, MenuItem, 
+  Divider, IconButton
+} from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
+import SaveIcon from '@mui/icons-material/Save';
+import NavigateNextIcon from '@mui/icons-material/NavigateNext';
+import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
+import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
+import PersonIcon from '@mui/icons-material/Person';
+import { FormStepper } from '../components/formStepper';
+
+const modalStyle = {
+  position: 'absolute' as 'absolute',
+  top: '50%',
+  left: '50%',
+  transform: 'translate(-50%, -50%)',
+  width: { xs: '95%', md: 1050 }, 
+  maxHeight: '92vh',
+  bgcolor: 'background.paper',
+  boxShadow: 24,
+  p: 4.5, 
+  borderRadius: 3,
+  overflowY: 'auto',
+};
+
+// Mock de usuario del sistema (reemplazar por tu hook de sesión/auth)
+const USUARIO_LOGUEADO = "NOC_User"; 
+
+// Función utilitaria para obtener el string ISO local requerido por datetime-local (YYYY-MM-DDTHH:mm)
+const getLocalDateTimeString = (date = new Date()) => {
+  const tzOffset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - tzOffset).toISOString().slice(0, 16);
+};
+
+// Función para transformar el formato YYYY-MM-DDTHH:mm a DD/MM/YYYY HH:mm para la plantilla de texto
+const formatToHumanDate = (dateTimeStr: string) => {
+  if (!dateTimeStr) return '';
+  const [datePart, timePart] = dateTimeStr.split('T');
+  const [year, month, day] = datePart.split('-');
+  return `${day}/${month}/${year} ${timePart}`;
+};
+
+// --- DICCIONARIOS NOC ---
+const subcategoriasPorServicio: Record<string, string[]> = {
+  SIN_AFECTACION: ["SOPORTE PREVENTIVO", "MONITOREO DE RUTINA", "SIN ALARMAS ACTIVA"],
+  INTERNET: ["ALTA LATENCIA","INCONSISTENCIAS EN RECURSOS ASIGNADOS ", "CONEXIÓN INTERMITENTE", "NO ALCANZA EL ANCHO DE BANDA", "PÉRDIDA DE PAQUETES", "SIN CONEXIÓN"],
+  TELEFONIA: ["INCIDENCIA EN LLAMADAS ENTRANTES", "INCIDENCIA EN LLAMADAS SALIENTES", "INTERFERENCIAS","SEÑALIZACION ", "TONO OCUPADO","SIN TONO"],
+  DATOS: ["CONEXIÓN INTERMITENTE", "MONITOREO", "PÉRDIDA DE PAQUETES","NO ALCANZA LA CAPACIDAD DE TRANSPORTE", "SIN CONEXIÓN"],
+  TELEVISION_OTT: ["NO VE ALGUNOS CANALES", "PIXELACIÓN DE IMAGEN", "PROBLEMAS DE AUDIO","ELIMINACIÓN DE CORREOS DE LA PLATAFORMA OTT", "SIN ACCESO"]
+};
+
+const plataformasPorCategoria: Record<string, string[]> = {
+  ACCESO: ["SERVICIO DE INTERNET GPON", "SERVICIO DE INTERNET ", "SERVICIO DE TELEFONÍA ", "SERVICIO ALOPON", "SERVICIO DE STREAMING", "SERVICIO DE DATOS ", "SERVICIO DE TELEVISIÓN"],
+  TRANSPORTE: ["SERVICIO DE INTERNET", "SERVICIO DE INTERNET METROETHERNET", "SERVICIO DE DATOS METROETHERNET"],
+  CORE: ["SERVICIO DE TELEFONÍA ","ENLACE INTERNACIONAL", "ENLACE INTERURBANO","ROUTER CORE", "CGNATS","CDN","FIREWALL","DNS","CORE OTT","CORE TELEFONIA","BASE DE DATOS","SERVIDORES"],
+  INFRAESTRUCTURA: ["ELECTRICA", "REFRIGERACION"],
+  COMPONENTES: ["DWDM","MODULOS","FIBRA OPTICA","TARJETA","PUERTO"],
+  IT: ["SISTEMAS IT INTERNAL"]
+};
+
+const estadosDisponibles = ["MIRANDA", "DISTRITO CAPITAL", "CARABOBO", "ZULIA"];
+const ciudadesPorEstado: Record<string, string[]> = {
+  "MIRANDA": ["CARACAS", "GUARENAS", "GUATIRE"],
+  "DISTRITO CAPITAL": ["CARACAS"],
+  "CARABOBO": ["VALENCIA", "PUERTO CABELLO"],
+  "ZULIA": ["MARACAIBO"]
+};
+
+interface TicketModalProps {
+  open: boolean;
+  onClose: () => void;
+  onSave: (ticketData: any) => void;
+}
+
+export default function TicketModal({ open, onClose, onSave }: TicketModalProps) {
+  const [activeStep, setActiveStep] = useState(0);
+  
+  const [form, setForm] = useState({
+    numeroTicket: '', 
+    tipoIncidencia: 'INCIDENCIA PUNTUAL', 
+    asunto: '', 
+    categoria: '', 
+    plataforma: '', 
+    tipoCliente: '', 
+    tiposervicio:'', 
+    subcategoria: '', 
+    estado: '',
+    municipio: '',
+    ciudad: '',
+    nodo: '',
+    operatorResponsable: USUARIO_LOGUEADO,
+    // Nuevos campos solicitados
+    ttZoho: '',
+    ttClienteProveedor: '',
+    // Marcas Cronológicas
+    horaInicioFalla: '',       // t0
+    horaDeteccionNoc: '',      // t1 (Apertura automática)
+    horaInicioAtencion: '',    // t2
+    horaEscalamiento: '',      // t3 
+    horaFinAfectacion: '',     // Fin de afectación
+    horaCierreFalla: '',       // t4 (Automática al guardar)
+    requiereEscalamiento: 'NO', 
+    escaladoA: '', 
+    causaRaiz: '', 
+    estatus: 'PRELIMINAR', 
+    descripcion: '',
+    // Métricas calculadas
+    tDeteccion: 0,
+    tAtencion: 0,
+    tEscalado: 0,
+    cCierreSoporte: 0,
+    mttrTotal: 0,
+    turnoAsignado: 'DIURNO'
+  });
+
+  const pasos = ['Clasificación e Infraestructura', 'Tiempos y Cierre Operativo'];
+
+  // 1. Inicialización de marcas temporales y plantilla estructurada base
+  useEffect(() => {
+    if (open) {
+      const ahora = getLocalDateTimeString();
+      const fechaFormateadaNoc = formatToHumanDate(ahora);
+      const fechaFormateadaInicioFalla = form.horaInicioFalla ? formatToHumanDate(form.horaInicioFalla) : '';
+      const fechaFormateadaFinAfectacion = form.horaFinAfectacion ? formatToHumanDate(form.horaFinAfectacion) : '';
+
+      const plantillaDescripcion = 
+        `Fecha y Hora apertura Ticket: ${fechaFormateadaNoc}\n` +
+        `Fecha y hora de fin de reporte: ${fechaFormateadaFinAfectacion}\n` +
+        `Fecha y Hora Inicio Afectación: ${fechaFormateadaInicioFalla}\n` +
+        `Causa:\n` +
+        `Solución:`;
+
+      setForm(prev => ({
+        ...prev,
+        horaDeteccionNoc: ahora,
+        horaInicioAtencion: ahora, 
+        operatorResponsable: USUARIO_LOGUEADO,
+        descripcion: plantillaDescripcion
+      }));
+      setActiveStep(0);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    setForm(prev => ({ ...prev, plataforma: '', tipoCliente: '', subcategoria: '' }));
+  }, [form.categoria]);
+
+  useEffect(() => {
+    if (form.plataforma.includes("METROETHERNET")) {
+      if (form.tipoCliente !== "INTERNET" && form.tipoCliente !== "DATOS" && form.tipoCliente !== "SIN_AFECTACION") {
+        setForm(prev => ({ ...prev, tipoCliente: '', subcategoria: '' }));
+      }
+    }
+  }, [form.plataforma]);
+
+  useEffect(() => {
+    if (form.categoria) {
+      const prefijo = form.categoria.substring(0, 4).toUpperCase();
+      if (!form.numeroTicket || !form.numeroTicket.startsWith(prefijo)) {
+        setForm(prev => ({ ...prev, numeroTicket: `${prefijo}-${Math.floor(100000 + Math.random() * 900000)}` }));
+      }
+    }
+  }, [form.categoria]);
+
+  useEffect(() => {
+    if (form.tipoIncidencia === 'INCIDENCIA MASIVA') {
+      setForm(prev => ({ ...prev, nodo: '' }));
+    }
+  }, [form.tipoIncidencia]);
+
+  useEffect(() => {
+    if (form.escaladoA === 'SI') {
+      setForm(prev => ({ ...prev, requiereEscalamiento: '' }));
+    }
+  }, [form.escaladoA]);
+
+  useEffect(() => {
+    setForm(prev => ({ ...prev, municipio: '', ciudad: '' }));
+  }, [form.estado]);
+
+  // --- CÁLCULO EN TIEMPO REAL DE LOS TIEMPOS DE CICLO ---
+  useEffect(() => {
+    const diffMin = (start: string, end: string) => {
+      if (!start || !end) return 0;
+      const diff = new Date(end).getTime() - new Date(start).getTime();
+      return diff > 0 ? Math.round(diff / 1000 / 60) : 0;
+    };
+
+    let turno = 'DIURNO';
+    if (form.horaDeteccionNoc) {
+      const horaNoc = new Date(form.horaDeteccionNoc).getHours();
+      if (horaNoc >= 19 || horaNoc < 7) turno = 'NOCTURNO';
+    }
+
+    setForm(prev => ({
+      ...prev,
+      tDeteccion: diffMin(form.horaInicioFalla, form.horaDeteccionNoc),
+      tAtencion: diffMin(form.horaDeteccionNoc, form.horaInicioAtencion),
+      tEscalado: form.requiereEscalamiento === 'SI' ? diffMin(form.horaInicioFalla, form.horaEscalamiento) : 0,
+      cCierreSoporte: diffMin(form.horaInicioAtencion, form.horaCierreFalla),
+      mttrTotal: diffMin(form.horaInicioFalla, form.horaCierreFalla),
+      turnoAsignado: turno
+    }));
+  }, [form.horaInicioFalla, form.horaDeteccionNoc, form.horaInicioAtencion, form.horaEscalamiento, form.horaCierreFalla, form.requiereEscalamiento]);
+
+  // Listener reactivo sincronizado para actualizar la plantilla de la bitácora
+  useEffect(() => {
+    if (form.horaDeteccionNoc) {
+      const t1Formateado = formatToHumanDate(form.horaDeteccionNoc);
+      const t0Formateado = form.horaInicioFalla ? formatToHumanDate(form.horaInicioFalla) : '';
+      const finAfectacionFormateado = form.horaFinAfectacion ? formatToHumanDate(form.horaFinAfectacion) : '';
+
+      setForm(prev => {
+        if (!prev.descripcion || prev.descripcion.startsWith("Fecha y Hora apertura Ticket:")) {
+          const lineas = prev.descripcion.split('\n');
+          lineas[0] = `Fecha y Hora apertura Ticket: ${t1Formateado}`;
+          lineas[1] = `Fecha y hora de fin de reporte: ${finAfectacionFormateado}`;
+          lineas[2] = `Fecha y Hora Inicio Afectación: ${t0Formateado}`; 
+          return { ...prev, descripcion: lineas.join('\n') };
+        }
+        return prev;
+      });
+    }
+  }, [form.horaDeteccionNoc, form.horaInicioFalla, form.horaFinAfectacion]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleNext = () => setActiveStep((prev) => prev + 1);
+  const handleBack = () => setActiveStep((prev) => prev - 1);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const fechaHoraCierreActual = getLocalDateTimeString();
+    const cierreFormateado = formatToHumanDate(fechaHoraCierreActual);
+    
+    const diffMin = (start: string, end: string) => {
+      if (!start || !end) return 0;
+      const diff = new Date(end).getTime() - new Date(start).getTime();
+      return diff > 0 ? Math.round(diff / 1000 / 60) : 0;
+    };
+
+    let descripcionFinal = form.descripcion;
+    const lineas = descripcionFinal.split('\n');
+    if (lineas.length >= 2 && lineas[1].trim() === "Fecha y hora de fin de reporte:") {
+      lineas[1] = `Fecha y hora de fin de reporte: ${cierreFormateado}`;
+      descripcionFinal = lineas.join('\n');
+    }
+
+    const finalFormData = {
+      ...form,
+      horaCierreFalla: fechaHoraCierreActual,
+      descripcion: descripcionFinal,
+      cCierreSoporte: diffMin(form.horaInicioAtencion, fechaHoraCierreActual),
+      mttrTotal: diffMin(form.horaInicioFalla, fechaHoraCierreActual),
+      estatus: 'CERRADO'
+    };
+
+    onSave(finalFormData);
+    setActiveStep(0);
+    onClose();
+  };
+
+  const handleDateTimeClick = (e: React.MouseEvent<HTMLInputElement>) => {
+    try { (e.target as any).showPicker(); } catch (err) {}
+  };
+
+  const renderServiciosAfectados = () => {
+    const esMetroethernet = form.plataforma.includes("METROETHERNET");
+    return [
+      <MenuItem key="SIN_AFECTACION" value="SIN_AFECTACION">SIN AFECTACIÓN</MenuItem>,
+      <MenuItem key="INTERNET" value="INTERNET">INTERNET</MenuItem>,
+      <MenuItem key="DATOS" value="DATOS">DATOS</MenuItem>,
+      !esMetroethernet && <MenuItem key="TELEFONIA" value="TELEFONIA">TELEFONÍA</MenuItem>,
+      !esMetroethernet && <MenuItem key="TELEVISION_OTT" value="TELEVISION_OTT"> OTT</MenuItem>
+    ].filter(Boolean);
+  };
+
+  return (
+    <Modal open={open} onClose={onClose}>
+      <Box sx={modalStyle} component="form" onSubmit={handleSubmit}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+          <Typography variant="h5" sx={{ color: '#000027', fontWeight: 600 }}>Apertura y Tipificación - NOC</Typography>
+          <IconButton onClick={onClose} edge="end"><CloseIcon /></IconButton>
+        </Box>
+        
+        <FormStepper activeStep={activeStep} steps={pasos} />
+        <Divider sx={{ mb: 3 }} />
+
+        {/* PASO 1: CLASIFICACIÓN E INFRAESTRUCTURA */}
+        {activeStep === 0 ? (
+          <Grid container spacing={2.5}>
+            <Grid size={{ xs: 12, sm: 3 }}>
+              <TextField fullWidth disabled label="Número de Caso (Auto)" name="numeroTicket" value={form.numeroTicket} size="small" InputProps={{ startAdornment: <ConfirmationNumberIcon sx={{ color: '#000027', mr: 1, fontSize: '1.1rem' }} /> }} sx={{ bgcolor: '#f0f4f8' }} />
+            </Grid>
+           
+            <Grid size={{ xs: 12, sm: 3 }}>
+              <TextField select fullWidth required label="Tipo de Incidencia" name="tipoIncidencia" value={form.tipoIncidencia} onChange={handleChange} size="small">
+                <MenuItem value="INCIDENCIA PUNTUAL">INCIDENCIA PUNTUAL</MenuItem>
+                <MenuItem value="INCIDENCIA MASIVA">INCIDENCIA MASIVA</MenuItem>
+                <MenuItem value="VENTANA DE MANTENIMIENTO">VENTANA DE MANTENIMIENTO</MenuItem>
+              </TextField>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField fullWidth required label="Asunto del Caso" name="asunto" value={form.asunto} onChange={handleChange}  placeholder="CCS || SERVICIO || VLAN CLIENTE || FALLA  "  size="small" />
+            </Grid>
+
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <TextField select fullWidth required label="Categoría de Red" name="categoria" value={form.categoria} onChange={handleChange} size="small">
+                <MenuItem value="CORE">CORE</MenuItem>
+                <MenuItem value="TRANSPORTE">TRANSPORTE</MenuItem>
+                <MenuItem value="ACCESO">ACCESO</MenuItem>
+                <MenuItem value="INFRAESTRUCTURA">INFRAESTRUCTURA</MenuItem>
+                <MenuItem value="COMPONENTES">COMPONENTES</MenuItem>
+                <MenuItem value="IT">IT</MenuItem>
+              </TextField>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <TextField select fullWidth required label="Plataforma Tecnológica" name="plataforma" value={form.plataforma} onChange={handleChange} size="small" disabled={!form.categoria}>
+                {(plataformasPorCategoria[form.categoria] || []).map((p) => <MenuItem key={p} value={p}>{p}</MenuItem>)}
+              </TextField>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <TextField select fullWidth required label="Servicio Afectado" name="tipoCliente" value={form.tipoCliente} onChange={handleChange} size="small" disabled={!form.plataforma}>
+                {renderServiciosAfectados()}
+              </TextField>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <TextField select fullWidth required label="Subcategoría" name="subcategoria" value={form.subcategoria} onChange={handleChange} size="small" disabled={!form.tipoCliente}>
+                {(subcategoriasPorServicio[form.tipoCliente] || []).map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+              </TextField>
+            </Grid>
+
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <TextField select fullWidth required label="Tipo de servicio" name="tiposervicio" value={form.tiposervicio} onChange={handleChange} size="small">
+                <MenuItem value="BANCA">BANCA</MenuItem>
+                <MenuItem value="CARRIER">CARRIER</MenuItem>
+                <MenuItem value="FTTH">FTTH</MenuItem>
+                <MenuItem value="FTTO">FTTO</MenuItem>
+                <MenuItem value="CORPORATIVO">CORPORATIVO</MenuItem>
+              </TextField>
+            </Grid>
+
+            <Grid size={{ xs: 12, sm:  4 }}>
+              <TextField select fullWidth required label="Estado" name="estado" value={form.estado} onChange={handleChange} size="small">
+                {estadosDisponibles.map((est) => <MenuItem key={est} value={est}>{est}</MenuItem>)}
+              </TextField>
+            </Grid>
+            <Grid size={{ xs: 12, sm:  4 }}>
+              <TextField select fullWidth required label="Ciudad" name="ciudad" value={form.ciudad} onChange={handleChange} size="small" disabled={!form.estado}>
+                {(ciudadesPorEstado[form.estado] || []).map((ciu) => <MenuItem key={ciu} value={ciu}>{ciu}</MenuItem>)}
+              </TextField>
+            </Grid>
+
+            {form.tipoIncidencia !== 'INCIDENCIA MASIVA' && (
+              <Grid size={{ xs: 12, sm: 4 }}>
+                <TextField fullWidth required label="Nodo / ODF Afectado" name="nodo" value={form.nodo} onChange={handleChange} size="small" disabled={!form.ciudad} />
+              </Grid>
+            )}
+            
+          </Grid>
+        ) : (
+          /* PASO 2: TIEMPOS Y CIERRE OPERATIVO */
+          <Grid container spacing={2.5}>
+            <Grid size={{ xs: 12 }} sx={{ mb: -1 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#333' }}>
+                3. Tiempos de Ciclo de Falla (Marcas Cronológicas)
+              </Typography>
+            </Grid>
+
+            <Grid size={{ xs: 12, sm: 2 }}>
+              <TextField fullWidth required type="datetime-local" label="t0: Inicio Falla *" name="horaInicioFalla" value={form.horaInicioFalla} onChange={handleChange} size="small" InputLabelProps={{ shrink: true }} inputProps={{ onClick: handleDateTimeClick }} sx={{ '& input': { cursor: 'pointer' } }} />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 2 }}>
+              <TextField fullWidth disabled type="datetime-local" label="t1: Apertura NOC (Auto)" name="horaDeteccionNoc" value={form.horaDeteccionNoc} size="small" InputLabelProps={{ shrink: true }} sx={{ bgcolor: '#f0f4f8' }} />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 2 }}>
+              <TextField fullWidth required type="datetime-local" label="t2: Inicio Atención *" name="horaInicioAtencion" value={form.horaInicioAtencion} onChange={handleChange} size="small" InputLabelProps={{ shrink: true }} inputProps={{ onClick: handleDateTimeClick }} sx={{ '& input': { cursor: 'pointer' } }} />
+            </Grid>
+            
+            <Grid size={{ xs: 12, sm: 2 }}>
+              <TextField fullWidth type="datetime-local" label="t3: Escalamiento" name="horaEscalamiento" value={form.horaEscalamiento} onChange={handleChange} size="small" InputLabelProps={{ shrink: true }} disabled={form.requiereEscalamiento === 'NO'} required={form.requiereEscalamiento === 'SI'} inputProps={{ onClick: handleDateTimeClick }} sx={{ '& input': { cursor: 'pointer' } }} />
+            </Grid>
+
+            <Grid size={{ xs: 12, sm: 2 }}>
+              <TextField fullWidth type="datetime-local" label="Fin Afectación" name="horaFinAfectacion" value={form.horaFinAfectacion} onChange={handleChange} size="small" InputLabelProps={{ shrink: true }} inputProps={{ onClick: handleDateTimeClick }} sx={{ '& input': { cursor: 'pointer' } }} />
+            </Grid>
+
+            <Grid size={{ xs: 12, sm: 2 }}>
+              <TextField fullWidth disabled label="t4: Cierre Falla (Auto)" value="Al guardar..." size="small" sx={{ bgcolor: '#f0f4f8' }} />
+            </Grid>
+
+                        
+            {/* BARRA DE MÉTRICAS */}
+            <Grid size={{ xs: 12 }}>
+              <Box sx={{ 
+                bgcolor: '#b4baff', 
+                color: '#000', 
+                p: 2, 
+                borderRadius: 2, 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                flexWrap: 'wrap', 
+                gap: 2,
+                px: 3
+              }}>
+                <Typography variant="body2" sx={{ fontWeight: 700 }}><strong>T. Detección:</strong> {form.tDeteccion} min</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 700 }}><strong>T. Atención:</strong> {form.tAtencion} min</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 700 }}><strong>T. Escalado:</strong> {form.tEscalado} min</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 700 }}><strong>Cierre Soporte:</strong> (Se calcula al guardar)</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 800, color: '#800020', fontSize: '0.95rem' }}>
+                  <strong>MTTR Total:</strong> En proceso...
+                </Typography>
+              </Box>
+            </Grid>
+
+            {/* CAMPOS ADICIONALES DE CIERRE REESTRUCTURADOS */}
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <TextField select fullWidth label="¿Escalar a Especialistas / Campo?" name="requiereEscalamiento" value={form.requiereEscalamiento} onChange={handleChange} size="small">
+                <MenuItem value="NO">No</MenuItem><MenuItem value="SI">Sí</MenuItem>
+              </TextField>
+            </Grid>
+
+            {form.requiereEscalamiento !== 'NO' && (
+              <Grid size={{ xs: 12, sm: 4 }}>
+                <TextField fullWidth label="Grupo / Especialista Destino" name="escaladoA" value={form.escaladoA} onChange={handleChange} size="small" />
+              </Grid>
+            )}
+            <Grid size={{ xs: 12, sm: 4 }}><TextField fullWidth label="Causa Raíz Diagnosticada" name="causaRaiz" value={form.causaRaiz} onChange={handleChange} size="small" /></Grid>
+            <Grid size={{ xs: 12, sm: 4 }}><TextField fullWidth disabled label="Turno Operativo Asignado" value={form.turnoAsignado} size="small" sx={{ bgcolor: '#f0f4f8' }} /></Grid>
+            <Grid size={{ xs: 12, sm: 4 }}><TextField fullWidth disabled label="Operador Responsable" name="operatorResponsable" value={form.operatorResponsable} size="small" InputProps={{ startAdornment: <PersonIcon sx={{ color: '#000027', mr: 1, fontSize: '1.1rem' }} /> }} sx={{ bgcolor: '#f0f4f8' }} /></Grid>
+            <Grid size={{ xs: 12, sm: 4 }}><TextField fullWidth label="TT-ZOHO" name="ttZoho" value={form.ttZoho} onChange={handleChange} size="small" placeholder="Ingrese el número de ticket de Zoho" /></Grid>
+            <Grid size={{ xs: 12, sm: 4 }}><TextField fullWidth label="TT-CLIENTE / Proveedor" name="ttClienteProveedor" value={form.ttClienteProveedor} onChange={handleChange} size="small" placeholder="Ingrese el ticket externo asociado" /></Grid>
+            <Grid size={{ xs: 12, sm: 12 }}><TextField fullWidth multiline rows={7} required label="Detalles del incidente" name="descripcion" value={form.descripcion} onChange={handleChange} size="small" /></Grid>
+          </Grid>
+        )}
+
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 4, pt: 2, borderTop: '1px solid #e0e0e0' }}>
+          <Button variant="outlined" color="error" onClick={onClose} sx={{ borderRadius: '50px', px: 3, fontWeight: 600, textTransform: 'none' }}>Descartar</Button>
+          {activeStep > 0 && (
+            <Button variant="outlined" startIcon={<NavigateBeforeIcon />} onClick={handleBack} sx={{ borderRadius: '50px', px: 3, fontWeight: 600, textTransform: 'none', color: '#000027', borderColor: '#000027' }}>Atrás</Button>
+          )}
+          {activeStep < pasos.length - 1 ? (
+            <Button variant="contained" endIcon={<NavigateNextIcon />} onClick={handleNext} sx={{ bgcolor: '#000027', borderRadius: '50px', px: 4, fontWeight: 600, textTransform: 'none', '&:hover': { bgcolor: '#000045' } }}>Continuar</Button>
+          ) : (
+            <Button type="submit" variant="contained" startIcon={<SaveIcon />} sx={{ bgcolor: '#2e7d32', borderRadius: '50px', px: 4, fontWeight: 600, textTransform: 'none', '&:hover': { bgcolor: '#1b5e20' } }}>Guardar e Insertar en Dashboard</Button>
+          )}
+        </Box>
+      </Box>
+    </Modal>
+  );
+}

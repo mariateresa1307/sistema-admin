@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import Image from 'next/image';
+
 import { useRouter } from 'next/navigation'; 
 import {
   Button,
@@ -118,16 +118,7 @@ export default function LoginPage() {
           border: '1px solid rgba(255, 255, 255, 0.18)',
         }}>
           
-          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
-            <Image 
-              src="/NETUNO_logo.png" 
-              alt="Netuno Logo"
-              width={220} 
-              height={70} 
-              priority 
-              style={{ objectFit: 'contain' }}
-            />
-          </Box>
+     
           
           <Box component="form" onSubmit={handleSubmit} noValidate>
             <TextField
