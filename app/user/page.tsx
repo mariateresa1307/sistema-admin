@@ -1,43 +1,55 @@
 "use client";
 import { ContainerBox } from "../components/containerBox";
 import { CustomDataGrid } from "../components/customDataGrid";
+import { CardSeeModal } from "./cardUserSeeModal";
 import { useState, useCallback, useEffect } from "react";
-import { getUsers, deleteUser } from "@/lib/api";
+import { getUsers } from "@/lib/api";
 
-import ButtonGroup from "@mui/material/ButtonGroup";
-import Tooltip from "@mui/material/Tooltip";
-import Button from "@mui/material/Button";
-import { Edit as EditIcon, Delete as DeleteIcon } from "@mui/icons-material";
-import { GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
+import { Box, Chip } from "@mui/material";
+import { GridColDef, GridCellParams } from "@mui/x-data-grid";
 import { FloatingAddButton } from "../components/FloatingAddButton";
 import { FullScreenUserDialog } from "./userModal";
-import { ConfirmDialog } from "../components/ConfirmDialog"; 
 
+// 🔹 Unificado: Se elimina por completo 'is_active' dejando únicamente el tipo de la BD
 type Usuario = {
   _id: string;
   username: string;
   email: string;
   primerNombre: string;
+  segundoNombre?: string;
   primerApellido: string;
-  is_active: boolean;
+  segundoApellido?: string;
+  isActive: boolean; 
 };
 
 export default function UsuariosPage() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
+  
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<Usuario | null>(null);
-
-  // Estados para el Modal de Confirmación
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [userIdToDelete, setUserIdToDelete] = useState<string | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   const fetchUsuarios = useCallback(async () => {
     try {
       setLoading(true);
       const response = await getUsers();
-      setUsuarios(Array.isArray(response.data) ? response.data : []);
+      
+      // 🔹 Limpieza de datos: Mapeamos asegurando únicamente la propiedad 'isActive'
+      const dataNormalizada = (Array.isArray(response.data) ? response.data : []).map((user: any) => ({
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+        primerNombre: user.primerNombre,
+        segundoNombre: user.segundoNombre,
+        primerApellido: user.primerApellido,
+        segundoApellido: user.segundoApellido,
+        isActive: user.isActive !== undefined ? user.isActive : (user.is_active ?? true)
+      }));
+
+      setUsuarios(dataNormalizada);
     } catch (err: any) {
+      console.error("Error al obtener usuarios:", err);
       setUsuarios([]);
     } finally {
       setLoading(false);
@@ -52,75 +64,52 @@ export default function UsuariosPage() {
       flex: 1.5,
       minWidth: 200,
       valueGetter: (value, row) =>
-        `${row.primerNombre || ""} ${row.primerApellido || ""}`,
+        `${row?.primerNombre || ""} ${row?.primerApellido || ""}`.trim(),
     },
+    { field: "email", headerName: "Correo Electrónico", flex: 1.5, minWidth: 200 },
     {
-      field: "email",
-      headerName: "Correo Electrónico",
-      flex: 1.5,
-      minWidth: 200,
-    },
-    {
-      field: "isActive",
+      field: "isActive", 
       headerName: "Estado",
       flex: 1,
       minWidth: 120,
-      renderCell: (params) => (params.value ? "Activo" : "Inactivo"),
-    },
-    {
-      field: "",
-      headerName: "Acciones",
-      minWidth: 150,
-      sortable: false,
-      filterable: false,
-      renderCell: (params: GridRenderCellParams<Usuario>) => (
-        <ButtonGroup
-          variant="outlined"
-          size="small"
-          sx={{
-            height: "30px",
-            "& .MuiButton-root": { borderColor: "#E2E8F0" },
-          }}
-        >
-          <Tooltip title="Editar">
-            <Button onClick={() => handleEdit(params.row)}>
-              <EditIcon fontSize="small" sx={{ color: "#080769" }} />
-            </Button>
-          </Tooltip>
-          <Tooltip title="Eliminar">
-            <Button onClick={() => handleDelete(params.row._id)}>
-              <DeleteIcon fontSize="small" sx={{ color: "#d32f2f" }} />
-            </Button>
-          </Tooltip>
-        </ButtonGroup>
-      ),
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) => {
+        const activo = params.value; 
+        return (
+          <Chip 
+            label={activo ? "Activo" : "Inactivo"} 
+            size="small" 
+            sx={{ 
+              bgcolor: activo ? '#e8f5e9' : '#ffebee', 
+              color: activo ? '#2e7d32' : '#c62828', 
+              fontWeight: 'bold', 
+              borderRadius: '6px', 
+              px: 0.5 
+            }} 
+          />
+        );
+      },
     },
   ];
 
-  const handleEdit = (usuario: Usuario) => {
-    console.log("Datos del usuario a editar:", usuario);
-    setSelectedUser(usuario);
+  const handleCellClick = (params: GridCellParams) => {
+    if (params.row) {
+      const rowData = params.row as Usuario;
+      setSelectedUser(rowData);
+      setIsDetailOpen(true);
+    }
+  };
+
+  const handleTransitionToEdit = () => {
+    setIsDetailOpen(false);
     setIsDialogOpen(true);
   };
 
-  // Solo abre el modal y guarda el ID
-  const handleDelete = (id: string) => {
-    setUserIdToDelete(id);
-    setDeleteConfirmOpen(true);
-  };
-
-  // Función que se ejecuta al confirmar en el modal
-  const handleConfirmDelete = async () => {
-    if (!userIdToDelete) return;
-    try {
-      await deleteUser(userIdToDelete);
-      fetchUsuarios();
-    } catch (err) {
-      alert("Error al eliminar el usuario");
-    } finally {
-      setDeleteConfirmOpen(false);
-      setUserIdToDelete(null);
-    }
+  // Función unificada que se ejecuta al guardar de forma exitosa en el Formulario
+  const handleFormSubmit = async () => {
+    await fetchUsuarios();
+    setSelectedUser(null);
   };
 
   useEffect(() => {
@@ -133,7 +122,18 @@ export default function UsuariosPage() {
         title="Gestión de Usuarios"
         subtitle="Administración centralizada de accesos Netuno"
       >
-        <CustomDataGrid rows={usuarios} columns={columns} loading={loading} />
+        <Box sx={{ 
+          '& .MuiDataGrid-row': { cursor: 'pointer', transition: 'background-color 0.15s ease' },
+          '& .MuiDataGrid-row:hover': { bgcolor: '#f8fafc' } 
+        }}>
+          <CustomDataGrid 
+            rows={usuarios} 
+            columns={columns} 
+            loading={loading} 
+            onCellClick={handleCellClick}
+            getRowId={(row) => row._id} 
+          />
+        </Box>
       </ContainerBox>
 
       <FloatingAddButton
@@ -143,24 +143,28 @@ export default function UsuariosPage() {
         }}
       />
 
+      {/* Modal de Creación / Edición */}
       <FullScreenUserDialog
         isOpen={isDialogOpen}
-        onClose={() => setIsDialogOpen(false)}
+        onClose={() => {
+          setIsDialogOpen(false);
+          setSelectedUser(null);
+        }}
         title={selectedUser ? "Editar Usuario" : "Nuevo Usuario"}
         isEditMode={!!selectedUser}
         initialData={selectedUser}
-        onSubmit={async () => {
-          fetchUsuarios();
-        }}
+        onSubmit={handleFormSubmit} 
       />
 
-   
-      <ConfirmDialog
-        open={deleteConfirmOpen}
-        onClose={() => setDeleteConfirmOpen(false)}
-        onConfirm={handleConfirmDelete}
-        title="¿Confirmar eliminación?"
-        description="Esta acción eliminará al usuario de forma permanente. ¿Deseas continuar?"
+      {/* Modal de Detalles (Visualización limpia) */}
+      <CardSeeModal 
+        open={isDetailOpen} 
+        onClose={() => {
+          setIsDetailOpen(false);
+          setSelectedUser(null);
+        }} 
+        user={selectedUser} // 🔹 Pasamos el objeto limpio con la propiedad estructurada 'isActive'
+        onEditClick={handleTransitionToEdit} 
       />
     </>
   );
