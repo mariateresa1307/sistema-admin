@@ -16,37 +16,33 @@ interface CustomDataGridProps extends Omit<DataGridProps, 'rows'> {
 
 const CustomDataGrid = ({ rows, columns, loading, ...restProps }: CustomDataGridProps) => {
   const [isMounted, setIsMounted] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [searchField, setSearchField] = useState<string>(columns[0]?.field || "");
+  
+  // 🔹 INICIALIZACIÓN: Definimos el campo y término iniciales
+  const [searchField, setSearchField] = useState<string>(
+    columns.find(col => col.field === 'isActive') ? 'isActive' : (columns[0]?.field || "")
+  );
+  const [searchTerm, setSearchTerm] = useState(searchField === 'isActive' ? "true" : "");
+  
   const [searchResults, setSearchResults] = useState(rows);
   const [isSearching, setIsSearching] = useState(false);
 
-  // 🔹 NUEVO: Detectar si la columna actual es booleana (isActive)
-  const isStatusField = useMemo(() => {
-    return searchField === 'isActive';
-  }, [searchField]);
+  const isStatusField = useMemo(() => searchField === 'isActive', [searchField]);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
+  // Sincronizar: Si el término está vacío, mostramos todo, excepto si es estado (que siempre tiene valor)
   useEffect(() => {
-    if (!searchTerm) {
+    if (!searchTerm && !isStatusField) {
       setSearchResults(rows);
     }
-  }, [rows, searchTerm]);
-
-  useEffect(() => {
-    if (!columns.find(col => col.field === searchField)) {
-      setSearchField(columns[0]?.field || "");
-    }
-  }, [columns, searchField]);
+  }, [rows, searchTerm, isStatusField]);
 
   const mockApiSearch = useCallback(async (field: string, value: string) => {
     return new Promise<any[]>((resolve) => {
       setTimeout(() => {
         const filtered = rows.filter((row: any) => {
-          // Lógica especial para booleano
           if (field === 'isActive') {
             return String(row[field]) === value;
           }
@@ -59,6 +55,7 @@ const CustomDataGrid = ({ rows, columns, loading, ...restProps }: CustomDataGrid
   }, [rows]);
 
   const handleSearch = useCallback(async () => {
+    // Si no hay término y no es campo de estado, mostramos todo
     if (!searchTerm && !isStatusField) {
       setSearchResults(rows);
       return;
@@ -96,8 +93,10 @@ const CustomDataGrid = ({ rows, columns, loading, ...restProps }: CustomDataGrid
           select
           value={searchField}
           onChange={(e) => {
-            setSearchField(e.target.value);
-            setSearchTerm(""); // Reset al cambiar columna
+            const newField = e.target.value;
+            setSearchField(newField);
+            // Si cambia a estado, ponemos "true" por defecto, si no, limpiamos
+            setSearchTerm(newField === 'isActive' ? "true" : "");
           }}
           label="Search by"
           size="small"
@@ -110,7 +109,6 @@ const CustomDataGrid = ({ rows, columns, loading, ...restProps }: CustomDataGrid
           ))}
         </TextField>
 
-        {/* 🔹 RENDERIZADO DINÁMICO */}
         {isStatusField ? (
           <TextField
             select
@@ -132,9 +130,7 @@ const CustomDataGrid = ({ rows, columns, loading, ...restProps }: CustomDataGrid
             size="small"
             InputProps={{
               startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
+                <InputAdornment position="start"><SearchIcon /></InputAdornment>
               ),
             }}
             sx={{ maxWidth: 500 }}
