@@ -31,12 +31,12 @@ export default function RBSPage() {
   const staticRows = [
     {
       _id: "123",
-      idNetuno: "ID_266262_TMV_montecristo_CSS_1G",
+      idNetuno: "ID_26235_RBS_TMVE_Laguna_Casarapa_CGG_1G",
       serialONT: "251656516516",
       name: "monte cristo oeste",
-      idRBS: "2222",
+      idServicio: "26226",
       city: "caracas",
-      instalado: true,
+      status: "Activo",
     },
   ];
 
@@ -48,10 +48,10 @@ export default function RBSPage() {
           columns={[
             { field: "idNetuno", headerName: "ID Netuno", flex: 1 },
             { field: "serialONT", headerName: "Serial ONT", flex: 1 },
-            { field: "idRBS", headerName: "ID RBS", flex: 1 },
+            { field: "idServicio", headerName: "ID Servicio", flex: 1 },
             { field: "name", headerName: "Nombre", flex: 1 },
             { field: "city", headerName: "Ciudad", flex: 1 },
-            { field: "instalado", headerName: "Instalado", flex: 1 },
+            { field: "status", headerName: "Estado", flex: 1 },
           ]}
           loading={false}
           // AQUÍ LA ACCIÓN: Al hacer clic, pasamos el servicio a 'selectedService' y abrimos el modal

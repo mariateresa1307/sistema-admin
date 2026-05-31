@@ -19,13 +19,13 @@ type Usuario = {
   segundoNombre?: string;
   primerApellido: string;
   segundoApellido?: string;
-  isActive: boolean; 
+  isActive: boolean;
 };
 
 export default function UsuariosPage() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<Usuario | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -34,7 +34,7 @@ export default function UsuariosPage() {
     try {
       setLoading(true);
       const response = await getUsers();
-      
+
       // 🔹 Limpieza de datos: Mapeamos asegurando únicamente la propiedad 'isActive'
       const dataNormalizada = (Array.isArray(response.data) ? response.data : []).map((user: any) => ({
         _id: user._id,
@@ -68,25 +68,25 @@ export default function UsuariosPage() {
     },
     { field: "email", headerName: "Correo Electrónico", flex: 1.5, minWidth: 200 },
     {
-      field: "isActive", 
+      field: "isActive",
       headerName: "Estado",
       flex: 1,
       minWidth: 120,
       align: 'center',
       headerAlign: 'center',
       renderCell: (params) => {
-        const activo = params.value; 
+        const activo = params.value;
         return (
-          <Chip 
-            label={activo ? "Activo" : "Inactivo"} 
-            size="small" 
-            sx={{ 
-              bgcolor: activo ? '#e8f5e9' : '#ffebee', 
-              color: activo ? '#2e7d32' : '#c62828', 
-              fontWeight: 'bold', 
-              borderRadius: '6px', 
-              px: 0.5 
-            }} 
+          <Chip
+            label={activo ? "Activo" : "Inactivo"}
+            size="small"
+            sx={{
+              bgcolor: activo ? '#e8f5e9' : '#ffebee',
+              color: activo ? '#2e7d32' : '#c62828',
+              fontWeight: 'bold',
+              borderRadius: '6px',
+              px: 0.5
+            }}
           />
         );
       },
@@ -122,16 +122,16 @@ export default function UsuariosPage() {
         title="Gestión de Usuarios"
         subtitle="Administración centralizada de accesos Netuno"
       >
-        <Box sx={{ 
+        <Box sx={{
           '& .MuiDataGrid-row': { cursor: 'pointer', transition: 'background-color 0.15s ease' },
-          '& .MuiDataGrid-row:hover': { bgcolor: '#f8fafc' } 
+          '& .MuiDataGrid-row:hover': { bgcolor: '#f8fafc' }
         }}>
-          <CustomDataGrid 
-            rows={usuarios} 
-            columns={columns} 
-            loading={loading} 
+          <CustomDataGrid
+            rows={usuarios}
+            columns={columns}
+            loading={loading}
             onCellClick={handleCellClick}
-            getRowId={(row) => row._id} 
+            getRowId={(row) => row._id}
           />
         </Box>
       </ContainerBox>
@@ -153,18 +153,18 @@ export default function UsuariosPage() {
         title={selectedUser ? "Editar Usuario" : "Nuevo Usuario"}
         isEditMode={!!selectedUser}
         initialData={selectedUser}
-        onSubmit={handleFormSubmit} 
+        onSubmit={handleFormSubmit}
       />
 
       {/* Modal de Detalles (Visualización limpia) */}
-      <CardSeeModal 
-        open={isDetailOpen} 
+      <CardSeeModal
+        open={isDetailOpen}
         onClose={() => {
           setIsDetailOpen(false);
           setSelectedUser(null);
-        }} 
+        }}
         user={selectedUser} // 🔹 Pasamos el objeto limpio con la propiedad estructurada 'isActive'
-        onEditClick={handleTransitionToEdit} 
+        onEditClick={handleTransitionToEdit}
       />
     </>
   );

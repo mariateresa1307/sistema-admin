@@ -19,9 +19,9 @@ const CustomDataGrid = ({ rows, columns, loading, ...restProps }: CustomDataGrid
   
   // 🔹 INICIALIZACIÓN: Definimos el campo y término iniciales
   const [searchField, setSearchField] = useState<string>(
-    columns.find(col => col.field === 'isActive') ? 'isActive' : (columns[0]?.field || "")
-  );
-  const [searchTerm, setSearchTerm] = useState(searchField === 'isActive' ? "true" : "");
+    columns.find(col => col.field === 'username') ? 'username' : (columns[0]?.field || "")
+);
+ const [searchTerm, setSearchTerm] = useState("");
   
   const [searchResults, setSearchResults] = useState(rows);
   const [isSearching, setIsSearching] = useState(false);
