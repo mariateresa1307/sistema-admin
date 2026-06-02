@@ -1,7 +1,6 @@
-'use client';
+"use client";
 
 import * as React from 'react';
-
 import { useRouter } from 'next/navigation'; 
 import {
   Button,
@@ -12,7 +11,7 @@ import {
   Link,
   InputAdornment,
 } from '@mui/material';
-import { Mail, Lock } from '@mui/icons-material';
+import { Mail, Lock, Hub as HubIcon } from '@mui/icons-material'; // Importamos el icono Hub
 import { motion, Variants } from 'motion/react';
 import api from '@/../src/lib/api';
 
@@ -44,7 +43,7 @@ const bounceVariants: Variants = {
 };
 
 export default function LoginPage() {
-  const router = useRouter(); // Inicializamos el router
+  const router = useRouter();
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -59,21 +58,16 @@ export default function LoginPage() {
       });
 
       if (response.data) {
-        console.log("¡Conexión exitosa!", response.data);
-        
-        // Guardamos el token que devuelve tu API de NestJS
         if (response.data.access_token) {
           localStorage.setItem('token', response.data.access_token);
         }
-
-        // Redirigimos al dashboard de usuario
         router.push('/home');
       }
     } catch (error: any) {
       if (error.response) {
         alert(`Error: ${error.response.data.message || 'Credenciales incorrectas'}`);
       } else {
-        alert("Error de conexión. Verifica que Docker y el Backend estén activos.");
+        alert("Error de conexión. Verifica que el Backend esté activo.");
       }
     }
   };
@@ -118,55 +112,41 @@ export default function LoginPage() {
           border: '1px solid rgba(255, 255, 255, 0.18)',
         }}>
           
-     
+          {/* NUEVO BLOQUE: TÍTULO E ICONO NOC */}
+          <Box sx={{ textAlign: 'center', mb: 4 }}>
+          
+              <HubIcon sx={{ fontSize: 50, color: 'white' }} />
+            
+            <Typography variant="h4" sx={{ color: 'white', fontWeight: 800, letterSpacing: '1px' }}>
+              NOC HELPDESK
+            </Typography>
+            <Typography sx={{ color: glassColors.textoSuave, mt: 0.5, fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '2px' }}>
+              Gestión de Servicios
+            </Typography>
+          </Box>
           
           <Box component="form" onSubmit={handleSubmit} noValidate>
+            {/* ... tus TextField de email y password permanecen iguales ... */}
             <TextField
-              fullWidth
-              variant="standard"
-              placeholder="Email"
-              name="email"
-              margin="normal"
+              fullWidth variant="standard" placeholder="Email" name="email" margin="normal"
               InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Mail sx={{ color: 'white', opacity: 0.7 }} />
-                  </InputAdornment>
-                ),
+                startAdornment: <InputAdornment position="start"><Mail sx={{ color: 'white', opacity: 0.7 }} /></InputAdornment>,
                 style: { color: 'white', fontSize: '1.1rem', paddingBottom: '10px' }
               }}
-              sx={{
-                '& .MuiInput-underlined:before': { borderBottomColor: 'rgba(255,255,255,0.3)' },
-                '& .MuiInput-underlined:after': { borderBottomColor: glassColors.burbujaSecundaria },
-                mb: 3
-              }}
+              sx={{ '& .MuiInput-underlined:after': { borderBottomColor: glassColors.burbujaSecundaria }, mb: 3 }}
             />
 
             <TextField
-              fullWidth
-              variant="standard"
-              placeholder="Password"
-              name="password"
-              type="password"
-              margin="normal"
+              fullWidth variant="standard" placeholder="Password" name="password" type="password" margin="normal"
               InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Lock sx={{ color: 'white', opacity: 0.7 }} />
-                  </InputAdornment>
-                ),
+                startAdornment: <InputAdornment position="start"><Lock sx={{ color: 'white', opacity: 0.7 }} /></InputAdornment>,
                 style: { color: 'white', fontSize: '1.1rem', paddingBottom: '10px' }
               }}
-              sx={{
-                '& .MuiInput-underlined:before': { borderBottomColor: 'rgba(255,255,255,0.3)' },
-                '& .MuiInput-underlined:after': { borderBottomColor: glassColors.burbujaSecundaria },
-                mb: 5
-              }}
+              sx={{ '& .MuiInput-underlined:after': { borderBottomColor: glassColors.burbujaSecundaria }, mb: 5 }}
             />
 
             <Button 
-              fullWidth
-              type="submit"
+              fullWidth type="submit"
               sx={{ 
                 bgcolor: glassColors.burbujaSecundaria, color: 'white', py: 1.8,
                 borderRadius: '30px', textTransform: 'none', fontWeight: 'bold',
@@ -177,15 +157,6 @@ export default function LoginPage() {
             >
               Sign In
             </Button>
-
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
-              <Link href="#" sx={{ color: glassColors.textoSuave, fontSize: '0.85rem', textDecoration: 'none', '&:hover': { color: 'white' } }}>
-                Create an account
-              </Link>
-              <Link href="#" sx={{ color: glassColors.textoSuave, fontSize: '0.85rem', textDecoration: 'none', '&:hover': { color: 'white' } }}>
-                Forgot password?
-              </Link>
-            </Box>
           </Box>
         </Box>
       </motion.div>
