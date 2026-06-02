@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import { Modal, Paper, Box, Typography, IconButton, Divider, Chip, Tooltip } from '@mui/material';
-import Grid from '@mui/material/Grid'; // Asegúrate de estar usando Grid2
+import Grid from '@mui/material/Grid'; 
 import { motion, AnimatePresence } from 'framer-motion';
 import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
@@ -9,15 +9,23 @@ import SettingsEthernetIcon from '@mui/icons-material/SettingsEthernet';
 
 // 1. DEFINICIÓN DE LA INTERFAZ
 interface ServiceData {
-  idNetuno: string;
+ _id?: string;
+  tipoServicio: string;
   name: string;
-  instalado: boolean;
-  idRBS: string;
   city: string;
-  nodeA: string;
-  nodeB: string;
-  oltnode: string;
-  serialONT: string;
+  tipo_cliente: string;
+  idNetuno: string;
+  idRBS?: string; 
+  idDOG?: string;
+  idServicio?: string;
+  serialONT?: string;
+  nodeA?: string;
+  nodeB?: string;
+  oltnode?: string;
+  contrato?: number;
+  vlan?: number | string;
+  status?: string;
+   instalado?: boolean;
 }
 
 // 2. LA INTERFAZ QUE EL COMPONENTE USA
@@ -28,7 +36,7 @@ interface CardSeeServiceModalProps {
   onEditClick?: () => void;
 }
 
-// 3. COMPONENTE (Ahora sí reconoce la interfaz porque está definida arriba)
+
 export const CardSeeServiceModal = ({ open, onClose, service, onEditClick }: CardSeeServiceModalProps) => {
   
   if (!service) return null;
@@ -82,7 +90,7 @@ export const CardSeeServiceModal = ({ open, onClose, service, onEditClick }: Car
                   </Box>
                 </Grid>
                 
-                {/* ... resto del grid ... */}
+               
               </Grid>
             </Paper>
           </motion.div>

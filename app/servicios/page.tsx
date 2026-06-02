@@ -1,60 +1,132 @@
 "use client";
 import { CustomDataGrid } from "app/components/customDataGrid";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { ContainerBox } from "../components/containerBox";
 import { FloatingAddButton } from "../components/FloatingAddButton";
 import { FullScreenServiceDialog } from "./serviceModal";
-import { CardSeeServiceModal } from "./cardSeeServiceModal"; // Importado
-import { getService } from "@/lib/api";
-import { GridCellParams } from "@mui/x-data-grid";
+import { CardSeeServiceModal } from "./cardSeeServiceModal";
+import { GridCellParams, GridColDef } from "@mui/x-data-grid";
+import { Chip } from "@mui/material";
 
-// Tu tipo original
 type Service = {
   _id?: string;
-  idNetuno: string;
+  tipoServicio: string;
   name: string;
-  instalado: boolean;
-  idRBS: string;
   city: string;
-  nodeA: string;
-  nodeB: string;
-  oltnode: string;
-  serialONT: string;
+  tipo_cliente: string;
+  idNetuno: string;
+  idRBS?: string;
+  idDOG?: string;
+  idServicio?: string; 
+  serialONT?: string;
+  nodeA?: string;
+  nodeB?: string;
+  oltnode?: string;
+  contrato?: number;
+  vlan?: number | string;
+  status?: string;
+  id_circuito?: string; 
+  instalado?: boolean; 
 };
 
 export default function RBSPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isDetailOpen, setIsDetailOpen] = useState(false); // Estado para el detalle
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [filtroTipo, setFiltroTipo] = useState("Todos"); 
+  const [rows, setRows] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Tus datos originales intactos
-  const staticRows = [
-    {
-      _id: "123",
-      idNetuno: "ID_26235_RBS_TMVE_Laguna_Casarapa_CGG_1G",
-      serialONT: "251656516516",
-      name: "monte cristo oeste",
-      idServicio: "26226",
-      city: "caracas",
-      status: "Activo",
-    },
-  ];
+  const fetchServices = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('http://localhost:4000/services');
+      const data = await res.json();
+      console.log("Datos crudos del servidor:", data);
+
+      const formattedData = data.map((s: any) => ({
+        ...s,
+        id_circuito: s.id_circuito ,
+      }));
+      
+      setRows(formattedData);
+    } catch (error) {
+     console.error("Error al obtener servicios:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchServices();
+  }, [fetchServices]);
+
+  const columns = useMemo((): GridColDef[] => {
+    const base: GridColDef[] = [{ field: "tipoServicio", headerName: "Tipo", width: 100 }];
+    
+    if (filtroTipo === "IU") {
+      return [
+        ...base,
+        { field: "id_circuito", headerName: "ID Circuito", flex: 1 },
+        { field: "city", headerName: "Proveedor", flex: 1 },
+        { field: "tipo_cliente", headerName: "Tipo de Proveedor", flex: 1 },
+        { field: "status", headerName: "Estado", width: 120 },
+      ];
+    }
+    
+    return [
+      ...base,
+      { field: "name", headerName: "Nombre", flex: 1 },
+      { 
+        field: "detalles", 
+        headerName: "Detalles Técnicos", 
+        flex: 1.5,
+        renderCell: (params) => {
+          const row = params.row as Service;
+      debugger; 
+    
+    console.log("Fila procesada:", row);
+          switch (row.tipoServicio) {
+            case "METROLAN": return `VLAN: ${row.vlan || '-'} | NodoA: ${row.nodeA || '-'}`;
+            case "RBS": return `ID RBS: ${row.idRBS || '-'} | Serial: ${row.serialONT || '-'}`;
+            case "IU": return `ID: ${row.id_circuito || 'N/A'}`;
+            case "DOG": return `Circuito: ${row.idDOG || '-'} | Contrato: ${row.contrato || '-'}`;
+            default: return "N/A";
+          }
+        }
+      },
+      { field: "city", headerName: "Ciudad", flex: 1 },
+      { field: "tipo_cliente", headerName: "Tipo Cliente / Proveedor", flex: 1 },
+      { 
+        field: "status", 
+        headerName: "Estado", 
+        minWidth: 120,
+        renderCell: (params) => (
+          <Chip
+            label={params.value || "Activo"}
+            size="small"
+            sx={{
+              bgcolor: '#e8f5e9',
+              color: '#2e7d32',
+              fontWeight: 'bold',
+            }}
+          />
+        ),
+      },
+    ];
+  }, [filtroTipo]);
+
+  const filteredRows = useMemo(() => {
+    return filtroTipo === "Todos" ? rows : rows.filter(r => r.tipoServicio === filtroTipo);
+  }, [rows, filtroTipo]);
 
   return (
     <>
       <ContainerBox title="Gestión de Servicios">
         <CustomDataGrid
-          rows={staticRows} // Usamos tus valores originales
-          columns={[
-            { field: "idNetuno", headerName: "ID Netuno", flex: 1 },
-            { field: "serialONT", headerName: "Serial ONT", flex: 1 },
-            { field: "idServicio", headerName: "ID Servicio", flex: 1 },
-            { field: "name", headerName: "Nombre", flex: 1 },
-            { field: "city", headerName: "Ciudad", flex: 1 },
-            { field: "status", headerName: "Estado", flex: 1 },
-          ]}
-          loading={false}
-          // AQUÍ LA ACCIÓN: Al hacer clic, pasamos el servicio a 'selectedService' y abrimos el modal
+          rows={filteredRows}
+          columns={columns}
+          loading={loading}
           onCellClick={(params: GridCellParams) => {
             setSelectedService(params.row as Service);
             setIsDetailOpen(true);
@@ -63,31 +135,23 @@ export default function RBSPage() {
         />
       </ContainerBox>
 
-      <FloatingAddButton
-        onClick={() => {
-          setSelectedService(null);
-          setIsDialogOpen(true);
-        }}
-      />
+      <FloatingAddButton onClick={() => { setSelectedService(null); setIsDialogOpen(true); }} />
 
       <FullScreenServiceDialog
         isOpen={isDialogOpen}
-        onClose={() => setIsDialogOpen(false)}
+        onClose={() => { setIsDialogOpen(false); fetchServices(); }}
         title={selectedService ? "Editar Servicio" : "Nuevo Servicio"}
-        isEditMode={!!selectedService}
         initialData={selectedService}
-        onSubmit={async () => { /* tu lógica */ }}
       />
 
-      {/* AGREGADO: Tu modal de detalle ahora recibe los valores de la tabla */}
       <CardSeeServiceModal
         open={isDetailOpen}
         onClose={() => setIsDetailOpen(false)}
-        service={selectedService}
-        onEditClick={() => {
-          setIsDetailOpen(false);
-          setIsDialogOpen(true);
-        }}
+        service={selectedService ? { 
+          ...selectedService, 
+          id_circuito: selectedService.id_circuito || "" 
+        } as any : null}
+        onEditClick={() => { setIsDetailOpen(false); setIsDialogOpen(true); }}
       />
     </>
   );

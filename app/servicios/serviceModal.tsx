@@ -7,7 +7,7 @@ import {
 import Grid from "@mui/material/Grid"; 
 import { Close as CloseIcon, CloudUpload as UploadIcon, PhotoCamera, Schema as DiagramIcon, AddPhotoAlternate as AddIcon } from "@mui/icons-material";
 
-const CIUDADES_VENEZUELA = ["Caracas", "Maracaibo", "Valencia", "Barquisimeto", "Maracay", "San Cristóbal", "Mérida", "Puerto la cruz"].sort();
+const CIUDADES_VENEZUELA = ["Caracas", "Maracaibo", "Valencia","Guarenas / Guatire", "Barquisimeto", "Maracay", "San Cristóbal", "Mérida", "Puerto la cruz"].sort();
 const TIPOS_SERVICIO = ["DOG", "METROLAN", "RBS", "IU"];
 const TIPO_CLIENTE_FULL = ["TELEFONICA", "GALANET","DIGITEL","MOVILNET", "INTER", "EWINET", "VNET"];
 const PROVEEDOR_IU = ["INTER", "DIGITEL", "VNET"];
@@ -146,7 +146,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
             {/* CAMPOS DINÁMICOS */}
             {tipoServicio === "METROLAN" && (
               <>
-                <Grid size={12}><TextField name="idServicio" label="ID SERVICIO METROLAN" fullWidth required defaultValue={initialData?.idServicio || ""} size="small" /></Grid>
+                <Grid size={12}><TextField name="id_circuito" label="ID SERVICIO METROLAN" fullWidth required defaultValue={initialData?.id_circuitos || ""} size="small" /></Grid>
                 <Grid size={6}><TextField name="nodeA" label="NODO A" fullWidth required defaultValue={initialData?.nodeA || ""} size="small" /></Grid>
                 <Grid size={6}><TextField name="nodeB" label="NODO B" fullWidth required defaultValue={initialData?.nodeB || ""} size="small" /></Grid>
                 <Grid size={12}><TextField name="vlan" label="VLAN / Segmento" fullWidth defaultValue={initialData?.vlan || ""} size="small" /></Grid>
@@ -161,7 +161,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
                 <Grid size={6}><TextField name="nodoA" label="Nodo A y Puerto" fullWidth defaultValue={initialData?.nodoA || ""} size="small" /></Grid>
                 <Grid size={6}><TextField name="nodoB" label="Nodo B" fullWidth defaultValue={initialData?.nodoB || ""} size="small" /></Grid>
                 <Grid size={6}><TextField name="oltnode" label="Nodo OLT" fullWidth defaultValue={initialData?.oltnode || ""} size="small" /></Grid>
-                <Grid size={12}><TextField name="instalado" label="Fecha Instalación" type="date" fullWidth InputLabelProps={{ shrink: true }} defaultValue={initialData?.instalado || ""} size="small" /></Grid>
+                
               </>
             )}
 

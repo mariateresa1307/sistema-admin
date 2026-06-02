@@ -10,7 +10,6 @@ import { GridColDef, GridCellParams } from "@mui/x-data-grid";
 import { FloatingAddButton } from "../components/FloatingAddButton";
 import { FullScreenUserDialog } from "./userModal";
 
-// 🔹 Unificado: Se elimina por completo 'is_active' dejando únicamente el tipo de la BD
 type Usuario = {
   _id: string;
   username: string;
@@ -35,7 +34,6 @@ export default function UsuariosPage() {
       setLoading(true);
       const response = await getUsers();
 
-      // 🔹 Limpieza de datos: Mapeamos asegurando únicamente la propiedad 'isActive'
       const dataNormalizada = (Array.isArray(response.data) ? response.data : []).map((user: any) => ({
         _id: user._id,
         username: user.username,
@@ -143,7 +141,7 @@ export default function UsuariosPage() {
         }}
       />
 
-      {/* Modal de Creación / Edición */}
+   
       <FullScreenUserDialog
         isOpen={isDialogOpen}
         onClose={() => {
@@ -156,14 +154,13 @@ export default function UsuariosPage() {
         onSubmit={handleFormSubmit}
       />
 
-      {/* Modal de Detalles (Visualización limpia) */}
       <CardSeeModal
         open={isDetailOpen}
         onClose={() => {
           setIsDetailOpen(false);
           setSelectedUser(null);
         }}
-        user={selectedUser} // 🔹 Pasamos el objeto limpio con la propiedad estructurada 'isActive'
+        user={selectedUser} 
         onEditClick={handleTransitionToEdit}
       />
     </>
