@@ -13,10 +13,14 @@ export const ContainerBox = (props: Props) => {
 
   return (
     <>
-      <Typography variant="h4" sx={{ fontWeight: 800, color: isDark ? "contrast.main" : "primary.main" }}>
+      <Typography variant="h4" component="div" sx={{ fontWeight: 800, color: isDark ? "contrast.main" : "primary.main" }}>
         {props.title}
       </Typography>
-      { props.subtitle ?? <Typography variant="body2" sx={{ color: "primary.text" }}>{props.subtitle}</Typography> }
+
+      { props.subtitle && (
+      <Typography variant="body2" sx={{ color: "primary.text" }}>{props.subtitle}
+      </Typography> 
+      )}
 
        <Divider sx={{ mb: 3, mt: 2 }} />
 

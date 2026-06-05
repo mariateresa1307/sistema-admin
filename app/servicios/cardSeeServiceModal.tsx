@@ -7,9 +7,8 @@ import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
 import SettingsEthernetIcon from '@mui/icons-material/SettingsEthernet';
 
-// 1. DEFINICIÓN DE LA INTERFAZ
 interface ServiceData {
- _id?: string;
+  _id?: string;
   tipoServicio: string;
   name: string;
   city: string;
@@ -19,16 +18,15 @@ interface ServiceData {
   idDOG?: string;
   idServicio?: string;
   serialONT?: string;
-  nodeA?: string;
-  nodeB?: string;
-  oltnode?: string;
+  nodoA?: string;
+  nodoB?: string;
+  nodoOLT?: string;
   contrato?: number;
   vlan?: number | string;
   status?: string;
-   instalado?: boolean;
+  instalado?: boolean;
 }
 
-// 2. LA INTERFAZ QUE EL COMPONENTE USA
 interface CardSeeServiceModalProps {
   open: boolean;
   onClose: () => void;
@@ -36,10 +34,55 @@ interface CardSeeServiceModalProps {
   onEditClick?: () => void;
 }
 
-
 export const CardSeeServiceModal = ({ open, onClose, service, onEditClick }: CardSeeServiceModalProps) => {
   
   if (!service) return null;
+
+  // Función para obtener campos dinámicos según el tipo de servicio
+  const getDynamicFields = (s: ServiceData) => {
+    switch (s.tipoServicio) {
+      case "METROLAN":
+        return [
+          { label: "ID SERVICIO", value: s.idServicio },
+          { label: "NODO A", value: s.nodoA },
+          { label: "NODO B", value: s.nodoB },
+          { label: "VLAN", value: s.vlan }
+        ];
+      case "RBS":
+        return [
+          { label: "ID RBS", value: s.idRBS },
+          { label: "SERIAL ONT", value: s.serialONT },
+          { label: "NODO A", value: s.nodoA },
+          { label: "NODO B", value: s.nodoB },
+          { label: "NODO OLT", value: s.nodoOLT }
+        ];
+      case "IU":
+        return [
+          { label: "NOMBRE DE ENLACE", value: s.name },
+          { label: "VLAN", value: s.vlan },
+          { label: "NODO A", value: s.nodoA },
+          { label: "NODO B", value: s.nodoB }
+        ];
+      case "DOG":
+        return [
+          { label: "CONTRATO", value: s.contrato },
+          { label: "ID DOG", value: s.idDOG },
+          { label: "VLAN", value: s.vlan },
+          { label: "NODO A", value: s.nodoA },
+          { label: "NODO B", value: s.nodoB },
+          { label: "NODO OLT", value: s.nodoOLT },
+          { label: "SERIAL ONT", value: s.serialONT }
+        ];
+      case "RC Business y Premium":
+        return [
+          { label: "CONTRATO", value: s.contrato },
+          { label: "NODO A", value: s.nodoA },
+          { label: "VLAN", value: s.vlan }
+        ];
+      default:
+        return [];
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -62,35 +105,51 @@ export const CardSeeServiceModal = ({ open, onClose, service, onEditClick }: Car
             >
               <Box sx={{ 
                 position: 'absolute', top: 0, left: 0, width: '100%', height: '5px',
-                bgcolor: service.instalado ? '#22c55e' : '#f59e0b'
+                bgcolor: service.status === "Activo" ? '#22c55e' : '#f59e0b'
               }} />
 
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                   <SettingsEthernetIcon sx={{ color: '#080769', fontSize: '1.5rem' }} />
-                  <Typography variant="h6" sx={{ fontWeight: 700, color: '#0f172a' }}>
+                  <Typography variant="h6" component="div" sx={{ fontWeight: 700, color: '#0f172a' }}>
                     Detalles del Servicio
                   </Typography>
                 </Box>
-                <IconButton onClick={onClose} size="small"><CloseIcon /></IconButton>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  {onEditClick && (
+                    <Tooltip title="Editar">
+                      <IconButton onClick={onEditClick} size="small"><EditIcon /></IconButton>
+                    </Tooltip>
+                  )}
+                  <IconButton onClick={onClose} size="small"><CloseIcon /></IconButton>
+                </Box>
               </Box>
 
               <Divider sx={{ mb: 3.5, borderColor: '#f1f5f9' }} />
 
               <Grid container spacing={3}>
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748b' }}>ID NETUNO</Typography>
+                <Grid size={{ xs: 12, sm: 12 }}>
+                  <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748b', display: 'block' }}>ID NETUNO</Typography>
                   <Typography variant="body2" sx={{ fontWeight: 700, color: '#4f46e5' }}>{service.idNetuno}</Typography>
                 </Grid>
 
                 <Grid size={{ xs: 12, sm: 6 }}>
-                  <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748b' }}>ESTADO</Typography>
+                  <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748b', display: 'block' }}>ESTADO</Typography>
                   <Box sx={{ mt: 0.5 }}>
-                    <Chip label={service.instalado ? "Instalado" : "Pendiente"} size="small" />
+                    <Chip 
+                      label={service.status === "Activo" ? "Activo" : "Inactivo"} 
+                      size="small" 
+                      color={service.status === "Activo" ? "success" : "warning"}
+                    />
                   </Box>
                 </Grid>
-                
-               
+
+                {getDynamicFields(service).map((field, idx) => (
+                  <Grid key={idx} size={{ xs: 12, sm: 6 }}>
+                    <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748b', display: 'block' }}>{field.label}</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#334155' }}>{field.value || '—'}</Typography>
+                  </Grid>
+                ))}
               </Grid>
             </Paper>
           </motion.div>

@@ -105,7 +105,7 @@ export default function HomePage() {
   ];
 
   return (
-    <ContainerBox title="Administración de Incidencias y actividades" subtitle="">
+    <ContainerBox title="Administración de Incidencias y actividades" subtitle="Monitorización en tiempo real de operaciones.">
       
       <MetricsCarousel metrics={metrics} />
 
