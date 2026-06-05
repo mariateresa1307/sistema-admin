@@ -1,11 +1,11 @@
 "use client";
 import { CustomDataGrid } from "app/components/customDataGrid";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { ContainerBox } from "../components/containerBox";
 import { FloatingAddButton } from "../components/FloatingAddButton";
 import { FullScreenServiceDialog } from "./serviceModal";
 import { CardSeeServiceModal } from "./cardSeeServiceModal";
-import { GridCellParams, GridColDef } from "@mui/x-data-grid";
+import { GridCellParams, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import { Chip } from "@mui/material";
 
 type Service = {
@@ -19,9 +19,9 @@ type Service = {
   idDOG?: string;
   idServicio?: string; 
   serialONT?: string;
-  nodeA?: string;
-  nodeB?: string;
-  oltnode?: string;
+  nodoA?: string;
+  nodoB?: string;
+  oltnodo?: string;
   contrato?: number;
   vlan?: number | string;
   status?: string;
@@ -37,21 +37,16 @@ export default function RBSPage() {
   const [rows, setRows] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
 
+const isFirstRun = useRef(true);
+  
   const fetchServices = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch('http://localhost:4000/services');
       const data = await res.json();
-      console.log("Datos crudos del servidor:", data);
-
-      const formattedData = data.map((s: any) => ({
-        ...s,
-        id_circuito: s.id_circuito ,
-      }));
-      
-      setRows(formattedData);
+      setRows(data);
     } catch (error) {
-     console.error("Error al obtener servicios:", error);
+      console.error("Error al obtener servicios:", error);
     } finally {
       setLoading(false);
     }
@@ -61,64 +56,47 @@ export default function RBSPage() {
     fetchServices();
   }, [fetchServices]);
 
+  useEffect(() => {
+    if (isFirstRun.current) {
+      isFirstRun.current = false;
+      return;
+    }
+    console.log("Datos actuales en la tabla:", rows);
+  }, [rows]);
+
+  const renderDetalles = (row: Service) => {
+    switch (row.tipoServicio) {
+      case "METROLAN": return `VLAN: ${row.vlan || '-'} | NodoA: ${row.nodoA || '-'}`;
+      case "RBS": return `ID RBS: ${row.idRBS || '-'} | Serial: ${row.serialONT || '-'}`;
+      case "IU": return `ID: ${row.id_circuito || '-'} | Proveedor: ${row.tipo_cliente || '-'}`;
+      case "DOG": return `Circuito: ${row.idDOG || '-'} | Contrato: ${row.contrato || '-'}`;
+       case "RC Business y Premium": return `VLAN: ${row.vlan || '-'} | Equipo: ${row.nodoA || '-'}`;
+      default: return "N/A";
+    }
+  };
+
   const columns = useMemo((): GridColDef[] => {
     const base: GridColDef[] = [{ field: "tipoServicio", headerName: "Tipo", width: 100 }];
     
-    if (filtroTipo === "IU") {
-      return [
-        ...base,
-        { field: "id_circuito", headerName: "ID Circuito", flex: 1 },
-        { field: "city", headerName: "Proveedor", flex: 1 },
-        { field: "tipo_cliente", headerName: "Tipo de Proveedor", flex: 1 },
-        { field: "status", headerName: "Estado", width: 120 },
-      ];
-    }
-    
-    return [
-      ...base,
-      { field: "name", headerName: "Nombre", flex: 1 },
-      { 
-        field: "detalles", 
-        headerName: "Detalles Técnicos", 
-        flex: 1.5,
-        renderCell: (params) => {
-          const row = params.row as Service;
-      debugger; 
-    
-    console.log("Fila procesada:", row);
-          switch (row.tipoServicio) {
-            case "METROLAN": return `VLAN: ${row.vlan || '-'} | NodoA: ${row.nodeA || '-'}`;
-            case "RBS": return `ID RBS: ${row.idRBS || '-'} | Serial: ${row.serialONT || '-'}`;
-            case "IU": return `ID: ${row.id_circuito || 'N/A'}`;
-            case "DOG": return `Circuito: ${row.idDOG || '-'} | Contrato: ${row.contrato || '-'}`;
-            default: return "N/A";
-          }
-        }
-      },
-      { field: "city", headerName: "Ciudad", flex: 1 },
-      { field: "tipo_cliente", headerName: "Tipo Cliente / Proveedor", flex: 1 },
-      { 
-        field: "status", 
-        headerName: "Estado", 
-        minWidth: 120,
-        renderCell: (params) => (
-          <Chip
-            label={params.value || "Activo"}
-            size="small"
-            sx={{
-              bgcolor: '#e8f5e9',
-              color: '#2e7d32',
-              fontWeight: 'bold',
-            }}
-          />
-        ),
-      },
-    ];
+const dynamicColumns = filtroTipo === "IU" 
+      ? [{ field: "id_circuito", headerName: "ID Circuito", flex: 1 }, { field: "city", headerName: "Proveedor", flex: 1 }]
+      : [{ field: "name", headerName: "Nombre", flex: 1 }, {field: "detalles", headerName: "Detalles Técnicos", flex: 1.5,
+          renderCell: (params: { row: Service; }) => renderDetalles(params.row as Service) 
+        }];
+console.log("Columnas renderizadas:", [...base, ...dynamicColumns, { field: "status", headerName: "Estado", width: 120 }]);
+        return [
+          ...base,
+          ...dynamicColumns,
+          { field: "status", headerName: "Estado", width: 120, renderCell: (params) => (
+      <Chip label={params.value || "Activo"} size="small" sx={{ bgcolor: '#e8f5e9', color: '#2e7d32', fontWeight: 'bold' }} />
+    )}];
   }, [filtroTipo]);
-
+    
+    
   const filteredRows = useMemo(() => {
     return filtroTipo === "Todos" ? rows : rows.filter(r => r.tipoServicio === filtroTipo);
   }, [rows, filtroTipo]);
+  
 
   return (
     <>

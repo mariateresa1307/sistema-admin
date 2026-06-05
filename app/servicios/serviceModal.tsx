@@ -127,8 +127,8 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
             </Grid>
             
             <Grid size={{ xs: 12, md: 6 }}>
-                <Typography sx={labelStyle}>{tipoServicio === "IU" ? "ID Circuito" : "Nombre del Cliente"}</Typography>
-                <TextField fullWidth name={tipoServicio === "IU" ? "id_circuito" : "name"} defaultValue={initialData?.name || initialData?.id_circuito || ""} size="small" />
+                <Typography sx={labelStyle}>{tipoServicio === "IU" ? "Nombre del enlace" : "Nombre del Cliente"}</Typography>
+                <TextField fullWidth name="name" defaultValue={initialData?.name || ""} size="small" />
             </Grid>
 
             <Grid size={6}>
@@ -150,10 +150,10 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
             {/* CAMPOS DINÁMICOS */}
             {tipoServicio === "METROLAN" && (
               <>
-                <Grid size={12}><TextField name="id_circuito" label="ID SERVICIO METROLAN" fullWidth defaultValue={initialData?.id_circuito || ""} size="small" /></Grid>
+                <Grid size={6}><TextField name="id_circuito" label="ID SERVICIO METROLAN" fullWidth defaultValue={initialData?.id_circuito || ""} size="small" /></Grid>
                 <Grid size={6}><TextField name="nodoA" label="NODO A" fullWidth defaultValue={initialData?.nodoA || ""} size="small" /></Grid>
                 <Grid size={6}><TextField name="nodoB" label="NODO B" fullWidth defaultValue={initialData?.nodoB || ""} size="small" /></Grid>
-                <Grid size={12}><TextField name="vlan" label="VLAN / Segmento" fullWidth defaultValue={initialData?.vlan || ""} size="small" /></Grid>
+                <Grid size={6}><TextField name="vlan" label="VLAN / Segmento" fullWidth defaultValue={initialData?.vlan || ""} size="small" /></Grid>
               </>
             )}
 
@@ -172,10 +172,10 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
 
               {tipoServicio === "IU" && (
               <>
-                
+                 <Grid size={6}><TextField name="id_circuito" label="ID Circuito" fullWidth defaultValue={initialData?.id_circuito || ""} size="small" /></Grid>
                 <Grid size={6}><TextField name="vlan" label="VLAN / Segmento" fullWidth defaultValue={initialData?.vlan || ""} size="small" /></Grid>
                 <Grid size={6}><TextField name="nodoA" label="Nodo A y Puerto" fullWidth defaultValue={initialData?.nodoA || ""} size="small" /></Grid>
-                <Grid size={6}><TextField name="nodoB" label="Nodo B" fullWidth defaultValue={initialData?.nodoB} size="small" /></Grid>
+                <Grid size={6}><TextField name="nodoB" label="Nodo B" fullWidth defaultValue={initialData?.nodoB || ""} size="small" /></Grid>
               </>
             )}
 {tipoServicio === "DOG" && (
@@ -196,7 +196,6 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
               <>
                 <Grid size={6}><TextField name="idNetuno" label="ID NETUNO" fullWidth defaultValue={initialData?.id_netuno || ""} size="small" /></Grid>
                 <Grid size={6}><TextField name="contrato" label="Contrato" fullWidth defaultValue={initialData?.contrato || ""} size="small" /></Grid>
-                <Grid size={12}><TextField name="descripcion_premium" label="Detalle de Servicio Premium" fullWidth defaultValue={initialData?.descripcion || ""} size="small" /></Grid>
                 <Grid size={6}><TextField name="nodoA" label="Nodo A" fullWidth defaultValue={initialData?.nodoA || ""} size="small" /></Grid>
                 <Grid size={6}><TextField name="vlan" label="VLAN" fullWidth defaultValue={initialData?.vlan || ""} size="small" /></Grid>
               </>
