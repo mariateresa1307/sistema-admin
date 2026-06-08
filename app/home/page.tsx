@@ -9,21 +9,22 @@ import { Chip, Box } from "@mui/material";
 import TicketModal from '../home/ticketModal'; 
 
 type Tickets = {
-  id: string; 
+  id: string;
   _id: string;
   username: string;
-  email: string; 
+  email: string;
   asuntoCaso: string;
-  ticketCodigo: string; 
+  ticketCodigo: string;
   primerNombre: string;
   primerApellido: string;
-  estado: 'PRELIMINAR' | 'ACTIVO' | 'CERRADO'; 
+  responsable: string;
+  estado: 'PRELIMINAR' | 'ACTIVO' | 'CERRADO';
 };
 
 const mockTickets: Tickets[] = [
-  { id: "1", _id: "64a7b1e8f", username: "op_zero", email: "ACCE-458129", asuntoCaso: "FALLA EN EQUIPO ONT - CLIENTE CARRIER", ticketCodigo: "INC-1544322", primerNombre: "Zero", primerApellido: "Soporte", estado: "ACTIVO" },
-  { id: "2", _id: "64a7b1e9a", username: "analista_noc1", email: "CORE-938201", asuntoCaso: "INCIDENCIA EN LLAMADAS SALIENTES - SIP TRUNK", ticketCodigo: "INC-1544323", primerNombre: "Carlos", primerApellido: "Mendoza", estado: "PRELIMINAR" },
-  { id: "3", _id: "64a7b1e9b", username: "analista_noc2", email: "TRAN-301928", asuntoCaso: "PIXELACIÓN DE IMAGEN - PLATAFORMA OTT", ticketCodigo: "INC-1544324", primerNombre: "María", primerApellido: "Rodríguez", estado: "CERRADO" }
+  { id: "1", _id: "64a7b1e8f", username: "op_zero", email: "ACCE-458129", asuntoCaso: "FALLA EN EQUIPO ONT - CLIENTE CARRIER", ticketCodigo: "INC-1544322", primerNombre: "Zero", primerApellido: "Soporte", responsable: "Zero Soporte", estado: "ACTIVO" },
+  { id: "2", _id: "64a7b1e9a", username: "analista_noc1", email: "CORE-938201", asuntoCaso: "INCIDENCIA EN LLAMADAS SALIENTES - SIP TRUNK", ticketCodigo: "INC-1544323", primerNombre: "Carlos", primerApellido: "Mendoza", responsable: "Carlos Mendoza", estado: "PRELIMINAR" },
+  { id: "3", _id: "64a7b1e9b", username: "analista_noc2", email: "TRAN-301928", asuntoCaso: "PIXELACIÓN DE IMAGEN - PLATAFORMA OTT", ticketCodigo: "INC-1544324", primerNombre: "María", primerApellido: "Rodríguez", responsable: "María Rodríguez", estado: "CERRADO" }
 ];
 
 export default function HomePage() {
@@ -54,12 +55,13 @@ export default function HomePage() {
       id: String(tickets.length + 1),
       _id: Math.random().toString(36).substring(2, 11),
       username: "op_zero",
-      email: nuevoTicketData.numeroTicket || "S/N", 
+      email: nuevoTicketData.numeroTicket || "S/N",
       asuntoCaso: nuevoTicketData.asunto.toUpperCase(),
       ticketCodigo: `INC-${Math.floor(1000000 + Math.random() * 9000000)}`,
       primerNombre: "Zero",
       primerApellido: "Soporte",
-      estado: nuevoTicketData.estatus 
+      responsable: "Zero Soporte",
+      estado: nuevoTicketData.estatus
     };
     setTickets(prev => [nuevoRegistro, ...prev]);
   };

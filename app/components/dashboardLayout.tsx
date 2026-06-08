@@ -4,7 +4,8 @@ import React, { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Box, Drawer, Button, AppBar, Toolbar, List, Typography, IconButton, ListItemButton, ListItemIcon,
   ListItemText,  Avatar, Collapse, Menu, MenuItem, Tooltip, Divider, Stack} from "@mui/material";
-import { Dashboard, People, ExpandLess, ExpandMore, Logout, Settings, VerifiedUser} from "@mui/icons-material";
+import { Dashboard, People, ExpandLess, ExpandMore, Logout, Settings, VerifiedUser }  from "@mui/icons-material";
+import AssessmentIcon from '@mui/icons-material/Assessment';
 import { ThemeProvider, useTheme, type ThemeMode} from "../context/ThemeContext";
 import AcUnitIcon from '@mui/icons-material/AcUnit';
 import TicketModal from "../home/ticketModal";
@@ -48,13 +49,18 @@ const MENU_ITEMS: MenuItem[] = [
       },
     ],
   },
+ 
+  {
+    label: "Reportes",
+    path: "/report",
+    icon: <AssessmentIcon />,
+  },
   {
     label: "Servicios",
     path: "/servicios",
     icon: <LanIcon fontSize="small" />,
   },
 ];
-
 // ============ ESTILOS COMPARTIDOS ============
 const sharedStyles = {
   selectedButton: {
@@ -151,7 +157,7 @@ const UserMenu = React.memo<{
   const [modalOpen, setModalOpen] = React.useState(false);
 
   const handleSaveTicket = (data?: any) => {
-    // Close modal after save; actual save handled inside TicketModal
+    
     setModalOpen(false);
   };
 
@@ -180,7 +186,7 @@ const UserMenu = React.memo<{
         </Box>
       </motion.div>
 
-      {/* Llamada al componente Modal */}
+     
       <TicketModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -285,18 +291,9 @@ const SidebarItem = React.memo<{
 
   return (
     <>
-      <ListItemButton
-        onClick={handleClick}
-        selected={isSelected}
-        sx={sharedStyles.selectedButton}
-      >
-        <ListItemIcon sx={sharedStyles.iconSecondary}>{item.icon}</ListItemIcon>
-        {isOpen && (
-          <ListItemText
-            primary={item.label}
-            sx={{ "& span": { fontWeight: 500 } }}
-          />
-        )}
+    <ListItemButton onClick={handleClick} selected={isSelected} sx={{ "&.Mui-selected": { borderRadius: "8px", mx: 1, bgcolor: "primary.main" } }}>
+        <ListItemIcon sx={{ color: "secondary.main" }}>{item.icon}</ListItemIcon>
+        {isOpen && <ListItemText primary={item.label} sx={{ "& span": { fontWeight: 500 } }} />}
         {isOpen && hasChildren && (subOpen ? <ExpandLess /> : <ExpandMore />)}
       </ListItemButton>
 
@@ -304,19 +301,9 @@ const SidebarItem = React.memo<{
         <Collapse in={subOpen && isOpen} timeout="auto" unmountOnExit>
           <List component="div" disablePadding>
             {item.children!.map((child) => (
-              <ListItemButton
-                key={child.path}
-                sx={{ pl: 4 }}
-                onClick={() => onNavigate(child.path)}
-                selected={pathname === child.path}
-              >
-                <ListItemIcon sx={sharedStyles.iconPrimary}>
-                  {child.icon}
-                </ListItemIcon>
-                <ListItemText
-                  primary={child.label}
-                  sx={sharedStyles.textSecondary}
-                />
+              <ListItemButton key={child.path} sx={{ pl: 4 }} onClick={() => onNavigate(child.path)} selected={pathname === child.path}>
+                <ListItemIcon sx={{ color: "primary.main" }}>{child.icon}</ListItemIcon>
+                <ListItemText primary={child.label} sx={{ "& span": { color: "text.secondary" } }} />
               </ListItemButton>
             ))}
           </List>
@@ -325,7 +312,6 @@ const SidebarItem = React.memo<{
     </>
   );
 });
-SidebarItem.displayName = "SidebarItem";
 
 const Sidebar = React.memo<{
   pathname: string;

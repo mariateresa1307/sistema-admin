@@ -14,10 +14,9 @@ type Service = {
   name: string;
   city: string;
   tipo_cliente: string;
-  idNetuno: string;
+  id_netuno: string;
   idRBS?: string;
-  idDOG?: string;
-  idServicio?: string; 
+  id_circuito?: string;
   serialONT?: string;
   nodoA?: string;
   nodoB?: string;
@@ -25,20 +24,19 @@ type Service = {
   contrato?: number;
   vlan?: number | string;
   status?: string;
-  id_circuito?: string; 
-  instalado?: boolean; 
+  instalado?: boolean;
 };
 
 export default function RBSPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
-  const [filtroTipo, setFiltroTipo] = useState("Todos"); 
+  const [filtroTipo, setFiltroTipo] = useState("Todos");
   const [rows, setRows] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
 
-const isFirstRun = useRef(true);
-  
+  const isFirstRun = useRef(true);
+
   const fetchServices = useCallback(async () => {
     setLoading(true);
     try {
@@ -66,37 +64,40 @@ const isFirstRun = useRef(true);
 
   const renderDetalles = (row: Service) => {
     switch (row.tipoServicio) {
-      case "METROLAN": return `VLAN: ${row.vlan || '-'} | NodoA: ${row.nodoA || '-'}`;
-      case "RBS": return `ID RBS: ${row.idRBS || '-'} | Serial: ${row.serialONT || '-'}`;
-      case "IU": return `ID: ${row.id_circuito || '-'} | Proveedor: ${row.tipo_cliente || '-'}`;
-      case "DOG": return `Circuito: ${row.idDOG || '-'} | Contrato: ${row.contrato || '-'}`;
-       case "RC Business y Premium": return `VLAN: ${row.vlan || '-'} | Equipo: ${row.nodoA || '-'}`;
+      case "METROLAN": return `VLAN: ${row.vlan } | NodoA: ${row.nodoA || '-'}`;
+      case "RBS": return `ID RBS: ${row.idRBS } | Serial: ${row.serialONT || '-'}`;
+      case "IU": return `ID: ${row.id_circuito } | Proveedor: ${row.tipo_cliente || '-'}`;
+      case "DOG": return `Circuito: ${row.id_circuito } | Contrato: ${row.contrato || '-'}`;
+      case "Redes Compartidas": return `VLAN: ${row.vlan } | Equipo: ${row.nodoA || '-'}`;
       default: return "N/A";
     }
   };
 
   const columns = useMemo((): GridColDef[] => {
     const base: GridColDef[] = [{ field: "tipoServicio", headerName: "Tipo", width: 100 }];
-    
-const dynamicColumns = filtroTipo === "IU" 
+
+    const dynamicColumns = filtroTipo === "IU"
       ? [{ field: "id_circuito", headerName: "ID Circuito", flex: 1 }, { field: "city", headerName: "Proveedor", flex: 1 }]
-      : [{ field: "name", headerName: "Nombre", flex: 1 }, {field: "detalles", headerName: "Detalles Técnicos", flex: 1.5,
-          renderCell: (params: { row: Service; }) => renderDetalles(params.row as Service) 
-        }];
-console.log("Columnas renderizadas:", [...base, ...dynamicColumns, { field: "status", headerName: "Estado", width: 120 }]);
-        return [
-          ...base,
-          ...dynamicColumns,
-          { field: "status", headerName: "Estado", width: 120, renderCell: (params) => (
-      <Chip label={params.value || "Activo"} size="small" sx={{ bgcolor: '#e8f5e9', color: '#2e7d32', fontWeight: 'bold' }} />
-    )}];
+      : [{ field: "name", headerName: "Nombre", flex: 1 }, {
+        field: "detalles", headerName: "Detalles Técnicos", flex: 1.5,
+        renderCell: (params: { row: Service; }) => renderDetalles(params.row as Service)
+      }];
+    console.log("Columnas renderizadas:", [...base, ...dynamicColumns, { field: "status", headerName: "Estado", width: 120 }]);
+    return [
+      ...base,
+      ...dynamicColumns,
+      {
+        field: "status", headerName: "Estado", width: 120, renderCell: (params) => (
+          <Chip label={params.value || "Activo"} size="small" sx={{ bgcolor: '#e8f5e9', color: '#2e7d32', fontWeight: 'bold' }} />
+        )
+      }];
   }, [filtroTipo]);
-    
-    
+
+
   const filteredRows = useMemo(() => {
     return filtroTipo === "Todos" ? rows : rows.filter(r => r.tipoServicio === filtroTipo);
   }, [rows, filtroTipo]);
-  
+
 
   return (
     <>
@@ -125,9 +126,9 @@ console.log("Columnas renderizadas:", [...base, ...dynamicColumns, { field: "sta
       <CardSeeServiceModal
         open={isDetailOpen}
         onClose={() => setIsDetailOpen(false)}
-        service={selectedService ? { 
-          ...selectedService, 
-          id_circuito: selectedService.id_circuito || "" 
+        service={selectedService ? {
+          ...selectedService,
+          id_circuito: selectedService.id_circuito || ""
         } as any : null}
         onEditClick={() => { setIsDetailOpen(false); setIsDialogOpen(true); }}
       />

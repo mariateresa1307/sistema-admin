@@ -5,7 +5,7 @@ import {
   DataGridProps,
 } from "@mui/x-data-grid";
 import { useMemo, useState, useEffect, useCallback } from "react";
-import { TextField, Box, InputAdornment, Chip, MenuItem } from "@mui/material";
+import { TextField, Box, InputAdornment, MenuItem } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 
 interface CustomDataGridProps extends Omit<DataGridProps, 'rows'> {
@@ -14,38 +14,42 @@ interface CustomDataGridProps extends Omit<DataGridProps, 'rows'> {
   loading: boolean;
 }
 
-const CustomDataGrid = ({ rows, columns, loading, ...restProps }: CustomDataGridProps) => {
+  const CustomDataGrid = ({ rows, columns, loading, ...restProps }: CustomDataGridProps) => {
   const [isMounted, setIsMounted] = useState(false);
-  
-  // 🔹 INICIALIZACIÓN: Definimos el campo y término iniciales
   const [searchField, setSearchField] = useState<string>(
-    columns.find(col => col.field === 'username') ? 'username' : (columns[0]?.field || "")
-);
- const [searchTerm, setSearchTerm] = useState("");
-  
+    columns.find(col => col.field === 'name') ? 'name' : (columns[0]?.field || "")
+  );
+  const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState(rows);
   const [isSearching, setIsSearching] = useState(false);
-
   const isStatusField = useMemo(() => searchField === 'isActive', [searchField]);
+  const isTipoServicioField = useMemo(() => searchField === 'tipoServicio', [searchField]);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  // Sincronizar: Si el término está vacío, mostramos todo, excepto si es estado (que siempre tiene valor)
   useEffect(() => {
-    if (!searchTerm && !isStatusField) {
+    if (!searchTerm && !isStatusField && !isTipoServicioField) {
       setSearchResults(rows);
     }
-  }, [rows, searchTerm, isStatusField]);
+  }, [rows, searchTerm, isStatusField, isTipoServicioField]);
 
   const mockApiSearch = useCallback(async (field: string, value: string) => {
     return new Promise<any[]>((resolve) => {
       setTimeout(() => {
+        if (!value) {
+          resolve(rows);
+          return;
+        }
+
         const filtered = rows.filter((row: any) => {
-          if (field === 'isActive') {
-            return String(row[field]) === value;
-          }
+        
+          if (field === 'isActive') return String(row[field]) === value;
+         
+          if (field === 'tipoServicio') return row[field] === value;
+          
+          
           const cellValue = String(row[field] || "").toLowerCase();
           return cellValue.includes(value.toLowerCase());
         });
@@ -55,12 +59,6 @@ const CustomDataGrid = ({ rows, columns, loading, ...restProps }: CustomDataGrid
   }, [rows]);
 
   const handleSearch = useCallback(async () => {
-    // Si no hay término y no es campo de estado, mostramos todo
-    if (!searchTerm && !isStatusField) {
-      setSearchResults(rows);
-      return;
-    }
-
     setIsSearching(true);
     try {
       const results = await mockApiSearch(searchField, searchTerm);
@@ -71,7 +69,7 @@ const CustomDataGrid = ({ rows, columns, loading, ...restProps }: CustomDataGrid
     } finally {
       setIsSearching(false);
     }
-  }, [searchTerm, searchField, rows, mockApiSearch, isStatusField]);
+  }, [searchTerm, searchField, rows, mockApiSearch]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -95,8 +93,7 @@ const CustomDataGrid = ({ rows, columns, loading, ...restProps }: CustomDataGrid
           onChange={(e) => {
             const newField = e.target.value;
             setSearchField(newField);
-            // Si cambia a estado, ponemos "true" por defecto, si no, limpiamos
-            setSearchTerm(newField === 'isActive' ? "true" : "");
+            setSearchTerm("");
           }}
           label="Search by"
           size="small"
@@ -109,7 +106,22 @@ const CustomDataGrid = ({ rows, columns, loading, ...restProps }: CustomDataGrid
           ))}
         </TextField>
 
-        {isStatusField ? (
+        {isTipoServicioField ? (
+          <TextField
+            select
+            size="small"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            sx={{ minWidth: 200, flex: 1, maxWidth: 500 }}
+            label="Filtrar por tipo"
+          >
+            <MenuItem value="">Todos</MenuItem>
+            <MenuItem value="RBS">RBS</MenuItem>
+            <MenuItem value="METROLAN">METROLAN</MenuItem>
+            <MenuItem value="IU">IU</MenuItem>
+            <MenuItem value="DOG">DOG</MenuItem>
+          </TextField>
+        ) : isStatusField ? (
           <TextField
             select
             size="small"
@@ -126,7 +138,7 @@ const CustomDataGrid = ({ rows, columns, loading, ...restProps }: CustomDataGrid
             fullWidth
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder={`Search...`}
+            placeholder={`Search ${searchField}...`}
             size="small"
             InputProps={{
               startAdornment: (

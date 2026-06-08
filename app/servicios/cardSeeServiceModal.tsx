@@ -13,9 +13,10 @@ interface ServiceData {
   name: string;
   city: string;
   tipo_cliente: string;
-  idNetuno: string;
+  ipNetuno: string;
+  id_netuno: string;
   idRBS?: string; 
-  idDOG?: string;
+  id_circuito?: string;
   idServicio?: string;
   serialONT?: string;
   nodoA?: string;
@@ -43,13 +44,16 @@ export const CardSeeServiceModal = ({ open, onClose, service, onEditClick }: Car
     switch (s.tipoServicio) {
       case "METROLAN":
         return [
-          { label: "ID SERVICIO", value: s.idServicio },
+          { label: "NOMBRE CLIENTE ", value: s.name },
+           { label: "ID SERVICIO", value: s.id_circuito },
           { label: "NODO A", value: s.nodoA },
           { label: "NODO B", value: s.nodoB },
+           { label: "IP NETUNO", value: s.ipNetuno },
           { label: "VLAN", value: s.vlan }
         ];
       case "RBS":
         return [
+          { label: "ID NETUNO", value: s.id_netuno },
           { label: "ID RBS", value: s.idRBS },
           { label: "SERIAL ONT", value: s.serialONT },
           { label: "NODO A", value: s.nodoA },
@@ -66,18 +70,20 @@ export const CardSeeServiceModal = ({ open, onClose, service, onEditClick }: Car
       case "DOG":
         return [
           { label: "CONTRATO", value: s.contrato },
-          { label: "ID DOG", value: s.idDOG },
+          { label: "ID DOG", value: s.id_circuito },
           { label: "VLAN", value: s.vlan },
           { label: "NODO A", value: s.nodoA },
           { label: "NODO B", value: s.nodoB },
           { label: "NODO OLT", value: s.nodoOLT },
           { label: "SERIAL ONT", value: s.serialONT }
         ];
-      case "RC Business y Premium":
+      case "Redes Compartidas":
         return [
+          {label: "NOMBRE CLIENTE", value: s.name },
           { label: "CONTRATO", value: s.contrato },
+          { label: "VLAN", value: s.vlan },
           { label: "NODO A", value: s.nodoA },
-          { label: "VLAN", value: s.vlan }
+          { label: "IP NETUNO", value: s.ipNetuno },
         ];
       default:
         return [];
@@ -128,12 +134,8 @@ export const CardSeeServiceModal = ({ open, onClose, service, onEditClick }: Car
               <Divider sx={{ mb: 3.5, borderColor: '#f1f5f9' }} />
 
               <Grid container spacing={3}>
-                <Grid size={{ xs: 12, sm: 12 }}>
-                  <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748b', display: 'block' }}>ID NETUNO</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#4f46e5' }}>{service.idNetuno}</Typography>
-                </Grid>
-
-                <Grid size={{ xs: 12, sm: 6 }}>
+             
+                <Grid size={{ xs: 12, sm: 3 }}>
                   <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748b', display: 'block' }}>ESTADO</Typography>
                   <Box sx={{ mt: 0.5 }}>
                     <Chip 
@@ -145,7 +147,7 @@ export const CardSeeServiceModal = ({ open, onClose, service, onEditClick }: Car
                 </Grid>
 
                 {getDynamicFields(service).map((field, idx) => (
-                  <Grid key={idx} size={{ xs: 12, sm: 6 }}>
+                  <Grid key={idx} size={{ xs: 12, sm: 5 }}>
                     <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748b', display: 'block' }}>{field.label}</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 600, color: '#334155' }}>{field.value || '—'}</Typography>
                   </Grid>
