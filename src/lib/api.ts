@@ -29,3 +29,5 @@ export const getService = (search?: string) => api.get(`/service${search ? `?sea
 export const createService = (data: any) => api.post('/service', data);
 export const updateService = (id: string, data: any) => api.put(`/service/${id}`, data);
 export const deleteService = (id: string) => api.delete(`/service/${id}`);
+
+export const saveTicket = (data: any) => api.post('/tickets', data);

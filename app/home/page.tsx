@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { ContainerBox } from "../components/containerBox";
 import { CustomDataGrid } from "../components/customDataGrid";
 import { MetricsCarousel } from "../components/metricsCarousel";
-import { TicketDetailModal } from "../components/cardDetailModal";
+import { TicketDetailModal } from "./cardDetailModal";
 import { GridColDef, GridCellParams } from "@mui/x-data-grid";
 import { Chip, Box } from "@mui/material";
 import TicketModal from '../home/ticketModal'; 

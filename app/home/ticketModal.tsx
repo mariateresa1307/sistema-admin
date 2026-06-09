@@ -11,6 +11,7 @@ import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import PersonIcon from '@mui/icons-material/Person';
 import { FormStepper } from '../components/formStepper';
+import { saveTicket } from '@/lib/api';
 
 // --- FUNCIONES AUXILIARES NECESARIAS ---
 const getLocalDateTimeString = (date = new Date()) => {
@@ -122,6 +123,8 @@ export default function TicketModal({ open, onClose, onSave }: TicketModalProps)
     tEscalado: 0, cCierreSoporte: 0, mttrTotal: 0, turnoAsignado: 'DIURNO'
   });
 
+  const [preSaved, setPreSaved] = useState<boolean>(false);
+
   const pasos = ['Clasificación e Infraestructura', 'Tiempos y Cierre Operativo'];
 
   useEffect(() => {
@@ -146,6 +149,7 @@ export default function TicketModal({ open, onClose, onSave }: TicketModalProps)
         descripcion: plantillaDescripcion
       }));
       setActiveStep(0);
+      setPreSaved(false);
     }
   }, [open]);
 
@@ -155,6 +159,24 @@ export default function TicketModal({ open, onClose, onSave }: TicketModalProps)
   useEffect(() => { if (form.tipoIncidencia === 'INCIDENCIA MASIVA') { setForm(prev => ({ ...prev, tiposervicio: '', subcategoria: '' })); } }, [form.tipoIncidencia]);
   useEffect(() => { if (form.escaladoA === 'SI') { setForm(prev => ({ ...prev, requiereEscalamiento: '' })); } }, [form.escaladoA]);
   useEffect(() => { setForm(prev => ({ ...prev, municipio: '', ciudad: '' })); }, [form.estado]);
+  useEffect(() => {
+    if( activeStep > 0 && !preSaved) {
+      const handleSaveTicket = async () => {
+        await saveTicket({
+          // form
+          caseNumber: form.numeroTicket,
+          incidentType: form.tipoIncidencia,
+          subject: form.asunto,
+          networkCategory: form.categoria,
+          description: form.descripcion,
+          status: "presaved",
+        });
+        setPreSaved(true);
+        console.log("Saved! ")
+      }
+      handleSaveTicket();
+    }
+  }, [activeStep, setPreSaved, preSaved])
 
   useEffect(() => {
     const diffMin = (start: string, end: string) => { if (!start || !end) return 0; const diff = new Date(end).getTime() - new Date(start).getTime(); return diff > 0 ? Math.round(diff / 1000 / 60) : 0; };
