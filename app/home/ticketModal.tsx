@@ -1,9 +1,12 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { 
-  Modal, Box, Typography, TextField, Button, Grid, MenuItem, 
-  Divider, IconButton
+import {
+  Modal, Box, Typography, Autocomplete, TextField, Button, Chip, Grid, MenuItem,
+  Divider, IconButton, Stack,
 } from '@mui/material';
+import { alpha, styled } from '@mui/material/styles';
+
+import Switch, { SwitchProps } from '@mui/material/Switch';
 import CloseIcon from '@mui/icons-material/Close';
 import SaveIcon from '@mui/icons-material/Save';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
@@ -11,13 +14,29 @@ import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import PersonIcon from '@mui/icons-material/Person';
 import { FormStepper } from '../components/formStepper';
-import { saveTicket } from '@/lib/api';
+import saveTicket from '@/lib/api';
+import ElementoModal from '../components/elementoTicketModal';
+import AddIcon from '@mui/icons-material/Add';
 
-// --- FUNCIONES AUXILIARES NECESARIAS ---
+
+const estructuraJerarquica: Record<string, { estado: string, localidades: string[] }> = {
+  "CARACAS": { estado: "DISTRITO CAPITAL", localidades: ["Head End Los Narajos", "Parque Central", "Torre Credi Card", "Cubo Negro", "Parque Cristal", "La Urbina", "El encantado", "Caricuao", "El Valle", "Manzanares", "Santa Mónica", "San Bernandino", "Mariches", "Valle Arriba", "El Paraíso", "Plaza las Américas"] },
+  "GUARENAS": { estado: "MIRANDA", localidades: ["Head End Guatire", "CC Buena Aventura"] },
+  "GUATIRE": { estado: "MIRANDA", localidades: ["Head End Guatire", "CC Buena Aventura"] },
+  "VALENCIA": { estado: "CARABOBO", localidades: ["Head End Valencia", "Flor Amarillo", "San Diego", "Naguanagua", "Sambil"] },
+  "PUERTO CABELLO": { estado: "CARABOBO", localidades: ["Head End Puerto Cabello"] },
+  "MARACAIBO": { estado: "ZULIA", localidades: ["Head End Maracaibo", "El Dividive"] },
+  "SAN CRISTOBAL": { estado: "TACHIRA", localidades: ["Head End San Cristobal", "Las Vegas"] },
+  "MARACAY": { estado: "ARAGUA", localidades: ["HUB Site Maracay"] },
+  "LA VICTORIA": { estado: "ARAGUA", localidades: ["Hub La Victoria"] },
+  "CARRIZAL": { estado: "ALTOS MIRANDINOS", localidades: ["HUB Carrizal"] }
+};
+// --- FUNCIONES AUXILIARES  ---
 const getLocalDateTimeString = (date = new Date()) => {
   const tzOffset = date.getTimezoneOffset() * 60000;
   return new Date(date.getTime() - tzOffset).toISOString().slice(0, 16);
 };
+
 
 const formatToHumanDate = (dateTimeStr: string) => {
   if (!dateTimeStr) return '';
@@ -31,37 +50,36 @@ const modalStyle = {
   top: '50%',
   left: '50%',
   transform: 'translate(-50%, -50%)',
-  width: { xs: '95%', md: 1050 }, 
+  width: { xs: '95%', md: 1050 },
   maxHeight: '92vh',
   bgcolor: 'background.paper',
   boxShadow: 24,
-  p: 4.5, 
+  p: 4.5,
   borderRadius: 3,
   overflowY: 'auto',
 };
 
-const USUARIO_LOGUEADO = "NOC_User"; 
+const USUARIO_LOGUEADO = "NOC_User";
 
 // --- MANTENIMIENTO DE CONFIGURACIONES ---
 const listaGenericaMantenimiento = ["SIN GESTION", "RECURSOS", "SUMINISTRO ELECTRICO", "CONFIGURACION", "EQUIPO AVERIADO"];
 
 const subcategoriasPorServicio: Record<string, string[]> = {
   SIN_AFECTACION: ["SOPORTE PREVENTIVO", "MONITOREO DE RUTINA", "SIN ALARMAS ACTIVA"],
-  INTERNET: ["ALTA LATENCIA","INCONSISTENCIAS EN RECURSOS ASIGNADOS ", "CONEXIÓN INTERMITENTE", "NO ALCANZA EL ANCHO DE BANDA", "PÉRDIDA DE PAQUETES", "SIN CONEXIÓN"],
-  TELEFONIA: ["INCIDENCIA EN LLAMADAS ENTRANTES", "INCIDENCIA EN LLAMADAS SALIENTES", "INTERFERENCIAS","SEÑALIZACION ", "TONO OCUPADO","SIN TONO"],
-  DATOS: ["CONEXIÓN INTERMITENTE", "MONITOREO", "PÉRDIDA DE PAQUETES","NO ALCANZA LA CAPACIDAD DE TRANSPORTE", "SIN CONEXIÓN"],
-  TELEVISION_OTT: ["NO VE ALGUNOS CANALES", "PIXELACIÓN DE IMAGEN", "PROBLEMAS DE AUDIO","ELIMINACIÓN DE CORREOS DE LA PLATAFORMA OTT", "SIN ACCESO"],
-  // Se agrega categoría para mantenimiento
-  MANTENIMIENTO: ["PROGRAMADA", "URGENTE", "PREVENTIVA", "CORRECTIVA"] 
+  INTERNET: ["ALTA LATENCIA", "INCONSISTENCIAS EN RECURSOS ASIGNADOS ", "CONEXIÓN INTERMITENTE", "NO ALCANZA EL ANCHO DE BANDA", "PÉRDIDA DE PAQUETES", "SIN CONEXIÓN"],
+  TELEFONIA: ["INCIDENCIA EN LLAMADAS ENTRANTES", "INCIDENCIA EN LLAMADAS SALIENTES", "INTERFERENCIAS", "SEÑALIZACION ", "TONO OCUPADO", "SIN TONO"],
+  DATOS: ["CONEXIÓN INTERMITENTE", "MONITOREO", "PÉRDIDA DE PAQUETES", "NO ALCANZA LA CAPACIDAD DE TRANSPORTE", "SIN CONEXIÓN"],
+  TELEVISION_OTT: ["NO VE ALGUNOS CANALES", "PIXELACIÓN DE IMAGEN", "PROBLEMAS DE AUDIO", "ELIMINACIÓN DE CORREOS DE LA PLATAFORMA OTT", "SIN ACCESO"],
+  MANTENIMIENTO: ["PROGRAMADA", "URGENTE", "PREVENTIVA", "CORRECTIVA"]
 };
 
 const plataformasPorCategoria: Record<string, string[]> = {
-  CORE: ["ENLACE INTERNACIONAL", "ROUTER CORE", "CGNAT","CDN","FIREWALL","DNS","CORE OTT","CORE TELEFONIA"],
-  TRANSPORTE: ["ROUTER DE DISTRIBUCION","ENLACE INTERURBANO","ROUTER AAA", "SWITCH"],
-  ACCESO: ["EQUIPO OLT", "EQUIPO IAD", "EQUIPO GATEWAY", "EQUIPO SWICTH"],
+  CORE: ["ENLACE INTERNACIONAL", "ROUTER CORE", "CGNAT", "CDN", "FIREWALL", "DNS", "CORE OTT", "CORE TELEFONIA"],
+  TRANSPORTE: ["ROUTER DE DISTRIBUCION", "ENLACE INTERURBANO", "ROUTER AAA", "SWITCH"],
+  ACCESO: ["ONT", " IAD", " GATEWAY", " SWICTH"],
   INFRAESTRUCTURA: ["ELECTRICA", "REFRIGERACION"],
-  COMPONENTES: ["DWDM","MODULOS","FIBRA OPTICA","TARJETA","PUERTO"],
-  IT: ["SISTEMAS IT INTERNAL","BASE DE DATOS","SERVIDORES","DNS"]
+  COMPONENTES: ["DWDM", "MODULOS", "FIBRA OPTICA", "TARJETA", "PUERTO"],
+  IT: ["SISTEMAS IT INTERNAL", "BASE DE DATOS", "SERVIDORES", "DNS"]
 };
 
 const serviciosPorPlataforma: Record<string, string[]> = {
@@ -76,32 +94,21 @@ const serviciosPorPlataforma: Record<string, string[]> = {
   "ROUTER DE DISTRIBUCION": listaGenericaMantenimiento,
   "ROUTER AAA": listaGenericaMantenimiento,
   "SWITCH": listaGenericaMantenimiento,
-  "EQUIPO OLT": listaGenericaMantenimiento,
-  "EQUIPO IAD": listaGenericaMantenimiento,
-  "EQUIPO GATEWAY": listaGenericaMantenimiento,
-  "EQUIPO SWICTH": listaGenericaMantenimiento,
-  "ELECTRICA": ["RED PUBLICA","INVERSOR","BREAKER","RECTIFICADOR","UPS","PLANTA ELECTRICA"],
-  "REFRIGERACION": ["TEMPRATURA ALTA","SUMINISTRO ELECTRICO","FALLA EN EQUIPO DE REFRIGERACION"],
-  "DWDM": ["CORTE DE FIBRA", "MODULO","TARJETA","PATCHCORD","PIGTAIL","CONFIGURACION","ATENUACION","INTERMITENCIAS"],
+  "ONT": listaGenericaMantenimiento,
+  " IAD": listaGenericaMantenimiento,
+  " GATEWAY": listaGenericaMantenimiento,
+  " SWICTH": listaGenericaMantenimiento,
+  "ELECTRICA": ["RED PUBLICA", "INVERSOR", "BREAKER", "RECTIFICADOR", "UPS", "PLANTA ELECTRICA"],
+  "REFRIGERACION": ["TEMPRATURA ALTA", "SUMINISTRO ELECTRICO", "FALLA EN EQUIPO DE REFRIGERACION"],
+  "DWDM": ["CORTE DE FIBRA", "MODULO", "TARJETA", "PATCHCORD", "PIGTAIL", "CONFIGURACION", "ATENUACION", "INTERMITENCIAS"],
   "MODULOS": ["TRANCEIVER", "SFP", "PIGTAIL", "QSFP"],
   "FIBRA OPTICA": ["CORTE DE FIBRA", "ATNUACION", "FIBRA DAÑADA", "CONEXION SUELTA"],
   "TARJETA": ["FALLA EN TARJETA", "TARJETA NO RECONOCIDA", "TARJETA CON ERRORES"],
-  "PUERTO": ["PUERTO CAIDO", "PUERTO CON ERRORES", "PUERTO NO RECONOCIDO","PUERTO DAÑADO"],
+  "PUERTO": ["PUERTO CAIDO", "PUERTO CON ERRORES", "PUERTO NO RECONOCIDO", "PUERTO DAÑADO"],
   "SISTEMAS IT INTERNAL": ["FALLA EN APLICACION", "FALLA EN SISTEMA OPERATIVO", "FALLA EN BASE DE DATOS", "FALLA EN SERVIDOR", "FALLA EN DNS"],
   "BASE DE DATOS": ["FALLA EN CONSULTAS", "FALLA EN RESPALDOS", "FALLA EN REPLICACION"],
   "SERVIDORES": ["CAIDA DEL SERVIDOR", "INTERMITENCIA DEL SERVIDOR", "RENDIMIENTO LENTO"],
   "DNS": ["RESOLUCION LENTA", "FALLA EN RESOLUCION", "CONFIGURACION INCORRECTA"]
-};
-
-const estadosDisponibles = ["MIRANDA", "DISTRITO CAPITAL", "CARABOBO", "ZULIA","TACHIRA","ARAGUA","ALTOS MIRANDINOS"];
-const ciudadesPorEstado: Record<string, string[]> = {
-  "MIRANDA": ["CARACAS", "GUARENAS", "GUATIRE"],
-  "DISTRITO CAPITAL": ["CARACAS"],
-  "CARABOBO": ["VALENCIA", "PUERTO CABELLO"],
-  "ZULIA": ["MARACAIBO"],
-  "TACHIRA": ["SAN CRISTOBAL"],
-  "ARAGUA": ["MARACAY", "LA VICTORIA"],
-  "ALTOS MIRANDINOS": ["CARRIZAL"]
 };
 
 interface TicketModalProps {
@@ -112,20 +119,57 @@ interface TicketModalProps {
 
 export default function TicketModal({ open, onClose, onSave }: TicketModalProps) {
   const [activeStep, setActiveStep] = useState(0);
-  
+  const [openModal, setOpenModal] = useState(false);
+
+  // Listas para autocompletar
+  const [contrato, setContrato] = useState(['Opcion 1', 'Opcion 2']);
+  const [detallesFallas, setDetallesFallas] = useState([
+    'POTENCIA FUERA DE RANGO',
+    'FALLA ONT', 'IAD']);
+
+
+
+  const label = { slotProps: { input: { 'aria-label': 'Color switch demo' } } };
+
+
   const [form, setForm] = useState({
-    numeroTicket: '', tipoIncidencia: 'INCIDENCIA PUNTUAL', asunto: '', categoria: '', plataforma: '', 
-    tipoCliente: '', tiposervicio:'', subcategoria: '', estado: '', municipio: '', ciudad: '',
+    numeroTicket: '', tipoIncidencia: 'INCIDENCIA PUNTUAL', asunto: '', categoria: '', plataforma: '',
+    tipoCliente: '', tiposervicio: '', subcategoria: '', estado: '', municipio: '', ciudad: '', localidad: '',
     nodo: '', operatorResponsable: USUARIO_LOGUEADO, ttZoho: '', ttClienteProveedor: '',
-    horaInicioFalla: '', horaDeteccionNoc: '', horaInicioAtencion: '', horaEscalamiento: '', 
-    horaFinAfectacion: '', horaCierreFalla: '', requiereEscalamiento: 'NO', escaladoA: '', 
-    causaRaiz: '', estatus: 'PRELIMINAR', descripcion: '', tDeteccion: 0, tAtencion: 0, 
+    horaInicioFalla: '', horaDeteccionNoc: '', horaInicioAtencion: '', horaEscalamiento: '',
+    horaFinAfectacion: '', horaCierreFalla: '', requiereEscalamiento: 'NO', escaladoA: '',
+    causaRaiz: '', SolucionCaso: '', estatus: 'PRELIMINAR', descripcion: '', tDeteccion: 0, tAtencion: 0,
     tEscalado: 0, cCierreSoporte: 0, mttrTotal: 0, turnoAsignado: 'DIURNO'
   });
 
   const [preSaved, setPreSaved] = useState<boolean>(false);
-
   const pasos = ['Clasificación e Infraestructura', 'Tiempos y Cierre Operativo'];
+
+  useEffect(() => {
+    if (form.ciudad && estructuraJerarquica[form.ciudad]) {
+      setForm(prev => ({
+        ...prev,
+        estado: estructuraJerarquica[form.ciudad].estado,
+
+      }));
+    } else {
+      setForm(prev => ({ ...prev, estado: '' }));
+    }
+  }, [form.ciudad]);
+
+  useEffect(() => {
+    if (open) {
+      const ahora = getLocalDateTimeString();
+      setForm(prev => ({
+        ...prev,
+        horaDeteccionNoc: ahora,
+        horaInicioAtencion: ahora,
+        operatorResponsable: USUARIO_LOGUEADO,
+      }));
+      setActiveStep(0);
+      setPreSaved(false);
+    }
+  }, [open]);
 
   useEffect(() => {
     if (open) {
@@ -134,17 +178,18 @@ export default function TicketModal({ open, onClose, onSave }: TicketModalProps)
       const fechaFormateadaInicioFalla = form.horaInicioFalla ? formatToHumanDate(form.horaInicioFalla) : '';
       const fechaFormateadaFinAfectacion = form.horaFinAfectacion ? formatToHumanDate(form.horaFinAfectacion) : '';
 
-      const plantillaDescripcion = 
+      const plantillaDescripcion =
         `Fecha y Hora apertura Ticket: ${fechaFormateadaNoc}\n` +
-        `Fecha y hora de fin de reporte: ${fechaFormateadaFinAfectacion}\n` +
+        `Fecha y hora de fin de Afectación: ${fechaFormateadaFinAfectacion}\n` +
         `Fecha y Hora Inicio Afectación: ${fechaFormateadaInicioFalla}\n` +
+
         `Causa:\n` +
         `Solución:`;
 
       setForm(prev => ({
         ...prev,
         horaDeteccionNoc: ahora,
-        horaInicioAtencion: ahora, 
+        horaInicioAtencion: ahora,
         operatorResponsable: USUARIO_LOGUEADO,
         descripcion: plantillaDescripcion
       }));
@@ -158,18 +203,20 @@ export default function TicketModal({ open, onClose, onSave }: TicketModalProps)
   useEffect(() => { if (form.categoria) { const prefijo = form.categoria.substring(0, 4).toUpperCase(); if (!form.numeroTicket || !form.numeroTicket.startsWith(prefijo)) { setForm(prev => ({ ...prev, numeroTicket: `${prefijo}-${Math.floor(100000 + Math.random() * 900000)}` })); } } }, [form.categoria]);
   useEffect(() => { if (form.tipoIncidencia === 'INCIDENCIA MASIVA') { setForm(prev => ({ ...prev, tiposervicio: '', subcategoria: '' })); } }, [form.tipoIncidencia]);
   useEffect(() => { if (form.escaladoA === 'SI') { setForm(prev => ({ ...prev, requiereEscalamiento: '' })); } }, [form.escaladoA]);
-  useEffect(() => { setForm(prev => ({ ...prev, municipio: '', ciudad: '' })); }, [form.estado]);
+
   useEffect(() => {
-    if( activeStep > 0 && !preSaved) {
+    if (activeStep > 0 && !preSaved) {
       const handleSaveTicket = async () => {
         await saveTicket({
-          // form
-          caseNumber: form.numeroTicket,
-          incidentType: form.tipoIncidencia,
-          subject: form.asunto,
-          networkCategory: form.categoria,
-          description: form.descripcion,
-          status: "presaved",
+          method: 'post',
+          data: {
+            caseNumber: form.numeroTicket,
+            incidentType: form.tipoIncidencia,
+            subject: form.asunto,
+            networkCategory: form.categoria,
+            description: form.descripcion,
+            status: "presaved",
+          },
         });
         setPreSaved(true);
         console.log("Saved! ")
@@ -190,14 +237,23 @@ export default function TicketModal({ open, onClose, onSave }: TicketModalProps)
       const t1Formateado = formatToHumanDate(form.horaDeteccionNoc);
       const t0Formateado = form.horaInicioFalla ? formatToHumanDate(form.horaInicioFalla) : '';
       const finAfectacionFormateado = form.horaFinAfectacion ? formatToHumanDate(form.horaFinAfectacion) : '';
-      setForm(prev => { if (!prev.descripcion || prev.descripcion.startsWith("Fecha y Hora apertura Ticket:")) { const lineas = prev.descripcion.split('\n'); lineas[0] = `Fecha y Hora apertura Ticket: ${t1Formateado}`; lineas[1] = `Fecha y hora de fin de reporte: ${finAfectacionFormateado}`; lineas[2] = `Fecha y Hora Inicio Afectación: ${t0Formateado}`; return { ...prev, descripcion: lineas.join('\n') }; } return prev; });
+      setForm(prev => {
+        if (!prev.descripcion || prev.descripcion.startsWith("Fecha y Hora apertura Ticket:")) {
+          const lineas = prev.descripcion.split('\n');
+          lineas[0] = `Fecha y Hora apertura Ticket: ${t1Formateado}`;
+          lineas[1] = `Fecha y hora de fin de Afectación: ${finAfectacionFormateado}`;
+          lineas[2] = `Fecha y Hora Inicio Afectación: ${t0Formateado}`;
+
+          return { ...prev, descripcion: lineas.join('\n') };
+        } return prev;
+      });
     }
   }, [form.horaDeteccionNoc, form.horaInicioFalla, form.horaFinAfectacion]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => { const { name, value } = e.target; setForm(prev => ({ ...prev, [name]: value })); };
   const handleNext = () => setActiveStep((prev) => prev + 1);
   const handleBack = () => setActiveStep((prev) => prev - 1);
-  const handleDateTimeClick = (e: React.MouseEvent<HTMLInputElement>) => { try { (e.target as any).showPicker(); } catch (err) {} };
+  const handleDateTimeClick = (e: React.MouseEvent<HTMLInputElement>) => { try { (e.target as any).showPicker(); } catch (err) { } };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -206,23 +262,13 @@ export default function TicketModal({ open, onClose, onSave }: TicketModalProps)
     const diffMin = (start: string, end: string) => { if (!start || !end) return 0; const diff = new Date(end).getTime() - new Date(start).getTime(); return diff > 0 ? Math.round(diff / 1000 / 60) : 0; };
     let descripcionFinal = form.descripcion;
     const lineas = descripcionFinal.split('\n');
-    if (lineas.length >= 2 && lineas[1].trim() === "Fecha y hora de fin de reporte:") { lineas[1] = `Fecha y hora de fin de reporte: ${cierreFormateado}`; descripcionFinal = lineas.join('\n'); }
+    if (lineas.length >= 2 && lineas[1].trim() === "Fecha y hora de fin de Afectación:") { lineas[1] = `Fecha y hora de fin de Afectación: ${cierreFormateado}`; descripcionFinal = lineas.join('\n'); }
     const finalFormData = { ...form, horaCierreFalla: fechaHoraCierreActual, descripcion: descripcionFinal, cCierreSoporte: diffMin(form.horaInicioAtencion, fechaHoraCierreActual), mttrTotal: diffMin(form.horaInicioFalla, fechaHoraCierreActual), estatus: 'CERRADO' };
     onSave(finalFormData);
     setActiveStep(0);
     onClose();
   };
 
-  const renderServiciosAfectados = () => {
-    // Si es mantenimiento, usa la lista de MANTENIMIENTO
-    if (form.tipoIncidencia === 'VENTANA DE MANTENIMIENTO') {
-      return subcategoriasPorServicio.MANTENIMIENTO.map(s => (<MenuItem key={s} value={s}>{s}</MenuItem>));
-    }
-    // Si tiene plataforma, usa su lista
-    if (serviciosPorPlataforma[form.plataforma]) { return serviciosPorPlataforma[form.plataforma].map(s => (<MenuItem key={s} value={s}>{s}</MenuItem>)); }
-    // Si no, filtra las categorías base
-    return Object.keys(subcategoriasPorServicio).filter(k => k !== 'MANTENIMIENTO').map(s => (<MenuItem key={s} value={s}>{s.replace('_', ' ')}</MenuItem>));
-  };
 
   return (
     <Modal open={open} onClose={onClose}>
@@ -238,19 +284,125 @@ export default function TicketModal({ open, onClose, onSave }: TicketModalProps)
             <Grid size={{ xs: 12, sm: 3 }}><TextField fullWidth disabled label="Número de Caso (Auto)" name="numeroTicket" value={form.numeroTicket} size="small" InputProps={{ startAdornment: <ConfirmationNumberIcon sx={{ color: '#000027', mr: 1, fontSize: '1.1rem' }} /> }} sx={{ bgcolor: '#f0f4f8' }} /></Grid>
             <Grid size={{ xs: 12, sm: 3 }}><TextField select fullWidth required label="Tipo de Incidencia" name="tipoIncidencia" value={form.tipoIncidencia} onChange={handleChange} size="small"><MenuItem value="INCIDENCIA PUNTUAL">INCIDENCIA PUNTUAL</MenuItem><MenuItem value="INCIDENCIA MASIVA">INCIDENCIA MASIVA</MenuItem><MenuItem value="VENTANA DE MANTENIMIENTO">VENTANA DE MANTENIMIENTO</MenuItem></TextField></Grid>
             <Grid size={{ xs: 12, sm: 6 }}><TextField fullWidth required label="Asunto del Caso" name="asunto" value={form.asunto} onChange={handleChange} placeholder="CCS || SERVICIO || VLAN CLIENTE || FALLA" size="small" /></Grid>
-            <Grid size={{ xs: 12, sm: 4 }}><TextField select fullWidth required label="Categoría de Red" name="categoria" value={form.categoria} onChange={handleChange} size="small">{Object.keys(plataformasPorCategoria).map(c => <MenuItem key={c} value={c}>{c}</MenuItem>)}</TextField></Grid>
-            <Grid size={{ xs: 12, sm: 4 }}><TextField select fullWidth required label="Plataforma Tecnológica" name="plataforma" value={form.plataforma} onChange={handleChange} size="small" disabled={!form.categoria}>{(plataformasPorCategoria[form.categoria] || []).map((p) => <MenuItem key={p} value={p}>{p}</MenuItem>)}</TextField></Grid>
-            <Grid size={{ xs: 12, sm: 4 }}><TextField select fullWidth required label="Servicio Afectado" name="tipoCliente" value={form.tipoCliente} onChange={handleChange} size="small" disabled={!form.plataforma}>{renderServiciosAfectados()}</TextField></Grid>
+            <Grid size={{ xs: 12, sm: 4 }}><TextField select fullWidth required label="Categoría de Red" name="categoria" value={form.categoria} onChange={handleChange} size="small">{Object.keys(plataformasPorCategoria).filter(cat => {
+              if (form.tipoIncidencia === 'INCIDENCIA PUNTUAL') { return cat !== 'CORE' && cat !== 'TRANSPORTE'; } return true;
+            })
+              .map(c => (
+                <MenuItem key={c} value={c}>{c}</MenuItem>
+              ))
+            }</TextField></Grid>
+            <Grid size={{ xs: 12, sm: 4 }}><TextField select fullWidth required label="SubCategoría" name="plataforma" value={form.plataforma} onChange={handleChange} size="small" disabled={!form.categoria}>{(plataformasPorCategoria[form.categoria] || []).map((p) => <MenuItem key={p} value={p}>{p}</MenuItem>)}</TextField></Grid>
+            <Grid size={{ xs: 12, sm: 4 }} >
+              <Autocomplete
+                multiple
+                fullWidth
+                options={detallesFallas}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    fullWidth
+                    label="Detalles"
+                    size="small"
+                    InputProps={{
+                      ...params.InputProps,
+                      endAdornment: (
+                        <>
+                          {params.InputProps.endAdornment}
+                          <IconButton onClick={() => setOpenModal(true)} size="small">
+                            <AddIcon />
+                          </IconButton>
+                        </>
+                      ),
+                    }}
+                  />
+                )}
+              />
+              <ElementoModal
+                open={openModal}
+                onClose={() => setOpenModal(false)}
+                onAdd={(nuevo) => setDetallesFallas([...detallesFallas, nuevo])}
+              />
+            </Grid>
             {form.tipoIncidencia !== 'INCIDENCIA MASIVA' && (
               <>
-                <Grid size={{ xs: 12, sm: 4 }}><TextField select fullWidth required label="Subcategoría" name="subcategoria" value={form.subcategoria} onChange={handleChange} size="small" disabled={!form.tipoCliente}>{(subcategoriasPorServicio[form.tipoCliente] || []).map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}</TextField></Grid>
-                <Grid size={{ xs: 12, sm: 4 }}><TextField select fullWidth required label="Tipo de servicio" name="tiposervicio" value={form.tiposervicio} onChange={handleChange} size="small"><MenuItem value="BANCA">BANCA</MenuItem><MenuItem value="CARRIER">CARRIER</MenuItem><MenuItem value="FTTH">FTTH</MenuItem><MenuItem value="FTTO">FTTO</MenuItem><MenuItem value="CORPORATIVO">CORPORATIVO</MenuItem></TextField></Grid>
+                <Grid size={{ xs: 12, sm: 4 }}><TextField select fullWidth required label="Tipo de cliente"
+                  name="tiposervicio" value={form.tiposervicio} onChange={handleChange} size="small">
+                  <MenuItem value="BANCA">BANCA</MenuItem>
+                  <MenuItem value="CARRIER">CARRIER</MenuItem>
+                  <MenuItem value="RESIDENCIAL">RESIDENCIAL</MenuItem>
+                  <MenuItem value="CORPORATIVO">CORPORATIVO</MenuItem></TextField></Grid>
               </>
             )}
-            <Grid size={{ xs: 12, sm: 4 }}><TextField select fullWidth required label="Estado" name="estado" value={form.estado} onChange={handleChange} size="small">{estadosDisponibles.map((est) => <MenuItem key={est} value={est}>{est}</MenuItem>)}</TextField></Grid>
-            <Grid size={{ xs: 12, sm: 4 }}><TextField select fullWidth required label="Ciudad" name="ciudad" value={form.ciudad} onChange={handleChange} size="small" disabled={!form.estado}>{(ciudadesPorEstado[form.estado] || []).map((ciu) => <MenuItem key={ciu} value={ciu}>{ciu}</MenuItem>)}</TextField></Grid>
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <TextField select fullWidth required label="Ciudad" name="ciudad" value={form.ciudad}
+                onChange={(e) => setForm(prev => ({ ...prev, ciudad: e.target.value, estado: '', localidad: '' }))}
+                size="small"> {Object.keys(estructuraJerarquica).map((ciu) => (<MenuItem key={ciu} value={ciu}>{ciu}</MenuItem>))}
+              </TextField>
+            </Grid>
+            {form.ciudad && (
+              <>
+                <Grid size={{ xs: 12, sm: 4 }}><TextField fullWidth disabled label="Estado" value={form.estado}
+                  size="small" /></Grid>
+
+                <Grid size={{ xs: 12, sm: 4 }}><TextField select fullWidth required label="Localidad" name="localidad"
+                  value={form.localidad} onChange={handleChange} size="small">
+                  {(estructuraJerarquica[form.ciudad]?.localidades || []).map((loc) => (
+                    <MenuItem key={loc} value={loc}>{loc}</MenuItem>
+                  ))}
+                </TextField>
+                </Grid>
+              </>
+            )}
+
+
             {form.tipoIncidencia !== 'INCIDENCIA MASIVA' && (<Grid size={{ xs: 12, sm: 4 }}><TextField fullWidth required label="Nodo / ODF Afectado" name="nodo" value={form.nodo} onChange={handleChange} size="small" disabled={!form.ciudad} /></Grid>)}
+
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <Autocomplete
+                multiple
+                fullWidth
+                options={contrato}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    fullWidth
+                    label="Servicios afectados"
+                    size="small"
+                    InputProps={{
+                      ...params.InputProps,
+                      endAdornment: (
+                        <>
+                          {params.InputProps.endAdornment}
+                          <IconButton onClick={() => setOpenModal(true)} size="small">
+                            <AddIcon />
+                          </IconButton>
+                        </>
+                      ),
+                    }}
+                  />
+                )}
+              />
+              <ElementoModal
+                open={openModal}
+                onClose={() => setOpenModal(false)}
+                onAdd={(nuevo) => setContrato([...contrato, nuevo])}
+              />
+            </Grid>
+
+            <Grid size={{ xs: 4 }}>
+
+              <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+
+                <Switch {...label} defaultChecked />
+                <Typography>Afectacion</Typography>
+              </Stack>
+            </Grid>
+
+            <Grid size={{ xs: 12 }}>
+              < TextField fullWidth id="outlined-multiline-flexible" label="Bitacora" multiline maxRows={4} />
+            </Grid>
           </Grid>
+
         ) : (
           <Grid container spacing={2.5}>
             <Grid size={{ xs: 12 }} sx={{ mb: -1 }}><Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#333' }}>3. Tiempos de Ciclo de Falla</Typography></Grid>
@@ -271,6 +423,8 @@ export default function TicketModal({ open, onClose, onSave }: TicketModalProps)
             <Grid size={{ xs: 12, sm: 4 }}><TextField select fullWidth label="¿Escalar a Especialistas?" name="requiereEscalamiento" value={form.requiereEscalamiento} onChange={handleChange} size="small"><MenuItem value="NO">No</MenuItem><MenuItem value="SI">Sí</MenuItem></TextField></Grid>
             {form.requiereEscalamiento !== 'NO' && (<Grid size={{ xs: 12, sm: 4 }}><TextField fullWidth label="Grupo Destino" name="escaladoA" value={form.escaladoA} onChange={handleChange} size="small" /></Grid>)}
             <Grid size={{ xs: 12, sm: 4 }}><TextField fullWidth label="Causa Raíz" name="causaRaiz" value={form.causaRaiz} onChange={handleChange} size="small" /></Grid>
+            <Grid size={{ xs: 12, sm: 4 }}><TextField fullWidth label="Solucion Caso" name="SolucionCaso" value={form.SolucionCaso} onChange={handleChange} size="small" /></Grid>
+
             <Grid size={{ xs: 12, sm: 4 }}><TextField fullWidth disabled label="Turno" value={form.turnoAsignado} size="small" sx={{ bgcolor: '#f0f4f8' }} /></Grid>
             <Grid size={{ xs: 12, sm: 4 }}><TextField fullWidth disabled label="Operador" name="operatorResponsable" value={form.operatorResponsable} size="small" InputProps={{ startAdornment: <PersonIcon sx={{ color: '#000027', mr: 1, fontSize: '1.1rem' }} /> }} sx={{ bgcolor: '#f0f4f8' }} /></Grid>
             <Grid size={{ xs: 12, sm: 4 }}><TextField fullWidth label="TT-ZOHO" name="ttZoho" value={form.ttZoho} onChange={handleChange} size="small" /></Grid>
@@ -291,3 +445,5 @@ export default function TicketModal({ open, onClose, onSave }: TicketModalProps)
     </Modal>
   );
 }
+
+// styled is imported from @mui/material/styles

@@ -45,6 +45,7 @@ export const CardSeeServiceModal = ({ open, onClose, service, onEditClick }: Car
       case "METROLAN":
         return [
           { label: "NOMBRE CLIENTE ", value: s.name },
+          { label: "TIPO SERVICIO", value: s.tipoServicio },
            { label: "ID SERVICIO", value: s.id_circuito },
           { label: "NODO A", value: s.nodoA },
           { label: "NODO B", value: s.nodoB },
@@ -54,6 +55,7 @@ export const CardSeeServiceModal = ({ open, onClose, service, onEditClick }: Car
       case "RBS":
         return [
           { label: "ID NETUNO", value: s.id_netuno },
+           { label: "TIPO CLIENTE", value: s.tipo_cliente },
           { label: "ID RBS", value: s.idRBS },
           { label: "SERIAL ONT", value: s.serialONT },
           { label: "NODO A", value: s.nodoA },

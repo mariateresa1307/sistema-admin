@@ -29,8 +29,8 @@ export default function FiltrosSuperiores() {
   const [toDate, setToDate] = React.useState<Dayjs | null>(null);
   const [users, setUsers] = React.useState<{ id: string; name: string, selected: boolean }[]>([
     {
-      id: "6a276a18383ce2a8f29d58e5",
-      name: "Usuario 1",
+      id: "6a0f5053384dc174667e47aa",
+      name: "testuser",
       selected: true,
     }
   ]);
@@ -38,10 +38,13 @@ export default function FiltrosSuperiores() {
   const downloadExcel = () => { 
     const formData = new URLSearchParams();
 
-    formData.append("startDate", fromDate.toISOString())
-    formData.append("endDate", toDate.toISOString())
-    formData.append("userId", users.find(u => u.selected).id)
-    
+    formData.append("startDate", fromDate?.toISOString() ?? "");
+    formData.append("endDate", toDate?.toISOString() ?? "");
+
+    const selectedUser = users.find((u) => u.selected);
+    if (selectedUser) {
+      formData.append("testuser", selectedUser.id);
+    }
 
     window.open(`http://localhost:4000/audit/export?${formData.toString()}`, '_blank');
   }

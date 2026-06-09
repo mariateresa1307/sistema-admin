@@ -183,7 +183,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
               )}
               {tipoServicio === "RBS" && (
                 <>
-                  <Grid size={6}><TextField name="id_netuno" label="ID NETUNO" fullWidth defaultValue={initialData?.id_netuno || ""} size="small" /></Grid>
+                  <Grid size={6}><TextField name="id_circuito" label="ID Circuito" fullWidth defaultValue={initialData?.id_circuito || ""} size="small" /></Grid>
                   <Grid size={6}><TextField name="idRBS" label="ID RBS" fullWidth defaultValue={initialData?.idRBS || ""} size="small" /></Grid>
                   <Grid size={6}><TextField name="serialONT" label="Serial ONT" fullWidth defaultValue={initialData?.serialONT || ""} size="small" /></Grid>
                   <Grid size={6}><TextField name="nodoA" label="Nodo A y Puerto" fullWidth defaultValue={initialData?.nodoA || ""} size="small" /></Grid>
