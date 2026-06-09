@@ -2,19 +2,17 @@
 
 import React, { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { Box, Drawer, Button, AppBar, Toolbar, List, Typography, IconButton, ListItemButton, ListItemIcon,
-  ListItemText,  Avatar, Collapse, Menu, MenuItem, Tooltip, Divider, Stack} from "@mui/material";
-import { Dashboard, People, ExpandLess, ExpandMore, Logout, Settings, VerifiedUser }  from "@mui/icons-material";
-import AssessmentIcon from '@mui/icons-material/Assessment';
-import { ThemeProvider, useTheme, type ThemeMode} from "../context/ThemeContext";
+import { Box, Drawer, Button, AppBar, Toolbar, List, Typography, IconButton, ListItemButton, ListItemIcon, ListItemText, Avatar, Collapse,  Menu,
+  MenuItem, Tooltip, Divider, Stack} from "@mui/material";
+import { Dashboard, People,  ExpandLess, ExpandMore, Logout, Settings, VerifiedUser, Assessment, } from "@mui/icons-material";
+import {  ThemeProvider, useTheme, type ThemeMode} from "../context/ThemeContext";
 import AcUnitIcon from '@mui/icons-material/AcUnit';
 import TicketModal from "../home/ticketModal";
 import { motion } from "motion/react";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
-import LanIcon from '@mui/icons-material/Lan';
 
-import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import SettingsSuggestIcon from "@mui/icons-material/SettingsSuggest";
+
 const DRAWER_WIDTH = 260;
 const APP_BAR_HEIGHT = 64;
 
@@ -41,7 +39,16 @@ const MENU_ITEMS: MenuItem[] = [
     path: "#",
     icon: <People />,
     children: [
-      { label: "Usuarios", path: "/user", icon: <AccountCircleIcon fontSize="small" /> },
+      { 
+        label: "Usuarios", 
+        path: "/user", 
+        icon: <People fontSize="small" /> 
+      },
+      {
+        label: "Reportes", // ✅ Opción agregada antes de Auditoría
+        path: "/report",
+        icon: <Assessment fontSize="small" />,
+      },
       {
         label: "Auditoría",
         path: "/admin",
@@ -49,18 +56,13 @@ const MENU_ITEMS: MenuItem[] = [
       },
     ],
   },
- 
-  {
-    label: "Reportes",
-    path: "/report",
-    icon: <AssessmentIcon />,
-  },
   {
     label: "Servicios",
     path: "/servicios",
-    icon: <LanIcon fontSize="small" />,
+    icon: <People fontSize="small" />,
   },
 ];
+
 // ============ ESTILOS COMPARTIDOS ============
 const sharedStyles = {
   selectedButton: {
@@ -85,6 +87,7 @@ function useUserData() {
     primerApellido: "S",
   });
   const [mounted, setMounted] = React.useState(false);
+  
   React.useEffect(() => {
     setMounted(true);
     const stored = localStorage.getItem("userData");
@@ -101,7 +104,6 @@ function useUserData() {
 }
 
 // ============ SUBCOMPONENTES ============
-
 
 const ThemeSwitcher = React.memo<{
   isDark: boolean;
@@ -157,7 +159,6 @@ const UserMenu = React.memo<{
   const [modalOpen, setModalOpen] = React.useState(false);
 
   const handleSaveTicket = (data?: any) => {
-    
     setModalOpen(false);
   };
 
@@ -186,12 +187,12 @@ const UserMenu = React.memo<{
         </Box>
       </motion.div>
 
-     
       <TicketModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onSave={handleSaveTicket}
       />
+      
       <Avatar sx={{ bgcolor: "secondary.main", width: 38, height: 38, ml: 2 }}>
         {userData.primerNombre[0]?.toUpperCase()}
       </Avatar>
@@ -291,9 +292,18 @@ const SidebarItem = React.memo<{
 
   return (
     <>
-    <ListItemButton onClick={handleClick} selected={isSelected} sx={{ "&.Mui-selected": { borderRadius: "8px", mx: 1, bgcolor: "primary.main" } }}>
-        <ListItemIcon sx={{ color: "secondary.main" }}>{item.icon}</ListItemIcon>
-        {isOpen && <ListItemText primary={item.label} sx={{ "& span": { fontWeight: 500 } }} />}
+      <ListItemButton
+        onClick={handleClick}
+        selected={isSelected}
+        sx={sharedStyles.selectedButton}
+      >
+        <ListItemIcon sx={sharedStyles.iconSecondary}>{item.icon}</ListItemIcon>
+        {isOpen && (
+          <ListItemText
+            primary={item.label}
+            sx={{ "& span": { fontWeight: 500 } }}
+          />
+        )}
         {isOpen && hasChildren && (subOpen ? <ExpandLess /> : <ExpandMore />)}
       </ListItemButton>
 
@@ -301,9 +311,19 @@ const SidebarItem = React.memo<{
         <Collapse in={subOpen && isOpen} timeout="auto" unmountOnExit>
           <List component="div" disablePadding>
             {item.children!.map((child) => (
-              <ListItemButton key={child.path} sx={{ pl: 4 }} onClick={() => onNavigate(child.path)} selected={pathname === child.path}>
-                <ListItemIcon sx={{ color: "primary.main" }}>{child.icon}</ListItemIcon>
-                <ListItemText primary={child.label} sx={{ "& span": { color: "text.secondary" } }} />
+              <ListItemButton
+                key={child.path}
+                sx={{ pl: 4 }}
+                onClick={() => onNavigate(child.path)}
+                selected={pathname === child.path}
+              >
+                <ListItemIcon sx={sharedStyles.iconPrimary}>
+                  {child.icon}
+                </ListItemIcon>
+                <ListItemText
+                  primary={child.label}
+                  sx={sharedStyles.textSecondary}
+                />
               </ListItemButton>
             ))}
           </List>
@@ -312,13 +332,14 @@ const SidebarItem = React.memo<{
     </>
   );
 });
+SidebarItem.displayName = "SidebarItem";
 
 const Sidebar = React.memo<{
   pathname: string;
   onNavigate: (path: string) => void;
   onLogout: () => void;
 }>(({ pathname, onNavigate, onLogout }) => {
-  const [open] = React.useState(true); // Considera exponerlo si necesitas responsive
+  const [open] = React.useState(true);
 
   return (
     <Drawer
@@ -425,7 +446,6 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         component="main"
         sx={{
           paddingTop: `${APP_BAR_HEIGHT + 32}px`,
-          // paddingLeft: `${DRAWER_WIDTH + 16}px`,
           width: "100%",
           minHeight: "100vh",
           boxSizing: "border-box",
@@ -436,7 +456,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           justifyContent="center"
           sx={{ maxWidth: 1400, mx: "auto", px: 2 }}
         >
-          <Box sx={{ width: "91.666%" /* 11/12 */ }}>{children}</Box>
+          <Box sx={{ width: "91.666%" }}>{children}</Box>
         </Stack>
       </Box>
     </Box>
