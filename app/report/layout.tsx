@@ -1,6 +1,6 @@
 import DashboardLayout from '../components/dashboardLayout';
 
-export default function ServiciosLayout({
+export default function ReportLayout({
   children,
 }: {
   children: React.ReactNode;
