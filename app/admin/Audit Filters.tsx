@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useEffect } from "react";
 import {
   Box,
   Typography,
@@ -23,17 +23,17 @@ import {
 import { LocalizationProvider, DatePicker } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs, { Dayjs } from "dayjs";
+import { getUsers } from "@/lib/api";
+import { UserDTO } from "@/lib/types/user.dto";
+
+interface UserSelectOpt extends UserDTO {
+  selected: boolean;
+}
 
 export default function FiltrosSuperiores() {
   const [fromDate, setFromDate] = React.useState<Dayjs | null>(null);
   const [toDate, setToDate] = React.useState<Dayjs | null>(null);
-  const [users, setUsers] = React.useState<{ id: string; name: string, selected: boolean }[]>([
-    {
-      id: "6a0f5053384dc174667e47aa",
-      name: "testuser",
-      selected: true,
-    }
-  ]);
+  const [users, setUsers] = React.useState<Array<UserSelectOpt>>([]);
 
   const downloadExcel = () => { 
     const formData = new URLSearchParams();
@@ -43,18 +43,24 @@ export default function FiltrosSuperiores() {
 
     const selectedUser = users.find((u) => u.selected);
     if (selectedUser) {
-      formData.append("testuser", selectedUser.id);
+      formData.append("testuser", selectedUser._id);
     }
 
     window.open(`http://localhost:4000/audit/export?${formData.toString()}`, '_blank');
   }
 
+  useEffect(() => {
+    getUsers().then((result: any) => {
+      setUsers(result.data?.map((u: UserDTO) => ({...u, selected: false})))
+    })
+  }, [setUsers])
+
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
-      <Card
+      <Card 
+      elevation={0}
         sx={{
           borderRadius: "16px",
-          boxShadow: "0 4px 20px rgba(0,0,0,0.05)",
           border: "1px solid",
           borderColor: "divider",
         }}
@@ -72,7 +78,7 @@ export default function FiltrosSuperiores() {
 
           <Grid container spacing={2}>
             {/* Búsqueda por Usuario */}
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <TextField
                 select
                 fullWidth
@@ -82,27 +88,15 @@ export default function FiltrosSuperiores() {
               >
                 {
                   users.map(user => (
-                    <MenuItem key={user.id} value={user.id}>{user.name}</MenuItem>
+                    <MenuItem key={user._id} value={user._id}>{user.primerNombre} {user.primerApellido}</MenuItem>
                   ))
                 } 
               </TextField>
             </Grid>
 
-            {/* Selección de Acción */}
-            {/*<Grid size={{ xs: 12, sm: 4 }}>
-                  <TextField select fullWidth size="small" label="Acción Realizada" defaultValue="">
-                    <MenuItem value="PUT">Edición (PUT)</MenuItem>
-                    <MenuItem value="POST">Creación (POST)</MenuItem>
-                    <MenuItem value="DELETE">Eliminación (DELETE)</MenuItem>
-                    <MenuItem value="LOGIN">Inicio de Sesión</MenuItem>
-                  </TextField>
-                </Grid>
-                */}
-
-
 
             {/* Fecha Desde */}
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <DatePicker
                 label="Fecha de inicio"
                 value={fromDate}
@@ -112,7 +106,7 @@ export default function FiltrosSuperiores() {
             </Grid>
 
             {/* Fecha Hasta */}
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <DatePicker
                 label="Fecha de finalización"
                 value={toDate}

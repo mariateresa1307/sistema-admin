@@ -19,7 +19,7 @@ api.interceptors.request.use((config) => {
 
 
 export default api;
-export const getUsers = (search?: string) => api.get(`/user${search ? `?search=${search}` : ''}`);
+export const getUsers = (search?: string, params?: any) => api.get(`/user${search ? `?search=${search}` : ''}`, { params });
 export const createUser = (data: any) => api.post('/user', data);
 export const updateUser = (id: string, data: any) => api.put(`/user/${id}`, data);
 export const deleteUser = (id: string) => api.delete(`/user/${id}`);
