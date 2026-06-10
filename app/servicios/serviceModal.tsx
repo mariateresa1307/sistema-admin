@@ -6,19 +6,23 @@ import {
 } from "@mui/material";
 import Grid from "@mui/material/Grid";
 import { Close as CloseIcon, CloudUpload as UploadIcon, PhotoCamera, Schema as DiagramIcon, AddPhotoAlternate as AddIcon } from "@mui/icons-material";
+import { Switch, FormControlLabel } from "@mui/material";
+
 
 const CIUDADES_VENEZUELA = ["Caracas", "Maracaibo", "Valencia", "Guarenas / Guatire", "Barquisimeto", "Maracay", "San Cristóbal", "Mérida", "Puerto la cruz"].sort();
 const TIPOS_SERVICIO = ["DOG", "Redes Compartidas", "METROLAN", "RBS", "IU"];
 const TIPO_CLIENTE_FULL = ["TELEFONICA", "GALANET", "DIGITEL", "MOVILNET", "INTER", "EWINET", "VNET"];
 const PROVEEDOR_IU = ["INTER", "DIGITEL", "VNET"];
 const TIPOS_CLIENTE_METROLAN = ["CARRIER", "BANCA", "CORPO"];
+const PROVEEDORES_UM = ["Inter", "Digitel", "Vnet", "Movistar", "Otro"];
 
 export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servicio", initialData }: any) => {
   const [tipoServicio, setTipoServicio] = React.useState(initialData?.tipoServicio || "RBS");
   const [imagePreview, setImagePreview] = React.useState<string | null>(initialData?.imageUrl || null);
   const [showImageSection, setShowImageSection] = React.useState(!!initialData?.imageUrl);
-  
-  // Estado de notificación con estructura limpia
+
+  const [hasUltimaMilla, setHasUltimaMilla] = React.useState(initialData?.ultimaMilla || false);
+  const [proveedorUM, setProveedorUM] = React.useState(initialData?.proveedorUM || "");
   const [notification, setNotification] = React.useState({ open: false, message: '', severity: 'success' as any });
 
   const triggerNotification = (message: string, severity: 'success' | 'error') => {
@@ -28,6 +32,8 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
   React.useEffect(() => {
     if (initialData?.tipoServicio) {
       setTipoServicio(initialData.tipoServicio);
+      setHasUltimaMilla(!!initialData.ultimaMilla);
+      setProveedorUM(initialData.proveedorUM || "");
     }
   }, [initialData]);
 
@@ -49,6 +55,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
       reader.readAsDataURL(file);
     }
   };
+
 
   const handleSave = async () => {
     if (!formRef.current) return;
@@ -72,12 +79,15 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
       vlan: data.vlan ? Number(data.vlan) : null,
       contrato: data.contrato ? Number(data.contrato) : (initialData?.contrato || null),
       serialONT: data.serialONT || initialData?.serialONT || null,
+      ultimaMilla: data.hasUltimaMilla,
+      proveedorUM: data.hasUltimaMilla ? data.proveedorUM : null,
+      proveedor: data.proveedor || initialData?.proveedor || null,
       status: "Activo"
     };
 
     try {
       const url = isEditMode ? `http://localhost:4000/services/${initialData._id}` : 'http://localhost:4000/services';
-      
+
       const response = await fetch(url, {
         method: isEditMode ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -96,19 +106,25 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
     }
   };
 
+  const labelTipoCliente = (tipoServicio === "METROLAN" || tipoServicio === "IU") 
+    ? "Proveedor" 
+    : "POR DEFINIR";
+
+
+
   return (
     <>
-      {/* Snackbar fuera del Dialog para evitar renderizados accidentales */}
-      <Snackbar 
-        open={notification.open} 
-        autoHideDuration={6000} 
-        onClose={() => setNotification({ ...notification, open: false })} 
+    
+      <Snackbar
+        open={notification.open}
+        autoHideDuration={6000}
+        onClose={() => setNotification({ ...notification, open: false })}
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
-        <Alert 
-          onClose={() => setNotification({ ...notification, open: false })} 
-          severity={notification.severity} 
-          variant="filled" 
+        <Alert
+          onClose={() => setNotification({ ...notification, open: false })}
+          severity={notification.severity}
+          variant="filled"
           sx={{ width: '100%', bgcolor: notification.severity === 'success' ? '#1ccf46' : '#d32f2f' }}
         >
           {notification.message}
@@ -162,15 +178,15 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
                 </TextField>
               </Grid>
               <Grid size={6}>
-                <Typography sx={labelStyle}>Tipo de Cliente</Typography>
-                <TextField select fullWidth name="tipo_cliente" defaultValue={initialData?.tipo_cliente || ""} size="small">
+                <Typography sx={labelStyle}>{labelTipoCliente}</Typography>
+                <TextField select fullWidth name="tipo_cliente" defaultValue={initialData?.tipo_cliente ||''} size="small">
                   {opcionesCliente.map((c) => <MenuItem key={c} value={c}>{c}</MenuItem>)}
                 </TextField>
               </Grid>
 
               <Grid size={12}><Divider sx={{ my: 1 }} /></Grid>
 
-        
+
               {tipoServicio === "METROLAN" && (
                 <>
                   <Grid size={6}><TextField name="id_circuito" label="ID Circuito" fullWidth defaultValue={initialData?.id_circuito || ""} size="small" /></Grid>
@@ -179,6 +195,17 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
                   <Grid size={6}><TextField name="nodoB" label="NODO B" fullWidth defaultValue={initialData?.nodoB || ""} size="small" /></Grid>
                   <Grid size={6}><TextField name="ipNetuno" label="IP NETUNO" fullWidth defaultValue={initialData?.ipNetuno || ""} size="small" /></Grid>
                   <Grid size={6}><TextField name="vlan" label="VLAN " fullWidth defaultValue={initialData?.vlan || ""} size="small" /></Grid>
+                  <Grid size={6} sx={{ display: 'flex', alignItems: 'center' }}><FormControlLabel control={<Switch checked={hasUltimaMilla} onChange={(e) => setHasUltimaMilla(e.target.checked)} />} label="¿Tiene última milla?" /></Grid>
+                  {hasUltimaMilla && (
+                    <Grid size={6}>
+                      <TextField select fullWidth label="Proveedor UM" size="small" 
+                      value={proveedorUM} onChange={(e) => setProveedorUM(e.target.value)}>
+                        {PROVEEDORES_UM.map((prov) => (
+                          <MenuItem key={prov} value={prov}>{prov}</MenuItem>
+                        ))}
+                      </TextField>
+                    </Grid>
+                  )}
                 </>
               )}
               {tipoServicio === "RBS" && (
@@ -189,7 +216,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
                   <Grid size={6}><TextField name="nodoA" label="Nodo A y Puerto" fullWidth defaultValue={initialData?.nodoA || ""} size="small" /></Grid>
                   <Grid size={6}><TextField name="nodoB" label="Nodo B" fullWidth defaultValue={initialData?.nodoB || ""} size="small" /></Grid>
                   <Grid size={6}><TextField name="oltnode" label="Nodo OLT" fullWidth defaultValue={initialData?.nodoOLT || ""} size="small" /></Grid>
-                
+
                 </>
               )}
               {tipoServicio === "IU" && (
@@ -198,7 +225,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
                   <Grid size={6}><TextField name="vlan" label="VLAN / Segmento" fullWidth defaultValue={initialData?.vlan || ""} size="small" /></Grid>
                   <Grid size={6}><TextField name="nodoA" label="Nodo A y Puerto" fullWidth defaultValue={initialData?.nodoA || ""} size="small" /></Grid>
                   <Grid size={6}><TextField name="nodoB" label="Nodo B" fullWidth defaultValue={initialData?.nodoB || ""} size="small" /></Grid>
-                  
+
                 </>
               )}
               {tipoServicio === "DOG" && (

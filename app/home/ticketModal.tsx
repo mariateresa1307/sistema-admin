@@ -19,18 +19,7 @@ import ElementoModal from '../components/elementoTicketModal';
 import AddIcon from '@mui/icons-material/Add';
 
 
-const estructuraJerarquica: Record<string, { estado: string, localidades: string[] }> = {
-  "CARACAS": { estado: "DISTRITO CAPITAL", localidades: ["Head End Los Narajos", "Parque Central", "Torre Credi Card", "Cubo Negro", "Parque Cristal", "La Urbina", "El encantado", "Caricuao", "El Valle", "Manzanares", "Santa Mónica", "San Bernandino", "Mariches", "Valle Arriba", "El Paraíso", "Plaza las Américas"] },
-  "GUARENAS": { estado: "MIRANDA", localidades: ["Head End Guatire", "CC Buena Aventura"] },
-  "GUATIRE": { estado: "MIRANDA", localidades: ["Head End Guatire", "CC Buena Aventura"] },
-  "VALENCIA": { estado: "CARABOBO", localidades: ["Head End Valencia", "Flor Amarillo", "San Diego", "Naguanagua", "Sambil"] },
-  "PUERTO CABELLO": { estado: "CARABOBO", localidades: ["Head End Puerto Cabello"] },
-  "MARACAIBO": { estado: "ZULIA", localidades: ["Head End Maracaibo", "El Dividive"] },
-  "SAN CRISTOBAL": { estado: "TACHIRA", localidades: ["Head End San Cristobal", "Las Vegas"] },
-  "MARACAY": { estado: "ARAGUA", localidades: ["HUB Site Maracay"] },
-  "LA VICTORIA": { estado: "ARAGUA", localidades: ["Hub La Victoria"] },
-  "CARRIZAL": { estado: "ALTOS MIRANDINOS", localidades: ["HUB Carrizal"] }
-};
+
 // --- FUNCIONES AUXILIARES  ---
 const getLocalDateTimeString = (date = new Date()) => {
   const tzOffset = date.getTimezoneOffset() * 60000;
@@ -61,7 +50,18 @@ const modalStyle = {
 
 const USUARIO_LOGUEADO = "NOC_User";
 
-// --- MANTENIMIENTO DE CONFIGURACIONES ---
+const estructuraJerarquica: Record<string, { estado: string, localidades: string[] }> = {
+  "CARACAS": { estado: "DISTRITO CAPITAL", localidades: ["Head End Los Narajos", "Parque Central", "Torre Credi Card", "Cubo Negro", "Parque Cristal", "La Urbina", "El encantado", "Caricuao", "El Valle", "Manzanares", "Santa Mónica", "San Bernandino", "Mariches", "Valle Arriba", "El Paraíso", "Plaza las Américas"] },
+  "ARAIRA": { estado: "MIRANDA", localidades: ["HUB Araira"] },
+  "GUARENAS / GUARENAS": { estado: "MIRANDA", localidades: ["Head End Guatire", "CC Buena Aventura"] },
+  "VALENCIA": { estado: "CARABOBO", localidades: ["Head End Valencia", "Flor Amarillo", "San Diego", "Naguanagua", "Sambil"] },
+  "PUERTO CABELLO": { estado: "CARABOBO", localidades: ["Head End Puerto Cabello"] },
+  "MARACAIBO": { estado: "ZULIA", localidades: ["Head End Maracaibo", "El Dividive"] },
+  "SAN CRISTOBAL": { estado: "TACHIRA", localidades: ["Head End San Cristobal", "Las Vegas"] },
+  "MARACAY": { estado: "ARAGUA", localidades: ["HUB Site Maracay"] },
+  "LA VICTORIA": { estado: "ARAGUA", localidades: ["Hub La Victoria"] },
+  "CARRIZAL": { estado: "ALTOS MIRANDINOS", localidades: ["HUB Carrizal"] }
+};
 const listaGenericaMantenimiento = ["SIN GESTION", "RECURSOS", "SUMINISTRO ELECTRICO", "CONFIGURACION", "EQUIPO AVERIADO"];
 
 const subcategoriasPorServicio: Record<string, string[]> = {
@@ -120,23 +120,13 @@ interface TicketModalProps {
 export default function TicketModal({ open, onClose, onSave }: TicketModalProps) {
   const [activeStep, setActiveStep] = useState(0);
   const [openModal, setOpenModal] = useState(false);
-
-  // Listas para autocompletar
-  const [contrato, setContrato] = useState(['Opcion 1', 'Opcion 2']);
-  const [detallesFallas, setDetallesFallas] = useState([
-    'POTENCIA FUERA DE RANGO',
-    'FALLA ONT', 'IAD']);
-
-
-
   const label = { slotProps: { input: { 'aria-label': 'Color switch demo' } } };
 
-
   const [form, setForm] = useState({
-    numeroTicket: '', tipoIncidencia: 'INCIDENCIA PUNTUAL', asunto: '', categoria: '', plataforma: '',
+    numeroTicket: '', tipoIncidencia: 'INCIDENCIA PUNTUAL', asunto: '', categoria: '', plataforma: '', detalle: '',
     tipoCliente: '', tiposervicio: '', subcategoria: '', estado: '', municipio: '', ciudad: '', localidad: '',
-    nodo: '', operatorResponsable: USUARIO_LOGUEADO, ttZoho: '', ttClienteProveedor: '',
-    horaInicioFalla: '', horaDeteccionNoc: '', horaInicioAtencion: '', horaEscalamiento: '',
+    nodo: '', abonado: '', nombreCliente: '', operatorResponsable: USUARIO_LOGUEADO, ttZoho: '', ttClienteProveedor: '',
+    horaInicioFalla: '', horaDeteccionNoc: '', horaInicioAtencion: '', horaEscalamiento: '', serviciosAfectados: [] as string[],
     horaFinAfectacion: '', horaCierreFalla: '', requiereEscalamiento: 'NO', escaladoA: '',
     causaRaiz: '', SolucionCaso: '', estatus: 'PRELIMINAR', descripcion: '', tDeteccion: 0, tAtencion: 0,
     tEscalado: 0, cCierreSoporte: 0, mttrTotal: 0, turnoAsignado: 'DIURNO'
@@ -145,6 +135,10 @@ export default function TicketModal({ open, onClose, onSave }: TicketModalProps)
   const [preSaved, setPreSaved] = useState<boolean>(false);
   const pasos = ['Clasificación e Infraestructura', 'Tiempos y Cierre Operativo'];
 
+  const [seleccionados, setSeleccionados] = useState<string[]>([]);
+
+
+  
   useEffect(() => {
     if (form.ciudad && estructuraJerarquica[form.ciudad]) {
       setForm(prev => ({
@@ -156,6 +150,32 @@ export default function TicketModal({ open, onClose, onSave }: TicketModalProps)
       setForm(prev => ({ ...prev, estado: '' }));
     }
   }, [form.ciudad]);
+
+useEffect(() => {
+  if (form.serviciosAfectados.length > 0) {
+    const servicios = form.serviciosAfectados.join(' | ');
+    setForm(prev => ({
+      ...prev,
+      asunto: `${servicios.toUpperCase()} || FALLA`
+    }));
+  }
+}, [form.subcategoria]);
+
+  useEffect(() => {
+    setForm(prev => ({ ...prev, detalle: '' }));
+  }, [form.subcategoria]);
+
+
+  useEffect(() => {
+    if (form.tipoCliente !== 'RESIDENCIAL') {
+      setForm(prev => ({
+        ...prev,
+        nodo: '',
+        abonado: '',
+        nombreCliente: ''
+      }));
+    }
+  }, [form.tipoCliente]);
 
   useEffect(() => {
     if (open) {
@@ -178,11 +198,11 @@ export default function TicketModal({ open, onClose, onSave }: TicketModalProps)
       const fechaFormateadaInicioFalla = form.horaInicioFalla ? formatToHumanDate(form.horaInicioFalla) : '';
       const fechaFormateadaFinAfectacion = form.horaFinAfectacion ? formatToHumanDate(form.horaFinAfectacion) : '';
 
+
       const plantillaDescripcion =
         `Fecha y Hora apertura Ticket: ${fechaFormateadaNoc}\n` +
-        `Fecha y hora de fin de Afectación: ${fechaFormateadaFinAfectacion}\n` +
         `Fecha y Hora Inicio Afectación: ${fechaFormateadaInicioFalla}\n` +
-
+        `Fecha y hora de fin de Afectación: ${fechaFormateadaFinAfectacion}\n` +
         `Causa:\n` +
         `Solución:`;
 
@@ -192,18 +212,20 @@ export default function TicketModal({ open, onClose, onSave }: TicketModalProps)
         horaInicioAtencion: ahora,
         operatorResponsable: USUARIO_LOGUEADO,
         descripcion: plantillaDescripcion
+
       }));
       setActiveStep(0);
       setPreSaved(false);
     }
   }, [open]);
 
-  useEffect(() => { setForm(prev => ({ ...prev, plataforma: '', tipoCliente: '', subcategoria: '' })); }, [form.categoria]);
+  useEffect(() => { setForm(prev => ({ ...prev, plataforma: '', subcategoria: '' })); }, [form.categoria]);
   useEffect(() => { if (form.plataforma.includes("METROETHERNET")) { if (form.tipoCliente !== "INTERNET" && form.tipoCliente !== "DATOS" && form.tipoCliente !== "SIN_AFECTACION") { setForm(prev => ({ ...prev, tipoCliente: '', subcategoria: '' })); } } }, [form.plataforma]);
   useEffect(() => { if (form.categoria) { const prefijo = form.categoria.substring(0, 4).toUpperCase(); if (!form.numeroTicket || !form.numeroTicket.startsWith(prefijo)) { setForm(prev => ({ ...prev, numeroTicket: `${prefijo}-${Math.floor(100000 + Math.random() * 900000)}` })); } } }, [form.categoria]);
   useEffect(() => { if (form.tipoIncidencia === 'INCIDENCIA MASIVA') { setForm(prev => ({ ...prev, tiposervicio: '', subcategoria: '' })); } }, [form.tipoIncidencia]);
   useEffect(() => { if (form.escaladoA === 'SI') { setForm(prev => ({ ...prev, requiereEscalamiento: '' })); } }, [form.escaladoA]);
-
+  useEffect(() => { if (form.tipoCliente === 'RESIDENCIAL') {setForm(prev => ({...prev, serviciosAfectados: [] }));} }, [form.tipoCliente]);
+  
   useEffect(() => {
     if (activeStep > 0 && !preSaved) {
       const handleSaveTicket = async () => {
@@ -241,20 +263,37 @@ export default function TicketModal({ open, onClose, onSave }: TicketModalProps)
         if (!prev.descripcion || prev.descripcion.startsWith("Fecha y Hora apertura Ticket:")) {
           const lineas = prev.descripcion.split('\n');
           lineas[0] = `Fecha y Hora apertura Ticket: ${t1Formateado}`;
-          lineas[1] = `Fecha y hora de fin de Afectación: ${finAfectacionFormateado}`;
-          lineas[2] = `Fecha y Hora Inicio Afectación: ${t0Formateado}`;
+          lineas[1] = `Fecha y Hora Inicio Afectación: ${t0Formateado}`;
+          lineas[2] = `Fecha y hora de fin de Afectación: ${finAfectacionFormateado}`;
+          if (lineas.length > 3) lineas[3] = `Causa: ${prev.causaRaiz || ''}`;
+          if (lineas.length > 4) lineas[4] = `Solución: ${prev.SolucionCaso || ''}`;
+
 
           return { ...prev, descripcion: lineas.join('\n') };
         } return prev;
       });
     }
+
+
   }, [form.horaDeteccionNoc, form.horaInicioFalla, form.horaFinAfectacion]);
+  useEffect(() => {
+    if (form.descripcion) {
+      const lineas = form.descripcion.split('\n');
+      if (lineas.length > 3) {
+        lineas[3] = `Causa: ${form.causaRaiz}`;
+      }
+      if (lineas.length > 4) {
+        lineas[4] = `Solución: ${form.SolucionCaso}`;
+      }
+      setForm(prev => ({ ...prev, descripcion: lineas.join('\n') }));
+    }
+  }, [form.causaRaiz, form.SolucionCaso]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => { const { name, value } = e.target; setForm(prev => ({ ...prev, [name]: value })); };
   const handleNext = () => setActiveStep((prev) => prev + 1);
   const handleBack = () => setActiveStep((prev) => prev - 1);
   const handleDateTimeClick = (e: React.MouseEvent<HTMLInputElement>) => { try { (e.target as any).showPicker(); } catch (err) { } };
-
+  const [contratos, setContratos] = useState(['GPON', 'ONT', 'IAD']);
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const fechaHoraCierreActual = getLocalDateTimeString();
@@ -292,45 +331,57 @@ export default function TicketModal({ open, onClose, onSave }: TicketModalProps)
               ))
             }</TextField></Grid>
             <Grid size={{ xs: 12, sm: 4 }}><TextField select fullWidth required label="SubCategoría" name="plataforma" value={form.plataforma} onChange={handleChange} size="small" disabled={!form.categoria}>{(plataformasPorCategoria[form.categoria] || []).map((p) => <MenuItem key={p} value={p}>{p}</MenuItem>)}</TextField></Grid>
-            <Grid size={{ xs: 12, sm: 4 }} >
-              <Autocomplete
-                multiple
-                fullWidth
-                options={detallesFallas}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    fullWidth
-                    label="Detalles"
-                    size="small"
-                    InputProps={{
-                      ...params.InputProps,
-                      endAdornment: (
-                        <>
-                          {params.InputProps.endAdornment}
-                          <IconButton onClick={() => setOpenModal(true)} size="small">
-                            <AddIcon />
-                          </IconButton>
-                        </>
-                      ),
-                    }}
-                  />
-                )}
-              />
-              <ElementoModal
-                open={openModal}
-                onClose={() => setOpenModal(false)}
-                onAdd={(nuevo) => setDetallesFallas([...detallesFallas, nuevo])}
-              />
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <TextField select fullWidth required label="Detalle" name="detalle" value={form.detalle} onChange={handleChange} size="small" disabled={!form.categoria}> {(subcategoriasPorServicio[form.subcategoria] || []).map((p) => (
+                <MenuItem key={p} value={p}>{p}</MenuItem>
+              ))}
+              </TextField>
             </Grid>
+
+
             {form.tipoIncidencia !== 'INCIDENCIA MASIVA' && (
               <>
                 <Grid size={{ xs: 12, sm: 4 }}><TextField select fullWidth required label="Tipo de cliente"
-                  name="tiposervicio" value={form.tiposervicio} onChange={handleChange} size="small">
+                  name="tipoCliente" value={form.tipoCliente} onChange={handleChange} size="small">
                   <MenuItem value="BANCA">BANCA</MenuItem>
                   <MenuItem value="CARRIER">CARRIER</MenuItem>
                   <MenuItem value="RESIDENCIAL">RESIDENCIAL</MenuItem>
                   <MenuItem value="CORPORATIVO">CORPORATIVO</MenuItem></TextField></Grid>
+              </>
+            )}
+
+            {form.tipoIncidencia !== 'INCIDENCIA MASIVA' && form.tipoCliente !== 'RESIDENCIAL' && (
+              <>
+                <Grid size={{ xs: 12, sm: 4 }}>
+                <Autocomplete
+        multiple
+        options={contratos}
+        value={form.serviciosAfectados}
+        onChange={(e, newValue) => setForm(prev => ({ ...prev, serviciosAfectados: newValue }))}
+        renderInput={(params) => (
+          <TextField
+            {...params}
+            label="Servicios afectados"
+            InputProps={{
+              ...params.InputProps,
+              endAdornment: (
+                <>
+                  {params.InputProps.endAdornment}
+                  <IconButton onClick={() => setOpenModal(true)} size="small">
+                    <AddIcon />
+                  </IconButton>
+                </>
+              ),
+            }}
+          />
+        )}
+      />
+      <ElementoModal
+        open={openModal}
+        onClose={() => setOpenModal(false)}
+        onAdd={(nuevo) => setContratos([...contratos, nuevo])}
+      />
+                </Grid>
               </>
             )}
             <Grid size={{ xs: 12, sm: 4 }}>
@@ -355,59 +406,22 @@ export default function TicketModal({ open, onClose, onSave }: TicketModalProps)
             )}
 
 
-            {form.tipoIncidencia !== 'INCIDENCIA MASIVA' && (<Grid size={{ xs: 12, sm: 4 }}><TextField fullWidth required label="Nodo / ODF Afectado" name="nodo" value={form.nodo} onChange={handleChange} size="small" disabled={!form.ciudad} /></Grid>)}
-
-            <Grid size={{ xs: 12, sm: 4 }}>
-              <Autocomplete
-                multiple
-                fullWidth
-                options={contrato}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    fullWidth
-                    label="Servicios afectados"
-                    size="small"
-                    InputProps={{
-                      ...params.InputProps,
-                      endAdornment: (
-                        <>
-                          {params.InputProps.endAdornment}
-                          <IconButton onClick={() => setOpenModal(true)} size="small">
-                            <AddIcon />
-                          </IconButton>
-                        </>
-                      ),
-                    }}
-                  />
-                )}
-              />
-              <ElementoModal
-                open={openModal}
-                onClose={() => setOpenModal(false)}
-                onAdd={(nuevo) => setContrato([...contrato, nuevo])}
-              />
-            </Grid>
-
-            <Grid size={{ xs: 4 }}>
-
-              <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-
-                <Switch {...label} defaultChecked />
-                <Typography>Afectacion</Typography>
-              </Stack>
-            </Grid>
-
-            <Grid size={{ xs: 12 }}>
-              < TextField fullWidth id="outlined-multiline-flexible" label="Bitacora" multiline maxRows={4} />
-            </Grid>
+            {form.tipoCliente === 'RESIDENCIAL' && (
+              <>
+                <Grid size={{ xs: 12, sm: 4 }}><TextField fullWidth required label="Nodo Afectado" name="nodo" value={form.nodo} onChange={handleChange} size="small" /> </Grid>
+                <Grid size={{ xs: 12, sm: 4 }}><TextField fullWidth required label="Abonado" name="abonado" value={form.abonado} onChange={handleChange} size="small" /></Grid>
+                <Grid size={{ xs: 12, sm: 4 }}><TextField fullWidth required label="Nombre del Cliente" name="nombreCliente" value={form.nombreCliente} onChange={handleChange} size="small" /></Grid>
+              </>
+            )}
+            <Grid size={{ xs: 12 }}>< TextField fullWidth id="outlined-multiline-flexible" label="Bitacora" multiline maxRows={4} /></Grid>
+            <Grid size={{ xs: 4 }}><Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}><Switch {...label}  /><Typography>Afectacion</Typography></Stack></Grid>
           </Grid>
 
         ) : (
           <Grid container spacing={2.5}>
             <Grid size={{ xs: 12 }} sx={{ mb: -1 }}><Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#333' }}>3. Tiempos de Ciclo de Falla</Typography></Grid>
             <Grid size={{ xs: 12, sm: 2 }}><TextField fullWidth required type="datetime-local" label="t0: Inicio Falla *" name="horaInicioFalla" value={form.horaInicioFalla} onChange={handleChange} size="small" InputLabelProps={{ shrink: true }} inputProps={{ onClick: handleDateTimeClick }} sx={{ '& input': { cursor: 'pointer' } }} /></Grid>
-            <Grid size={{ xs: 12, sm: 2 }}><TextField fullWidth type="datetime-local" label="t1: Apertura NOC (Auto)" name="horaDeteccionNoc" value={form.horaDeteccionNoc} size="small" InputLabelProps={{ shrink: true }} sx={{ bgcolor: '#f0f4f8' }} /></Grid>
+            <Grid size={{ xs: 12, sm: 2 }}><TextField fullWidth disabled type="datetime-local" label="t1: Apertura NOC (Auto)" name="horaDeteccionNoc" value={form.horaDeteccionNoc} size="small" InputLabelProps={{ shrink: true }} sx={{ bgcolor: '#f0f4f8' }} /></Grid>
             <Grid size={{ xs: 12, sm: 2 }}><TextField fullWidth required type="datetime-local" label="t2: Inicio Atención *" name="horaInicioAtencion" value={form.horaInicioAtencion} onChange={handleChange} size="small" InputLabelProps={{ shrink: true }} inputProps={{ onClick: handleDateTimeClick }} sx={{ '& input': { cursor: 'pointer' } }} /></Grid>
             <Grid size={{ xs: 12, sm: 2 }}><TextField fullWidth type="datetime-local" label="t3: Escalamiento" name="horaEscalamiento" value={form.horaEscalamiento} onChange={handleChange} size="small" InputLabelProps={{ shrink: true }} disabled={form.requiereEscalamiento === 'NO'} required={form.requiereEscalamiento === 'SI'} inputProps={{ onClick: handleDateTimeClick }} sx={{ '& input': { cursor: 'pointer' } }} /></Grid>
             <Grid size={{ xs: 12, sm: 2 }}><TextField fullWidth type="datetime-local" label="Fin Afectación" name="horaFinAfectacion" value={form.horaFinAfectacion} onChange={handleChange} size="small" InputLabelProps={{ shrink: true }} inputProps={{ onClick: handleDateTimeClick }} sx={{ '& input': { cursor: 'pointer' } }} /></Grid>
@@ -426,9 +440,9 @@ export default function TicketModal({ open, onClose, onSave }: TicketModalProps)
             <Grid size={{ xs: 12, sm: 4 }}><TextField fullWidth label="Solucion Caso" name="SolucionCaso" value={form.SolucionCaso} onChange={handleChange} size="small" /></Grid>
 
             <Grid size={{ xs: 12, sm: 4 }}><TextField fullWidth disabled label="Turno" value={form.turnoAsignado} size="small" sx={{ bgcolor: '#f0f4f8' }} /></Grid>
-            <Grid size={{ xs: 12, sm: 4 }}><TextField fullWidth disabled label="Operador" name="operatorResponsable" value={form.operatorResponsable} size="small" InputProps={{ startAdornment: <PersonIcon sx={{ color: '#000027', mr: 1, fontSize: '1.1rem' }} /> }} sx={{ bgcolor: '#f0f4f8' }} /></Grid>
             <Grid size={{ xs: 12, sm: 4 }}><TextField fullWidth label="TT-ZOHO" name="ttZoho" value={form.ttZoho} onChange={handleChange} size="small" /></Grid>
             <Grid size={{ xs: 12, sm: 4 }}><TextField fullWidth label="TT-CLIENTE" name="ttClienteProveedor" value={form.ttClienteProveedor} onChange={handleChange} size="small" /></Grid>
+            <Grid size={{ xs: 12, sm: 4 }}><TextField fullWidth disabled label="Operador" name="operatorResponsable" value={form.operatorResponsable} size="small" InputProps={{ startAdornment: <PersonIcon sx={{ color: '#000027', mr: 1, fontSize: '1.1rem' }} /> }} sx={{ bgcolor: '#f0f4f8' }} /></Grid>
             <Grid size={{ xs: 12, sm: 12 }}><TextField fullWidth multiline rows={7} required label="Detalles del incidente" name="descripcion" value={form.descripcion} onChange={handleChange} size="small" /></Grid>
           </Grid>
         )}
@@ -446,4 +460,3 @@ export default function TicketModal({ open, onClose, onSave }: TicketModalProps)
   );
 }
 
-// styled is imported from @mui/material/styles

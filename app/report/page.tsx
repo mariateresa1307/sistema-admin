@@ -1,15 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import { Box, Typography, Card, CardContent, TextField, MenuItem,
-  Button, Dialog, DialogTitle, DialogContent, DialogActions, Stack, Paper
-} from "@mui/material";
-import Grid from "@mui/material/Grid"; 
+import { Box, Typography, Card, CardContent, TextField, MenuItem, Button, Dialog, DialogTitle, DialogContent, DialogActions, Stack, Paper} from "@mui/material";
+import Grid from "@mui/material/Grid";
 import { Download, BarChart as ChartIcon } from "@mui/icons-material";
-import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  PieChart, Pie, Cell, Legend 
-} from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import Divider from '@mui/material/Divider';
 
 const data = [{ name: 'CORE', fallas: 40 }, { name: 'IT', fallas: 30 }, { name: 'Acceso', fallas: 20 }];
 
@@ -46,16 +42,19 @@ export default function ReportesPage() {
   });
 
   return (
-    <Box sx={{ p: 4, maxWidth: 1600, mx: "auto" }}>
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 4 }}>
-        <Box>
-          <Typography variant="h4" sx={{ fontWeight: 800 }}>Dashboard de Operaciones</Typography>
+
+    <Box sx={{ p: 1, maxWidth: 1600, mx: "auto" }}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1}}>
+        <Box >
+          <Typography variant="h4" sx={{ fontWeight: 800 , color:'#080769' }}>Dashboard de Operaciones</Typography>
           <Typography color="text.secondary">Monitoreo de KPIs por grupo y servicio</Typography>
         </Box>
+
         <Button variant="contained" startIcon={<Download />} onClick={() => setOpenModal(true)}>
           Exportar Reporte
         </Button>
       </Box>
+      <Divider sx={{mb:1}}/>
 
       {/* --- SECCION DE FILTROS --- */}
       <Paper elevation={0} sx={{ p: 3, mb: 4, border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
@@ -64,18 +63,30 @@ export default function ReportesPage() {
             <TextField fullWidth label="Grupo KPI" select size="medium" value={filters.grupo} onChange={(e) => setFilters({ ...filters, grupo: e.target.value })}>
               <MenuItem value="A">A - Gestión de fallas</MenuItem>
               <MenuItem value="B">B - Por servicio</MenuItem>
+              <MenuItem value="C">C - Operativos</MenuItem>
+              <MenuItem value="C">D - Calidad</MenuItem>
             </TextField>
           </Grid>
           <Grid size={{ xs: 12, md: 3 }}>
             <TextField fullWidth label="Plataforma" select size="medium" value={filters.plataforma} onChange={(e) => setFilters({ ...filters, plataforma: e.target.value })}>
               <MenuItem value="TODAS">Todas</MenuItem>
               <MenuItem value="CORE">CORE</MenuItem>
+              <MenuItem value="CORE">TRANSPORTE</MenuItem>
+              <MenuItem value="CORE">ACCESO</MenuItem>
+              <MenuItem value="CORE">AMBIENTE</MenuItem>
+              <MenuItem value="CORE">COMPONENTES</MenuItem>
+              <MenuItem value="CORE">IT</MenuItem>
+
             </TextField>
           </Grid>
           <Grid size={{ xs: 12, md: 3 }}>
-            <TextField fullWidth label="Servicio" select size="medium" value={filters.servicio} onChange={(e) => setFilters({ ...filters, servicio: e.target.value })}>
+            <TextField fullWidth label="Tipo Servicio" select size="medium" value={filters.servicio} onChange={(e) => setFilters({ ...filters, servicio: e.target.value })}>
               <MenuItem value="TODOS">Todos</MenuItem>
-              <MenuItem value="FTTH">FTTH</MenuItem>
+              <MenuItem value="FTTH">CARRIER</MenuItem>
+              <MenuItem value="FTTH">BANCA</MenuItem>
+              <MenuItem value="FTTH">CORPORATIVOS</MenuItem>
+              <MenuItem value="FTTH">RC</MenuItem>
+              <MenuItem value="FTTH">RESIDENCIAL</MenuItem>
             </TextField>
           </Grid>
           <Grid size={{ xs: 12, md: 4 }}>
