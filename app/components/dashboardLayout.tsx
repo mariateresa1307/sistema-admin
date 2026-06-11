@@ -10,6 +10,7 @@ import AcUnitIcon from '@mui/icons-material/AcUnit';
 import TicketModal from "../home/ticketModal";
 import { motion } from "motion/react";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
+import TuneIcon from '@mui/icons-material/Tune';
 
 import SettingsSuggestIcon from "@mui/icons-material/SettingsSuggest";
 
@@ -48,6 +49,11 @@ const MENU_ITEMS: MenuItem[] = [
         label: "Reportes", // ✅ Opción agregada antes de Auditoría
         path: "/report",
         icon: <Assessment fontSize="small" />,
+      },
+       {
+        label: "Configuracion", // ✅ Opción agregada antes de Auditoría
+        path: "/miscellaneous",
+        icon: <TuneIcon fontSize="small" />,
       },
       {
         label: "Auditoría",
