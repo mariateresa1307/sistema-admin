@@ -1,3 +1,4 @@
+import { getMiscellaneous } from '@/lib/api';
 import { useState, useCallback, useEffect } from 'react';
 
 export type MiscellaneousItem = {
@@ -24,6 +25,7 @@ const API_URL = 'http://localhost:4000/miscellaneous';
 export const useMiscellaneous = (currentCategoria: string) => {
   const [rows, setRows] = useState<MiscellaneousItem[]>([]);
   const [allItems, setAllItems] = useState<MiscellaneousItem[]>([]);
+  const [localidad, setLocalidad] = useState([])
   const [loading, setLoading] = useState(true);
   const [notification, setNotification] = useState<NotificationType>({
     open: false,
@@ -45,6 +47,18 @@ export const useMiscellaneous = (currentCategoria: string) => {
       const res = await fetch(`${API_URL}?categoria=${currentCategoria}`);
       const data = await res.json();
       const items = Array.isArray(data) ? data : (data.data || data.items || []);
+
+      if(currentCategoria === 'CIUDAD') {
+        for(const item of items) {
+          if(item.categoria === "CIUDAD") {
+            const locadilidad = await getMiscellaneous({ categoria: "LOCALIDAD", padreId: item._id});
+            if(locadilidad.data){
+              item.localidad = locadilidad.data;
+            }
+          }
+        }
+      }
+      
       setRows(items);
     } catch (error) {
       console.error("Error al obtener items:", error);
@@ -55,16 +69,29 @@ export const useMiscellaneous = (currentCategoria: string) => {
     }
   }, [currentCategoria, showNotification]);
 
+
   const fetchAllItems = useCallback(async () => {
     try {
       const res = await fetch(API_URL);
       const data = await res.json();
       const items = Array.isArray(data) ? data : [];
+      
+      if(currentCategoria === 'CIUDAD') {
+        for(const item of items) {
+          if(item.categoria === "CIUDAD") {
+            const locadilidad = await getMiscellaneous({ categoria: "LOCALIDAD", padreId: item._id});
+            if(locadilidad.data){
+              item.localidad = locadilidad.data;
+            }
+          }
+        }
+      }
+
       setAllItems(items);
     } catch (error) {
       console.error("Error al obtener todos los items:", error);
     }
-  }, []);
+  }, [currentCategoria]);
 
   useEffect(() => {
     fetchItems();

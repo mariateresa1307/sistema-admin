@@ -9,6 +9,7 @@ import PlaceIcon from '@mui/icons-material/Place';
 import MapIcon from '@mui/icons-material/Map';
 import CategoryIcon from '@mui/icons-material/Category';
 import { MiscellaneousItem } from "../miscellaneous/useMiscellaneous";
+import { getMiscellaneous } from "@/lib/api";
 
 interface MiscellaneousTableProps {
   rows: MiscellaneousItem[];
@@ -36,9 +37,7 @@ export const MiscellaneousTable = ({
   
   // ✅ Función para obtener localidades de una ciudad
   const getLocalidadesByCiudad = (ciudadId: string) => {
-    return allItems.filter(
-      item => item.categoria === 'LOCALIDAD' && item.padreId === ciudadId && item.activo !== false
-    );
+    return []
   };
 
   const columns = useMemo((): GridColDef[] => {
@@ -50,13 +49,14 @@ export const MiscellaneousTable = ({
       headerName: "Nombre",
       flex: 1,
       minWidth: 200,
-      renderCell: (params) => (
+      renderCell: (params) => {
+        return (
         <Chip
           label={params.value}
           size="small"
           sx={{ bgcolor: '#e8eaf6', color: '#000027', fontWeight: 'bold', borderRadius: '8px' }}
-        />
-      ),
+        />)
+      },
     });
 
     // ✅ Comportamiento diferente según el tab
@@ -84,15 +84,16 @@ export const MiscellaneousTable = ({
 
       // ✅ NUEVA: Columna "Localidades" - Muestra chips con las localidades
       baseColumns.push({
-        field: "localidades",
+        field: "value",
         headerName: "Localidades",
         flex: 2,
         minWidth: 300,
         sortable: false,
         renderCell: (params) => {
           const ciudadId = params.row._id || params.row.id;
-          const localidades = getLocalidadesByCiudad(ciudadId);
           
+          const localidades = params.row.localidad;
+
           if (localidades.length === 0) {
             return (
               <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
@@ -251,7 +252,7 @@ export const MiscellaneousTable = ({
 
     return baseColumns;
   }, [currentCategoria, allItems, onEdit, onDelete, onOpenLocalidades, onOpenSubcategorias]);
-
+  console.log({rows})
   return (
     <Box sx={{
       '& .MuiDataGrid-row': { cursor: 'pointer', transition: 'background-color 0.15s ease' },
