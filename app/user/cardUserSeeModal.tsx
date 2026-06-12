@@ -6,8 +6,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import SecurityIcon from '@mui/icons-material/Security';
 
-// 🔹 Unificado: Cambiado 'is_active' por 'isActive' para sincronizar con TypeORM
+
 interface UsuarioData {
   _id?: string;
   username: string;
@@ -16,7 +17,8 @@ interface UsuarioData {
   primerApellido: string;
   segundoApellido?: string;
   email: string;
-  isActive: boolean; // 👈 Modificado aquí
+  role: string;
+  isActive: boolean; 
 }
 
 interface CardSeeModalProps {
@@ -38,6 +40,38 @@ export function CardSeeModal({ open, onClose, user, onEditClick }: CardSeeModalP
     ? `${user.primerNombre || ""} ${user.segundoNombre || ""} ${user.primerApellido || ""} ${user.segundoApellido || ""}`.replace(/\s+/g, ' ').trim()
     : '';
 
+  // Función para obtener la configuración visual del rol
+  const getRoleConfig = (role: string) => {
+    const roleConfigs: Record<string, { label: string; bgcolor: string; color: string; icon: string }> = {
+      admin: { 
+        label: 'Administrador', 
+        bgcolor: '#e3f2fd', 
+        color: '#1565c0',
+        icon: '👑'
+      },
+      operador: { 
+        label: 'Operador', 
+        bgcolor: '#fff3e0', 
+        color: '#e65100',
+        icon: '⚙️'
+      },
+      editor: { 
+        label: 'Operator Editor', 
+        bgcolor: '#f3e5f5', 
+        color: '#6a1b9a',
+        icon: '👨‍💻'
+      },
+    };
+    return roleConfigs[role] || { 
+      label: role, 
+      bgcolor: '#f5f5f5', 
+      color: '#616161',
+      icon: '👤'
+    };
+  };
+
+  const roleConfig = user ? getRoleConfig(user.role || 'editor') : null;
+
   return (
     <AnimatePresence>
       {open && user && (
@@ -57,7 +91,7 @@ export function CardSeeModal({ open, onClose, user, onEditClick }: CardSeeModalP
                 bgcolor: '#ffffff', position: 'relative', overflow: 'hidden'
               }}
             >
-              {/* 🔹 Barra estética superior: Ahora lee 'user.isActive' */}
+            
               <Box sx={{ 
                 position: 'absolute', top: 0, left: 0, width: '100%', height: '5px',
                 bgcolor: user.isActive ? '#22c55e' : '#ef4444'
@@ -111,7 +145,6 @@ export function CardSeeModal({ open, onClose, user, onEditClick }: CardSeeModalP
                     Estado
                   </Typography>
                   <Box sx={{ mt: 0.5 }}>
-                    {/* 🔹 Chip de control: Ahora lee de manera unificada 'user.isActive' */}
                     <Chip 
                       label={user.isActive ? "Activo" : "Inactivo"} 
                       size="small"
@@ -124,8 +157,10 @@ export function CardSeeModal({ open, onClose, user, onEditClick }: CardSeeModalP
                   </Box>
                 </Grid>
 
+              
+
                 {/* Nombre y Apellido */}
-                <Grid size={12}>
+                <Grid size={6}>
                   <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700, letterSpacing: '0.5px' }}>
                     Nombre y Apellido
                   </Typography>
@@ -134,6 +169,36 @@ export function CardSeeModal({ open, onClose, user, onEditClick }: CardSeeModalP
                   </Typography>
                 </Grid>
 
+
+  {/* ✅ Rol de Usuario */}
+                <Grid size={{ xs: 12, sm:5 }}>
+                  <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700, letterSpacing: '0.5px' }}>
+                    Rol de Usuario
+                  </Typography>
+                  <Box sx={{ mt: 0.5, display: 'flex', alignItems: 'center', gap: 0.8 }}>
+                    <Chip 
+                      icon={
+                        <Box component="span" sx={{ fontSize: '0.9rem', lineHeight: 1 }}>
+                          {roleConfig?.icon}
+                        </Box>
+                      }
+                      label={roleConfig?.label || 'N/A'} 
+                      size="small"
+                      sx={{ 
+                        fontWeight: 700, 
+                        borderRadius: '6px', 
+                        fontSize: '0.72rem', 
+                        px: 1,
+                        bgcolor: roleConfig?.bgcolor || '#f5f5f5',
+                        color: roleConfig?.color || '#616161',
+                        '& .MuiChip-icon': {
+                          color: roleConfig?.color || '#616161',
+                          ml: '6px'
+                        }
+                      }} 
+                    />
+                  </Box>
+                </Grid>
                 {/* Correo */}
                 <Grid size={12}>
                   <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700, letterSpacing: '0.5px' }}>

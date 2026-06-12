@@ -5,9 +5,10 @@ import { CardSeeModal } from "./cardUserSeeModal";
 import { useState, useCallback, useEffect } from "react";
 import { getUsers } from "@/lib/api";
 
-import { Box, Chip } from "@mui/material";
+import { Box, Chip,Typography } from "@mui/material";
 import { GridColDef, GridCellParams } from "@mui/x-data-grid";
 import { FloatingAddButton } from "../components/FloatingAddButton";
+import { Notification } from '../components/Notification';
 import { FullScreenUserDialog } from "./userModal";
 
 type Usuario = {
@@ -19,6 +20,7 @@ type Usuario = {
   primerApellido: string;
   segundoApellido?: string;
   isActive: boolean;
+  role: string;
 };
 
 export default function UsuariosPage() {
@@ -28,6 +30,15 @@ export default function UsuariosPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<Usuario | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+
+  // ✅ Estado para la notificación
+  const [notification, setNotification] = useState({
+    open: false,
+    message: "",
+    severity: "success" as "success" | "error",
+  });
+
+
 
   const fetchUsuarios = useCallback(async () => {
     try {
@@ -42,7 +53,8 @@ export default function UsuariosPage() {
         segundoNombre: user.segundoNombre,
         primerApellido: user.primerApellido,
         segundoApellido: user.segundoApellido,
-        isActive: user.isActive !== undefined ? user.isActive : (user.is_active ?? true)
+        isActive: user.isActive !== undefined ? user.isActive : (user.is_active ?? true),
+        role: user.role || 'editor'
       }));
 
       setUsuarios(dataNormalizada);
@@ -55,16 +67,71 @@ export default function UsuariosPage() {
   }, []);
 
   const columns: GridColDef[] = [
-    { field: "username", headerName: "Usuario", flex: 1, minWidth: 120 },
+    { field: "username", 
+      headerName: "Usuario", 
+      flex: 1.3, 
+      minWidth: 120 ,
+       renderCell: (params) => {
+        const user = params.row as Usuario;
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2, height: '100%' }}>
+       
+      
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                fontWeight: 600, 
+             
+              }}
+            >
+              @{user.username}
+            </Typography>
+          </Box>
+        );
+      },
+    },
     {
       field: "primerNombre",
       headerName: "Nombre Completo",
       flex: 1.5,
       minWidth: 200,
+      
       valueGetter: (value, row) =>
         `${row?.primerNombre || ""} ${row?.primerApellido || ""}`.trim(),
     },
-    { field: "email", headerName: "Correo Electrónico", flex: 1.5, minWidth: 200 },
+    { field: "email", 
+      headerName: "Correo Electrónico",
+       flex: 1.5,
+        minWidth: 200 },
+    {
+      field: "role",
+      headerName: "Rol",
+      flex: 1,
+      minWidth: 120,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) => {
+        const role = params.value || 'editor';
+        const roleLabels: Record<string, string> = {
+          admin: 'Administrador',
+          operador: 'Operador',
+          editor: 'Operator Editor'
+        };
+        return (
+          <Chip
+            label={roleLabels[role] || role}
+            size="small"
+            sx={{
+              bgcolor: role === 'admin' ? '#e3f2fd' : role === 'operador' ? '#fff3e0' : '#f3e5f5',
+              color: role === 'admin' ? '#1565c0' : role === 'operador' ? '#e65100' : '#6a1b9a',
+              fontWeight: 'bold',
+              borderRadius: '6px',
+              px: 0.5
+            }}
+          />
+        );
+      },
+    },
     {
       field: "isActive",
       headerName: "Estado",
@@ -104,10 +171,24 @@ export default function UsuariosPage() {
     setIsDialogOpen(true);
   };
 
-  // Función unificada que se ejecuta al guardar de forma exitosa en el Formulario
+  // ✅ Función unificada que se ejecuta al guardar de forma exitosa en el Formulario
   const handleFormSubmit = async () => {
     await fetchUsuarios();
     setSelectedUser(null);
+    
+    // ✅ Mostrar notificación de éxito
+    setNotification({
+      open: true,
+      message: selectedUser 
+        ? "✅ Usuario actualizado exitosamente" 
+        : "✅ Usuario creado exitosamente",
+      severity: "success",
+    });
+  };
+
+  // ✅ Función para cerrar la notificación
+  const handleCloseNotification = () => {
+    setNotification({ ...notification, open: false });
   };
 
   useEffect(() => {
@@ -141,7 +222,6 @@ export default function UsuariosPage() {
         }}
       />
 
-   
       <FullScreenUserDialog
         isOpen={isDialogOpen}
         onClose={() => {
@@ -160,8 +240,16 @@ export default function UsuariosPage() {
           setIsDetailOpen(false);
           setSelectedUser(null);
         }}
-        user={selectedUser} 
+        user={selectedUser}
         onEditClick={handleTransitionToEdit}
+      />
+
+      {/* ✅ Notificación de éxito */}
+      <Notification
+        open={notification.open}
+        message={notification.message}
+        severity={notification.severity}
+        onClose={handleCloseNotification}
       />
     </>
   );
