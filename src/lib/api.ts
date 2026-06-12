@@ -31,3 +31,6 @@ export const updateService = (id: string, data: any) => api.put(`/service/${id}`
 export const deleteService = (id: string) => api.delete(`/service/${id}`);
 
 export const saveTicket = (data: any) => api.post('/tickets', data);
+
+// TODO_ALE: Agregar la ruta del controller para que el react la consulte.  
+export const getMiscellaneous = (params: any) => api.get('/miscellaneous', { params })  

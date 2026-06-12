@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo, ReactElement, useCallback } from "react";
+import { useState, useMemo, ReactElement, useCallback, useEffect } from "react";
 import { ContainerBox } from "../components/containerBox";
 import { FloatingAddButton } from "../components/FloatingAddButton";
 import { MiscellaneousModal } from "./miscellaneousModal";
@@ -25,6 +25,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CableIcon from '@mui/icons-material/Cable';
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 import MapIcon from '@mui/icons-material/Map';
+import { getMiscellaneous } from "@/lib/api"
 
 type TabConfig = {
   label: string;
@@ -64,6 +65,8 @@ export default function MiscellaneousPage() {
   // Estados para modal de Subcategorías
   const [subcategoriasDialogOpen, setSubcategoriasDialogOpen] = useState(false);
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<MiscellaneousItem | null>(null);
+
+  const [localidad, setLocalidad] = useState([])
 
   // Hook personalizado
   const {
@@ -185,6 +188,10 @@ const localidades = useMemo(() => {
     if (!categoriaSeleccionada?._id) return [];
     return getSubcategoriasByCategoria(categoriaSeleccionada._id);
   }, [categoriaSeleccionada, getSubcategoriasByCategoria]);
+
+
+
+ 
 
   return (
     <>

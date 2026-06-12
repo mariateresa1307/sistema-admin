@@ -17,6 +17,8 @@ import { FormStepper } from '../components/formStepper';
 import saveTicket from '@/lib/api';
 import ElementoModal from '../components/elementoTicketModal';
 import AddIcon from '@mui/icons-material/Add';
+import { getMiscellaneous } from '@/lib/api'; // TODO_ALE: importar la funcion para consultar api
+import { TIPO_INCIDENCIA } from 'app/utils/constants';
 
 // --- FUNCIONES AUXILIARES ---
 const getLocalDateTimeString = (date = new Date()) => {
@@ -128,6 +130,9 @@ export default function TicketModal({ open, onClose, onSave }: TicketModalProps)
   const [preSaved, setPreSaved] = useState<boolean>(false);
   const label = { slotProps: { input: { 'aria-label': 'Color switch demo' } } };
   const pasos = ['Clasificación e Infraestructura', 'Tiempos y Cierre Operativo'];
+  const [categoriaRed, setCategoriaRed] = useState([]);
+
+
 
   const [form, setForm] = useState({
     numeroTicket: '', tipoIncidencia: 'INCIDENCIA PUNTUAL', asunto: '', categoria: '', plataforma: '', detalle: '',
@@ -190,6 +195,14 @@ export default function TicketModal({ open, onClose, onSave }: TicketModalProps)
       setPreSaved(false);
     }
   }, [open]);
+
+  useEffect(() => {
+    if(form.tipoIncidencia) {
+      getMiscellaneous({ categoria: 'CATEGORIA_RED', tipoIncidencia: form.tipoIncidencia}).then((data) => {
+        setCategoriaRed(data.data)
+      })
+    }
+  }, [getMiscellaneous, form.tipoIncidencia])
 
   // Actualiza descripción causa o solución
   useEffect(() => {
@@ -369,9 +382,7 @@ export default function TicketModal({ open, onClose, onSave }: TicketModalProps)
                 onChange={handleChange}
                 size="small"
               >
-                <MenuItem value="INCIDENCIA PUNTUAL">INCIDENCIA PUNTUAL</MenuItem>
-                <MenuItem value="INCIDENCIA MASIVA">INCIDENCIA MASIVA</MenuItem>
-                <MenuItem value="VENTANA DE MANTENIMIENTO">VENTANA DE MANTENIMIENTO</MenuItem>
+                {TIPO_INCIDENCIA.map(tipoIncidencia => <MenuItem value={tipoIncidencia}>{tipoIncidencia}</MenuItem>)}
               </TextField>
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
@@ -397,14 +408,9 @@ export default function TicketModal({ open, onClose, onSave }: TicketModalProps)
                 onChange={handleCategoriaChange}
                 size="small"
               >
-                {Object.keys(plataformasPorCategoria).filter(cat => {
-                  if (form.tipoIncidencia === 'INCIDENCIA PUNTUAL') {
-                    return cat !== 'CORE' && cat !== 'TRANSPORTE';
-                  }
-                  return true;
-                }).map(c => (
-                  <MenuItem key={c} value={c}>{c}</MenuItem>
-                ))}
+                {categoriaRed.map((categoria:any) => 
+                   <MenuItem key={categoria._id} value={categoria._id}>{categoria.valor}</MenuItem>
+                )}
               </TextField>
             </Grid>
             <Grid size={{ xs: 12, sm: 4 }}>
