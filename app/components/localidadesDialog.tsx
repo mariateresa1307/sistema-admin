@@ -1,5 +1,6 @@
+
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog, DialogTitle, DialogContent, IconButton, Typography,
   Button, TextField, Box
@@ -30,6 +31,13 @@ export const LocalidadesDialog = ({
   const [nuevaLocalidad, setNuevaLocalidad] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Debug: Log cuando cambien las localidades
+  useEffect(() => {
+    console.log('📍 Ciudad seleccionada:', ciudadSeleccionada);
+    console.log('📍 Localidades recibidas:', localidades);
+    console.log('📍 Cantidad de localidades:', localidades?.length);
+  }, [ciudadSeleccionada, localidades]);
+
   const handleAgregar = async () => {
     if (!nuevaLocalidad.trim()) return;
     setLoading(true);
@@ -37,6 +45,10 @@ export const LocalidadesDialog = ({
     setNuevaLocalidad("");
     setLoading(false);
   };
+
+  if (!ciudadSeleccionada) {
+    return null;
+  }
 
   return (
     <Dialog
@@ -49,7 +61,7 @@ export const LocalidadesDialog = ({
       <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 0 }}>
         <Box>
           <Typography variant="h6" sx={{ fontWeight: 700 }}>
-            Localidades de {ciudadSeleccionada?.valor}
+            Localidades de {ciudadSeleccionada.valor}
           </Typography>
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
             Gestiona las localidades asociadas

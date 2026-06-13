@@ -1,38 +1,13 @@
 "use client";
 import * as React from "react";
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  IconButton,
-  Typography,
-  Button,
-  TextField,
-  Box,
-  Snackbar,
-  Alert,
-  FormControlLabel,
-  Switch,
-  MenuItem,
-} from "@mui/material";
-import Grid from "@mui/material/Grid";
-import {
-  Close as CloseIcon,
-  Map as MapIcon,
-  Category as CategoryIcon,
-} from "@mui/icons-material";
-import { TIPO_INCIDENCIA } from "app/utils/constants";
+import { BaseModal, MiscellaneousItem } from "./modal/baseMiscellaneousModal";
+import { CiudadFields } from "./modal/fields/ciudadFields";
+import { SubcategoriaFields } from "./modal/fields/subcategoriaFields";
+import { CategoriaRedFields } from "./modal/fields/CategoriaRedFields";
+import { DetalleFields } from "./modal/fields/detalleFields";
+//import { LocalidadFields } from "./modal/fields/localidadFields";
+import { SolucionCasoFields } from "./modal/fields/solucionCasoFields";
 
-type MiscellaneousItem = {
-  _id?: string;
-  id?: string;
-  categoria: string;
-  valor: string;
-  descripcion?: string;
-  padreId?: string;
-  padreNombre?: string;
-  activo?: boolean;
-};
 
 interface MiscellaneousModalProps {
   isOpen: boolean;
@@ -45,164 +20,192 @@ interface MiscellaneousModalProps {
 export const MiscellaneousModal = ({
   isOpen,
   onClose,
-  title = "Nuevo Elemento",
+  title,
   initialData,
   categoria,
 }: MiscellaneousModalProps) => {
-  const [valor, setValor] = React.useState("");
-  const [tipoIncidencia, setTipoIncidencia] = React.useState("");
-  const [descripcion, setDescripcion] = React.useState("");
-  const [activo, setActivo] = React.useState(true);
+
+  // Estados para los campos específicos
   const [estadoSeleccionado, setEstadoSeleccionado] = React.useState("");
   const [categoriaSeleccionada, setCategoriaSeleccionada] = React.useState("");
+  const [tipoIncidencia, setTipoIncidencia] = React.useState("");
+  const [subcategoriaSeleccionada, setSubcategoriaSeleccionada] = React.useState("");
+  const [ciudadSeleccionada, setCiudadSeleccionada] = React.useState("");
+  const [causaRaizSeleccionada, setCausaRaizSeleccionada] = React.useState("");
+
+  // Estados para las opciones de los selectores
   const [estados, setEstados] = React.useState<MiscellaneousItem[]>([]);
   const [categorias, setCategorias] = React.useState<MiscellaneousItem[]>([]);
-  const [loadingEstados, setLoadingEstados] = React.useState(false);
-  const [loadingCategorias, setLoadingCategorias] = React.useState(false);
-  const [notification, setNotification] = React.useState({
-    open: false,
-    message: "",
-    severity: "success" as "success" | "error",
-  });
+  const [subcategorias, setSubcategorias] = React.useState<MiscellaneousItem[]>([]);
+  const [ciudades, setCiudades] = React.useState<MiscellaneousItem[]>([]);
+  const [causasRaiz, setCausasRaiz] = React.useState<MiscellaneousItem[]>([]);
+  // Función de validación
+  const [validateFn, setValidateFn] = React.useState<() => boolean>(() => () => true);
 
-  // Cargar estados cuando se abre el modal y es categoría CIUDAD
+  // Cargar datos según la categoría
   React.useEffect(() => {
-    const cargarEstados = async () => {
-      if (categoria === "CIUDAD" && isOpen) {
-        setLoadingEstados(true);
-        try {
-          const res = await fetch(
-            "http://localhost:4000/miscellaneous?categoria=ESTADO",
-          );
-          const data = await res.json();
+    if (!isOpen) return;
+
+    // Resetear estados al cambiar de categoría
+    setEstadoSeleccionado("");
+    setCategoriaSeleccionada("");
+    setTipoIncidencia("");
+    setSubcategoriaSeleccionada("");
+    setCiudadSeleccionada("");
+    setCausaRaizSeleccionada("");
+    setEstados([]);
+    setCategorias([]);
+    setSubcategorias([]);
+    setCiudades([]);
+     setCausasRaiz([]);
+    setValidateFn(() => () => true);
+
+    // Cargar ESTADOS si es CIUDAD
+    if (categoria === "CIUDAD") {
+      fetch("http://localhost:4000/miscellaneous?categoria=ESTADO")
+        .then(res => res.json())
+        .then(data => {
           const estadosData = Array.isArray(data) ? data : [];
-          const estadosActivos = estadosData.filter(
-            (e: MiscellaneousItem) => e.activo !== false,
-          );
-          setEstados(estadosActivos);
-        } catch (error) {
-          console.error("Error al cargar estados:", error);
-        } finally {
-          setLoadingEstados(false);
-        }
-      }
-    };
-
-    cargarEstados();
-  }, [categoria, isOpen]);
-
-  // Cargar categorías cuando se abre el modal y es categoría SUBCATEGORIA
-  React.useEffect(() => {
-    const cargarCategorias = async () => {
-      if (categoria === "SUBCATEGORIA" && isOpen) {
-        setLoadingCategorias(true);
-        try {
-          const res = await fetch(
-            "http://localhost:4000/miscellaneous?categoria=CATEGORIA_RED",
-          );
-          const data = await res.json();
-          const categoriasData = Array.isArray(data) ? data : [];
-          const categoriasActivas = categoriasData.filter(
-            (c: MiscellaneousItem) => c.activo !== false,
-          );
-          setCategorias(categoriasActivas);
-        } catch (error) {
-          console.error("Error al cargar categorías:", error);
-        } finally {
-          setLoadingCategorias(false);
-        }
-      }
-    };
-
-    cargarCategorias();
-  }, [categoria, isOpen]);
-
-  // Inicializar valores cuando se abre el modal
-  React.useEffect(() => {
-    if (isOpen) {
-      if (initialData) {
-        setValor(initialData.valor || "");
-        setDescripcion(initialData.descripcion || "");
-        setActivo(initialData.activo !== false);
-        if (categoria === "CIUDAD" && initialData.padreId) {
-          setEstadoSeleccionado(initialData.padreId);
-        }
-        if (categoria === "SUBCATEGORIA" && initialData.padreId) {
-          setCategoriaSeleccionada(initialData.padreId);
-        }
-      } else {
-        setValor("");
-        setDescripcion("");
-        setActivo(true);
-        setEstadoSeleccionado("");
-        setCategoriaSeleccionada("");
-      }
+          setEstados(estadosData.filter((e: MiscellaneousItem) => e.activo !== false));
+        })
+        .catch(err => console.error("Error al cargar estados:", err));
     }
-  }, [initialData, isOpen, categoria]);
 
-  const triggerNotification = (
-    message: string,
-    severity: "success" | "error",
-  ) => {
-    setNotification({ open: true, message, severity });
+    // Cargar CATEGORÍAS si es SUBCATEGORIA
+    if (categoria === "SUBCATEGORIA") {
+      fetch("http://localhost:4000/miscellaneous?categoria=CATEGORIA_RED")
+        .then(res => res.json())
+        .then(data => {
+          const categoriasData = Array.isArray(data) ? data : [];
+          setCategorias(categoriasData.filter((c: MiscellaneousItem) => c.activo !== false));
+        })
+        .catch(err => console.error("Error al cargar categorías:", err));
+    }
+
+    // Cargar SUBCATEGORÍAS si es DETALLE
+    if (categoria === "DETALLE") {
+      fetch("http://localhost:4000/miscellaneous?categoria=SUBCATEGORIA")
+        .then(res => res.json())
+        .then(data => {
+          const subcategoriasData = Array.isArray(data) ? data : [];
+          setSubcategorias(subcategoriasData.filter((s: MiscellaneousItem) => s.activo !== false));
+        })
+        .catch(err => console.error("Error al cargar subcategorías:", err));
+    }
+
+    // ✅ Cargar CIUDADES si es LOCALIDAD
+    if (categoria === "LOCALIDAD") {
+      fetch("http://localhost:4000/miscellaneous?categoria=CIUDAD")
+        .then(res => res.json())
+        .then(data => {
+          const ciudadesData = Array.isArray(data) ? data : [];
+          setCiudades(ciudadesData.filter((c: MiscellaneousItem) => c.activo !== false));
+        })
+        .catch(err => console.error("Error al cargar ciudades:", err));
+    }
+
+      //  Cargar CAUSAS_RAIZ si es SOLUCION_CASO
+    if (categoria === "SOLUCION_CASO") {
+      fetch("http://localhost:4000/miscellaneous?categoria=CAUSA_RAIZ")
+        .then(res => res.json())
+        .then(data => {
+          const causasData = Array.isArray(data) ? data : [];
+          setCausasRaiz(causasData.filter((c: MiscellaneousItem) => c.activo !== false));
+        })
+        .catch(err => console.error("Error al cargar causas raíz:", err));
+    }
+  }, [categoria, isOpen]);
+
+ 
+
+
+
+  // Título por defecto según la categoría
+  const getDefaultTitle = () => {
+    if (initialData) return "Editar Elemento";
+    
+    switch (categoria) {
+      case "CIUDAD":
+        return "Nueva Ciudad";
+      case "SUBCATEGORIA":
+        return "Nueva Subcategoría";
+      case "CATEGORIA_RED":
+        return "Nueva Categoría de Red";
+      case "ESTADO":
+        return "Nuevo Estado";
+      case "LOCALIDAD":
+        return "Nueva Localidad";
+      case "DETALLE":
+        return "Nuevo Detalle";
+      case "SOLUCION_CASO":
+        return "Nueva Solución del Caso";
+      default:
+        return "Nuevo Elemento";
+    }
   };
 
-  const isEditMode = Boolean(initialData?._id || initialData?.id);
+  const modalTitle = title || getDefaultTitle();
 
-  const handleSave = async () => {
-    if (!valor.trim()) {
-      triggerNotification("El valor es obligatorio", "error");
-      return;
-    }
-
-    if (categoria === "CIUDAD" && !estadoSeleccionado) {
-      triggerNotification("Debe seleccionar un estado", "error");
-      return;
-    }
-
-    if (categoria === "SUBCATEGORIA" && !categoriaSeleccionada) {
-      triggerNotification("Debe seleccionar una categoría", "error");
-      return;
-    }
-
-    const payload: any = {
-      categoria,
-      valor: valor.toUpperCase(),
-      descripcion,
-      activo,
-    };
-
-    if (categoria === "CATEGORIA_RED" && tipoIncidencia) {
-      payload.tipoIncidencia = tipoIncidencia;
-    }
-
-    if (categoria === "CIUDAD" && estadoSeleccionado) {
-      const estado = estados.find(
-        (e) => (e._id || e.id) === estadoSeleccionado,
-      );
-      if (estado) {
-        payload.padreId = estado._id || estado.id;
-        payload.padreNombre = estado.valor;
-      }
-    }
-
-    if (categoria === "SUBCATEGORIA" && categoriaSeleccionada) {
-      const cat = categorias.find(
-        (c) => (c._id || c.id) === categoriaSeleccionada,
-      );
-      if (cat) {
-        payload.padreId = cat._id || cat.id;
-        payload.padreNombre = cat.valor;
-      }
-    }
-
+  // FUNCIÓN onSave
+  const handleSave = async (basePayload: any): Promise<boolean> => {
     try {
-      // TODO_MT: mover al archivo centralizado. src/lib/api.ts
+      const payload = { ...basePayload };
+
+      // CIUDAD → requiere ESTADO
+      if (categoria === "CIUDAD" && estadoSeleccionado) {
+        const estado = estados.find((e) => (e._id || e.id) === estadoSeleccionado);
+        if (estado) {
+          payload.estadoId = estado._id || estado.id;
+          payload.padreNombre = estado.valor;
+        }
+      }
+
+      // SUBCATEGORIA → requiere CATEGORIA_RED
+      if (categoria === "SUBCATEGORIA" && categoriaSeleccionada) {
+        const cat = categorias.find((c) => (c._id || c.id) === categoriaSeleccionada);
+        if (cat) {
+          payload.categoriaId = cat._id || cat.id;
+          payload.padreNombre = cat.valor;
+        }
+      }
+
+      // DETALLE → requiere SUBCATEGORIA
+      if (categoria === "DETALLE" && subcategoriaSeleccionada) {
+        const subcat = subcategorias.find((s) => (s._id || s.id) === subcategoriaSeleccionada);
+        if (subcat) {
+          payload.subcategoriaId = subcat._id || subcat.id;
+          payload.padreNombre = subcat.valor;
+        }
+      }
+
+      //  LOCALIDAD → requiere CIUDAD
+      if (categoria === "LOCALIDAD" && ciudadSeleccionada) {
+        const ciudad = ciudades.find((c) => (c._id || c.id) === ciudadSeleccionada);
+        if (ciudad) {
+          payload.ciudadId = ciudad._id || ciudad.id;
+          payload.padreNombre = ciudad.valor;
+        }
+      }
+
+        if (categoria === "SOLUCION_CASO" && causaRaizSeleccionada) {
+        const causa = causasRaiz.find((c) => (c._id || c.id) === causaRaizSeleccionada);
+        if (causa) {
+          payload.causaId = causa._id || causa.id;
+          payload.padreNombre = causa.valor;
+        }
+      }
+
+      // CATEGORIA_RED → tipo de incidencia
+      if (categoria === "CATEGORIA_RED" && tipoIncidencia) {
+        payload.tipoIncidencia = tipoIncidencia;
+      }
+
+      // Hacer la petición
+      const isEditMode = Boolean(initialData?._id || initialData?.id);
       const id = initialData?._id || initialData?.id;
-      const url =
-        isEditMode && id
-          ? `http://localhost:4000/miscellaneous/${id}`
-          : "http://localhost:4000/miscellaneous";
+      const url = isEditMode && id
+        ? `http://localhost:4000/miscellaneous/${id}`
+        : "http://localhost:4000/miscellaneous";
 
       const response = await fetch(url, {
         method: isEditMode ? "PATCH" : "POST",
@@ -210,416 +213,124 @@ export const MiscellaneousModal = ({
         body: JSON.stringify(payload),
       });
 
-      if (response.ok) {
-        triggerNotification("Elemento guardado correctamente", "success");
-        setTimeout(onClose, 1000);
-      } else {
+      if (!response.ok) {
         const err = await response.json();
-        triggerNotification(
-          `Error: ${err.message || "No se pudo guardar"}`,
-          "error",
-        );
+        console.error("Error del servidor:", err);
+        return false;
       }
+
+      return true;
     } catch (error) {
       console.error("Error:", error);
-      triggerNotification("Error de conexión con el servidor", "error");
+      return false;
     }
   };
 
+  // Renderizar los campos específicos según la categoría
+  const renderExtraFields = () => {
+    switch (categoria) {
+      case "CIUDAD":
+        return (
+          <CiudadFields
+            isOpen={isOpen}
+            initialData={initialData}
+            onEstadoChange={setEstadoSeleccionado}
+            onValidate={setValidateFn}
+          />
+        );
+
+      case "SUBCATEGORIA":
+        return (
+          <SubcategoriaFields
+            isOpen={isOpen}
+            initialData={initialData}
+            onCategoriaChange={setCategoriaSeleccionada}
+            onValidate={setValidateFn}
+          />
+        );
+
+      case "CATEGORIA_RED":
+        return (
+          <CategoriaRedFields
+            isOpen={isOpen}
+            initialData={initialData}
+            onTipoIncidenciaChange={setTipoIncidencia}
+          />
+        );
+
+      case "DETALLE":
+        return (
+          <DetalleFields
+            isOpen={isOpen}
+            initialData={initialData}
+            subcategorias={subcategorias}
+            onSubcategoriaChange={setSubcategoriaSeleccionada}
+            onValidate={setValidateFn}
+          />
+        );
+
+      //  Caso LOCALIDAD
+case "LOCALIDAD":
+       /* return (
+          <LocalidadFields
+            isOpen={isOpen}
+            initialData={initialData}
+            ciudades={ciudades}
+            onCiudadChange={setCiudadSeleccionada}
+            onValidate={setValidateFn}
+          />
+        );*/
+
+   //  Caso SOLUCION_CASO
+      case "SOLUCION_CASO":
+        return (
+          <SolucionCasoFields
+            isOpen={isOpen}
+            initialData={initialData}
+            causasRaiz={causasRaiz}
+            onCausaRaizChange={setCausaRaizSeleccionada}
+            onValidate={setValidateFn}
+          />
+        );
+      
+
+      default:
+        return null;
+    }
+  };
+
+  // Función de validación
+  const validate = () => {
+    if (typeof validateFn === 'function') {
+      const isValid = validateFn();
+      if (!isValid) {
+        if (categoria === "CIUDAD") {
+          alert("Debe seleccionar un estado");
+        } else if (categoria === "SUBCATEGORIA") {
+          alert("Debe seleccionar una categoría");
+        } else if (categoria === "DETALLE") {
+          alert("Debe seleccionar una subcategoría");
+        } else if (categoria === "LOCALIDAD") {
+          alert("Debe seleccionar una ciudad");
+        }else if (categoria === "SOLUCION_CASO") {
+          alert("Debe seleccionar una causa raíz");
+             }
+        return false;
+      }
+    }
+    return true;
+  };
+
   return (
-    <>
-      <Snackbar
-        open={notification.open}
-        autoHideDuration={4000}
-        onClose={() => setNotification({ ...notification, open: false })}
-        anchorOrigin={{ vertical: "top", horizontal: "right" }}
-      >
-        <Alert
-          onClose={() => setNotification({ ...notification, open: false })}
-          severity={notification.severity}
-          variant="filled"
-          sx={{
-            width: "100%",
-            bgcolor:
-              notification.severity === "success" ? "#1ccf46" : "#d32f2f",
-          }}
-        >
-          {notification.message}
-        </Alert>
-      </Snackbar>
-
-      <Dialog
-        open={isOpen}
-        onClose={onClose}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{ sx: { borderRadius: "18px", p: 1 } }}
-      >
-        <DialogTitle
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            pb: 0,
-          }}
-        >
-          <Box>
-            <Typography variant="h6" sx={{ fontWeight: 700 }}>
-              {title}
-            </Typography>
-            <Typography variant="caption" sx={{ color: "text.secondary" }}>
-              Categoría: {categoria.replace("_", " ")}
-            </Typography>
-          </Box>
-          <IconButton onClick={onClose} size="small">
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-
-        <DialogContent>
-          <Box sx={{ mt: 2 }}>
-            <Grid container spacing={2.5}>
-              {/* SELECTOR DE ESTADO - SOLO PARA CIUDAD */}
-              {categoria === "CIUDAD" && (
-                <Grid size={12}>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 1,
-                      mb: 1,
-                      color: "#1976d2",
-                    }}
-                  >
-                    <MapIcon fontSize="small" />
-                    <Typography
-                      sx={{
-                        fontWeight: 700,
-                        fontSize: "0.75rem",
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      Estado *
-                    </Typography>
-                  </Box>
-
-                  {loadingEstados ? (
-                    <Typography variant="body2" color="text.secondary">
-                      Cargando estados...
-                    </Typography>
-                  ) : estados.length === 0 ? (
-                    <Box
-                      sx={{
-                        p: 2,
-                        bgcolor: "#fff3e0",
-                        borderRadius: 1,
-                        border: "1px solid #ffb74d",
-                      }}
-                    >
-                      <Typography
-                        variant="body2"
-                        color="error"
-                        sx={{ fontWeight: 600 }}
-                      >
-                        ⚠️ No hay estados disponibles
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Primero debes crear estados desde el botón "Gestionar
-                        Estados" en el tab de Ciudad
-                      </Typography>
-                    </Box>
-                  ) : (
-                    <TextField
-                      select
-                      fullWidth
-                      value={estadoSeleccionado}
-                      onChange={(e) => setEstadoSeleccionado(e.target.value)}
-                      size="small"
-                      required
-                      helperText="Selecciona el estado al que pertenece esta ciudad"
-                      sx={{
-                        "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline":
-                          {
-                            borderColor: "#1976d2",
-                          },
-                      }}
-                    >
-                      <MenuItem value="" disabled>
-                        <Typography variant="body2" color="text.secondary">
-                          -- Selecciona un estado --
-                        </Typography>
-                      </MenuItem>
-                      {estados.map((estado) => (
-                        <MenuItem
-                          key={estado._id || estado.id}
-                          value={estado._id || estado.id}
-                        >
-                          <Box
-                            sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 1,
-                            }}
-                          >
-                            <MapIcon sx={{ fontSize: 16, color: "#1976d2" }} />
-                            <Typography>{estado.valor}</Typography>
-                            {estado.descripcion && (
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                sx={{ ml: 1 }}
-                              >
-                                - {estado.descripcion}
-                              </Typography>
-                            )}
-                          </Box>
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  )}
-                </Grid>
-              )}
-
-              {/* SELECTOR DE CATEGORÍA - SOLO PARA SUBCATEGORIA */}
-              {categoria === "SUBCATEGORIA" && (
-                <Grid size={12}>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 1,
-                      mb: 1,
-                      color: "#7b1fa2",
-                    }}
-                  >
-                    <CategoryIcon fontSize="small" />
-                    <Typography
-                      sx={{
-                        fontWeight: 700,
-                        fontSize: "0.75rem",
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      Categoría *
-                    </Typography>
-                  </Box>
-
-                  {loadingCategorias ? (
-                    <Typography variant="body2" color="text.secondary">
-                      Cargando categorías...
-                    </Typography>
-                  ) : categorias.length === 0 ? (
-                    <Box
-                      sx={{
-                        p: 2,
-                        bgcolor: "#fff3e0",
-                        borderRadius: 1,
-                        border: "1px solid #ffb74d",
-                      }}
-                    >
-                      <Typography
-                        variant="body2"
-                        color="error"
-                        sx={{ fontWeight: 600 }}
-                      >
-                        ⚠️ No hay categorías disponibles
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Primero debes crear categorías desde el tab de Categoría
-                        Red
-                      </Typography>
-                    </Box>
-                  ) : (
-                    <TextField
-                      select
-                      fullWidth
-                      value={categoriaSeleccionada}
-                      onChange={(e) => setCategoriaSeleccionada(e.target.value)}
-                      size="small"
-                      required
-                      helperText="Selecciona la categoría a la que pertenece esta subcategoría"
-                      sx={{
-                        "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline":
-                          {
-                            borderColor: "#7b1fa2",
-                          },
-                      }}
-                    >
-                      <MenuItem value="" disabled>
-                        <Typography variant="body2" color="text.secondary">
-                          -- Selecciona una categoría --
-                        </Typography>
-                      </MenuItem>
-                      {categorias.map((cat) => (
-                        <MenuItem
-                          key={cat._id || cat.id}
-                          value={cat._id || cat.id}
-                        >
-                          <Box
-                            sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 1,
-                            }}
-                          >
-                            <CategoryIcon
-                              sx={{ fontSize: 16, color: "#7b1fa2" }}
-                            />
-                            <Typography>{cat.valor}</Typography>
-                            {cat.descripcion && (
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                sx={{ ml: 1 }}
-                              >
-                                - {cat.descripcion}
-                              </Typography>
-                            )}
-                          </Box>
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  )}
-                </Grid>
-              )}
-
-              {/* TIPO DE INCIDENCIA */}
-              {categoria === "CATEGORIA_RED" && (
-                <Grid size={12}>
-                  <Typography
-                    sx={{
-                      fontWeight: 700,
-                      fontSize: "0.75rem",
-                      color: "#64748b",
-                      textTransform: "uppercase",
-                      mb: 0.5,
-                    }}
-                  >
-                    Tipo de incidencia
-                  </Typography>
-                  <TextField
-                    select
-                    fullWidth
-                    required
-                    label="Tipo de Incidencia"
-                    name="tipoIncidencia"
-                    value={tipoIncidencia}
-                    onChange={(e) => setTipoIncidencia(e.target.value)}
-                    size="small"
-                  >
-                    {TIPO_INCIDENCIA.map((tipoIncidencia) => (
-                      <MenuItem value={tipoIncidencia}>
-                        {tipoIncidencia}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </Grid>
-              )}
-
-              {/* CAMPO VALOR */}
-              <Grid size={12}>
-                <Typography
-                  sx={{
-                    fontWeight: 700,
-                    fontSize: "0.75rem",
-                    color: "#64748b",
-                    textTransform: "uppercase",
-                    mb: 0.5,
-                  }}
-                >
-                  Valor *
-                </Typography>
-                <TextField
-                  fullWidth
-                  value={valor}
-                  onChange={(e) => setValor(e.target.value)}
-                  placeholder={
-                    categoria === "CIUDAD" ? "Ej: CARACAS" : "Ej: NUEVO VALOR"
-                  }
-                  size="small"
-                  autoFocus
-                />
-              </Grid>
-
-              {/* CAMPO DESCRIPCIÓN */}
-              <Grid size={12}>
-                <Typography
-                  sx={{
-                    fontWeight: 700,
-                    fontSize: "0.75rem",
-                    color: "#64748b",
-                    textTransform: "uppercase",
-                    mb: 0.5,
-                  }}
-                >
-                  Descripción
-                </Typography>
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={3}
-                  value={descripcion}
-                  onChange={(e) => setDescripcion(e.target.value)}
-                  placeholder="Descripción opcional del elemento"
-                  size="small"
-                />
-              </Grid>
-
-              {/* SWITCH ACTIVO */}
-              <Grid size={12}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={activo}
-                      onChange={(e) => setActivo(e.target.checked)}
-                      sx={{
-                        "& .MuiSwitch-switchBase.Mui-checked": {
-                          color: "#2e7d32",
-                        },
-                        "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track":
-                          {
-                            backgroundColor: "#2e7d32",
-                          },
-                      }}
-                    />
-                  }
-                  label={
-                    <Typography
-                      sx={{
-                        fontWeight: 600,
-                        color: activo ? "#2e7d32" : "#666",
-                      }}
-                    >
-                      {activo ? "Activo" : "Inactivo"}
-                    </Typography>
-                  }
-                />
-              </Grid>
-            </Grid>
-          </Box>
-
-          <Box
-            sx={{ mt: 4, display: "flex", justifyContent: "flex-end", gap: 2 }}
-          >
-            <Button onClick={onClose} sx={{ textTransform: "none" }}>
-              Cancelar
-            </Button>
-            <Button
-              variant="contained"
-              onClick={handleSave}
-              sx={{
-                bgcolor: "#000027",
-                borderRadius: "8px",
-                px: 4,
-                textTransform: "none",
-                "&:hover": { bgcolor: "#000045" },
-              }}
-            >
-              Guardar
-            </Button>
-          </Box>
-        </DialogContent>
-      </Dialog>
-    </>
+    <BaseModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={modalTitle}
+      initialData={initialData}
+      categoria={categoria}
+      extraFields={renderExtraFields()}
+      onSave={handleSave}
+      validate={validate}
+    />
   );
 };

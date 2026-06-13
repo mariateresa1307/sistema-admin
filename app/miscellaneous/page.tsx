@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo, ReactElement, useCallback, useEffect } from "react";
+import { useState, useMemo, ReactElement, useCallback } from "react";
 import { ContainerBox } from "../components/containerBox";
 import { FloatingAddButton } from "../components/FloatingAddButton";
 import { MiscellaneousModal } from "./miscellaneousModal";
@@ -25,7 +25,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CableIcon from '@mui/icons-material/Cable';
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 import MapIcon from '@mui/icons-material/Map';
-import { getMiscellaneous } from "@/lib/api"
+import FmdGoodIcon from '@mui/icons-material/FmdGood';
 
 type TabConfig = {
   label: string;
@@ -66,22 +66,21 @@ export default function MiscellaneousPage() {
   const [subcategoriasDialogOpen, setSubcategoriasDialogOpen] = useState(false);
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<MiscellaneousItem | null>(null);
 
-  const [localidad, setLocalidad] = useState([])
-
   // Hook personalizado
   const {
     rows,
-    allItems, 
     loading,
     notification,
     closeNotification,
     fetchItems,
-    fetchAllItems,
+    fetchRelatedData,
     deleteItem,
     addItem,
     getEstados,
     getLocalidadesByCiudad,
     getSubcategoriasByCategoria,
+    localidades,
+    ciudades, 
   } = useMiscellaneous(currentCategoria);
 
   // Handlers
@@ -131,24 +130,46 @@ export default function MiscellaneousPage() {
 
   // Handlers para Localidades
   const handleOpenLocalidades = (ciudad: MiscellaneousItem) => {
+    console.log('🏙️ Abriendo modal para ciudad:', ciudad);
     setCiudadSeleccionada(ciudad);
     setLocalidadesDialogOpen(true);
   };
 
   const handleAgregarLocalidad = async (valor: string) => {
-    if (!ciudadSeleccionada) return;
-    await addItem({
-      categoria: 'LOCALIDAD',
-      valor: valor.toUpperCase(),
-      padreId: ciudadSeleccionada._id,
-      padreNombre: ciudadSeleccionada.valor,
-      activo: true,
-    });
-    fetchAllItems();
+    if (!ciudadSeleccionada) {
+      console.error('❌ No hay ciudad seleccionada');
+      return;
+    }
+    
+    try {
+      const success = await addItem({
+        categoria: 'LOCALIDAD',
+        valor: valor.toUpperCase(),
+        ciudadId: ciudadSeleccionada._id, // ✅ Usar ciudadId en lugar de padreId
+        padreNombre: ciudadSeleccionada.valor,
+        activo: true,
+      });
+      
+      console.log('✅ Resultado de agregar localidad:', success);
+      
+      // ✅ Forzar recarga de datos relacionados
+      if (success) {
+        await fetchRelatedData();
+      }
+    } catch (error) {
+      console.error("Error al agregar localidad:", error);
+    }
   };
 
   const handleEliminarLocalidad = async (localidad: MiscellaneousItem) => {
-    await deleteItem(localidad);
+    try {
+      const success = await deleteItem(localidad);
+      if (success) {
+        await fetchRelatedData();
+      }
+    } catch (error) {
+      console.error("Error al eliminar localidad:", error);
+    }
   };
 
   // Handlers para Subcategorías
@@ -159,14 +180,18 @@ export default function MiscellaneousPage() {
 
   const handleAgregarSubcategoria = async (valor: string) => {
     if (!categoriaSeleccionada) return;
-    await addItem({
-      categoria: 'SUBCATEGORIA',
-      valor: valor.toUpperCase(),
-      padreId: categoriaSeleccionada._id,
-      padreNombre: categoriaSeleccionada.valor,
-      activo: true,
-    });
-    fetchAllItems();
+    
+    try {
+      await addItem({
+        categoria: 'SUBCATEGORIA',
+        valor: valor.toUpperCase(),
+        categoriaId: categoriaSeleccionada._id, // ✅ Usar categoriaId
+        padreNombre: categoriaSeleccionada.valor,
+        activo: true,
+      });
+    } catch (error) {
+      console.error("Error al agregar subcategoría:", error);
+    }
   };
 
   const handleEliminarSubcategoria = async (subcategoria: MiscellaneousItem) => {
@@ -179,19 +204,23 @@ export default function MiscellaneousPage() {
   }, [rows, currentCategoria]);
 
   const estados = useMemo(() => getEstados(), [getEstados]);
-const localidades = useMemo(() => {
-  if (!selectedItem?._id || selectedItem.categoria !== 'CIUDAD') return [];
-  return getLocalidadesByCiudad(selectedItem._id);
-}, [selectedItem, getLocalidadesByCiudad]);
+
+  // Localidades para el modal de detalle
+  const localidadesParaDetalle = useMemo(() => {
+    if (!selectedItem?._id || selectedItem.categoria !== 'CIUDAD') return [];
+    return getLocalidadesByCiudad(selectedItem._id);
+  }, [selectedItem, getLocalidadesByCiudad]);
+
+  // Localidades para el modal de gestión
+  const localidadesParaGestion = useMemo(() => {
+    if (!ciudadSeleccionada?._id) return [];
+    return getLocalidadesByCiudad(ciudadSeleccionada._id);
+  }, [ciudadSeleccionada, getLocalidadesByCiudad, localidades]); // ✅ Agregar localidades como dependencia
 
   const subcategorias = useMemo(() => {
     if (!categoriaSeleccionada?._id) return [];
     return getSubcategoriasByCategoria(categoriaSeleccionada._id);
   }, [categoriaSeleccionada, getSubcategoriasByCategoria]);
-
-
-
- 
 
   return (
     <>
@@ -259,14 +288,12 @@ const localidades = useMemo(() => {
           </Box>
         )}
 
-     
-
         {/* Tabla */}
         <MiscellaneousTable
           rows={filteredRows}
-          allItems={allItems}
           loading={loading}
           currentCategoria={currentCategoria}
+          localidades={localidades}
           onCellClick={handleCellClick}
           onEdit={handleEdit}
           onDelete={handleDelete}
@@ -285,7 +312,7 @@ const localidades = useMemo(() => {
           setIsDialogOpen(false);
           setSelectedItem(null);
           fetchItems();
-          fetchAllItems();
+          fetchRelatedData();
         }}
         title={selectedItem ? "Editar Elemento" : "Nuevo Elemento"}
         initialData={selectedItem}
@@ -301,8 +328,8 @@ const localidades = useMemo(() => {
         }}
         item={selectedItem}
         onEditClick={handleTransitionToEdit}
-         onDelete={handleDelete} 
-         localidades={localidades}
+        onDelete={handleDelete}
+        localidades={localidadesParaDetalle}
       />
 
       {/* Modal Estados */}
@@ -317,9 +344,12 @@ const localidades = useMemo(() => {
       {/* Modal Localidades */}
       <LocalidadesDialog
         open={localidadesDialogOpen}
-        onClose={() => setLocalidadesDialogOpen(false)}
+        onClose={() => {
+          setLocalidadesDialogOpen(false);
+          setCiudadSeleccionada(null);
+        }}
         ciudadSeleccionada={ciudadSeleccionada}
-        localidades={localidades}
+        localidades={localidadesParaGestion}
         onAgregar={handleAgregarLocalidad}
         onEliminar={handleEliminarLocalidad}
       />

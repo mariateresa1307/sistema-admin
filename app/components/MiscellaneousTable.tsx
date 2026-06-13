@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, ReactElement } from "react";
+import { useMemo } from "react";
 import { CustomDataGrid } from "app/components/customDataGrid";
 import { GridCellParams, GridColDef } from "@mui/x-data-grid";
 import { Chip, Box, IconButton, Tooltip, Typography } from "@mui/material";
@@ -9,11 +9,10 @@ import PlaceIcon from '@mui/icons-material/Place';
 import MapIcon from '@mui/icons-material/Map';
 import CategoryIcon from '@mui/icons-material/Category';
 import { MiscellaneousItem } from "../miscellaneous/useMiscellaneous";
-import { getMiscellaneous } from "@/lib/api";
 
 interface MiscellaneousTableProps {
   rows: MiscellaneousItem[];
-  allItems: MiscellaneousItem[]; // ✅ NUEVO: Para acceder a las localidades
+  localidades: MiscellaneousItem[]; 
   loading: boolean;
   currentCategoria: string;
   onCellClick: (params: GridCellParams) => void;
@@ -25,7 +24,7 @@ interface MiscellaneousTableProps {
 
 export const MiscellaneousTable = ({
   rows,
-  allItems, // ✅ NUEVO
+  localidades, 
   loading,
   currentCategoria,
   onCellClick,
@@ -35,33 +34,37 @@ export const MiscellaneousTable = ({
   onOpenSubcategorias,
 }: MiscellaneousTableProps) => {
   
-  // ✅ Función para obtener localidades de una ciudad
   const getLocalidadesByCiudad = (ciudadId: string) => {
-    return []
+    if (!ciudadId) return [];
+    
+    const result = localidades.filter(
+      item => 
+        item.categoria === 'LOCALIDAD' && 
+        item.padreId === ciudadId && 
+        item.activo !== false
+    );
+    
+    return result;
   };
 
   const columns = useMemo((): GridColDef[] => {
     const baseColumns: GridColDef[] = [];
 
-    // ✅ Columna Nombre (SIEMPRE visible)
     baseColumns.push({
       field: "valor",
       headerName: "Nombre",
       flex: 1,
       minWidth: 200,
-      renderCell: (params) => {
-        return (
+      renderCell: (params) => (
         <Chip
           label={params.value}
           size="small"
           sx={{ bgcolor: '#e8eaf6', color: '#000027', fontWeight: 'bold', borderRadius: '8px' }}
-        />)
-      },
+        />
+      ),
     });
 
-    // ✅ Comportamiento diferente según el tab
     if (currentCategoria === 'CIUDAD') {
-      // 📍 En CIUDAD: mostrar columna "Estado"
       baseColumns.push({
         field: "padreNombre",
         headerName: "Estado",
@@ -82,19 +85,17 @@ export const MiscellaneousTable = ({
         ),
       });
 
-      // ✅ NUEVA: Columna "Localidades" - Muestra chips con las localidades
       baseColumns.push({
-        field: "value",
+        field: "localidades",
         headerName: "Localidades",
         flex: 2,
         minWidth: 300,
         sortable: false,
         renderCell: (params) => {
           const ciudadId = params.row._id || params.row.id;
+          const localidadesData = getLocalidadesByCiudad(ciudadId);
           
-          const localidades = params.row.localidad;
-
-          if (localidades.length === 0) {
+          if (localidadesData.length === 0) {
             return (
               <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
                 Sin localidades
@@ -104,7 +105,7 @@ export const MiscellaneousTable = ({
 
           return (
             <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', alignItems: 'center' }}>
-              {localidades.slice(0, 3).map((loc) => (
+              {localidadesData.slice(0, 3).map((loc) => (
                 <Chip
                   key={loc._id || loc.id}
                   label={loc.valor}
@@ -120,9 +121,9 @@ export const MiscellaneousTable = ({
                   }}
                 />
               ))}
-              {localidades.length > 3 && (
+              {localidadesData.length > 3 && (
                 <Chip
-                  label={`+${localidades.length - 3}`}
+                  label={`+${localidadesData.length - 3}`}
                   size="small"
                   sx={{
                     bgcolor: '#f5f5f5',
@@ -139,7 +140,6 @@ export const MiscellaneousTable = ({
         },
       });
     } else if (currentCategoria === 'SUBCATEGORIA') {
-      // 📋 En SUBCATEGORIA: mostrar columna "Categoría"
       baseColumns.push({
         field: "padreNombre",
         headerName: "Categoría",
@@ -160,7 +160,6 @@ export const MiscellaneousTable = ({
         ),
       });
     } else {
-      // 📝 En otros tabs: mostrar columna "Detalles" con la descripción
       baseColumns.push({
         field: "descripcion",
         headerName: "Detalles",
@@ -177,7 +176,6 @@ export const MiscellaneousTable = ({
         ),
       });
 
-      // Columna "Estado" (activo/inactivo)
       baseColumns.push({
         field: "activo",
         headerName: "Estado",
@@ -198,7 +196,6 @@ export const MiscellaneousTable = ({
       });
     }
 
-    // ✅ SOLO agregar columna de gestionar localidades en el tab CIUDAD
     if (currentCategoria === 'CIUDAD') {
       baseColumns.push({
         field: "gestionarLocalidades",
@@ -224,7 +221,6 @@ export const MiscellaneousTable = ({
       });
     }
 
-    // ✅ SOLO agregar columna de subcategorías en el tab CATEGORIA_RED
     if (currentCategoria === 'CATEGORIA_RED') {
       baseColumns.push({
         field: "gestionarSubcategorias",
@@ -251,8 +247,8 @@ export const MiscellaneousTable = ({
     }
 
     return baseColumns;
-  }, [currentCategoria, allItems, onEdit, onDelete, onOpenLocalidades, onOpenSubcategorias]);
-  console.log({rows})
+  }, [currentCategoria, localidades, onEdit, onDelete, onOpenLocalidades, onOpenSubcategorias]);
+
   return (
     <Box sx={{
       '& .MuiDataGrid-row': { cursor: 'pointer', transition: 'background-color 0.15s ease' },

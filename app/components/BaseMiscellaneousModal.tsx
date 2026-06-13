@@ -1,11 +1,13 @@
 "use client";
 import * as React from "react";
-import { Dialog, DialogTitle, DialogContent, IconButton, Typography,  Button, TextField, Box, Snackbar, Alert, FormControlLabel, Switch
+import {
+  Dialog, DialogTitle, DialogContent, IconButton, Typography,
+  Button, TextField, Box, Snackbar, Alert, FormControlLabel, Switch
 } from "@mui/material";
 import Grid from "@mui/material/Grid";
 import { Close as CloseIcon } from "@mui/icons-material";
 
-type MiscellaneousItem = {
+export type MiscellaneousItem = {
   _id?: string;
   id?: string;
   categoria: string;
@@ -14,28 +16,30 @@ type MiscellaneousItem = {
   padreId?: string;
   padreNombre?: string;
   activo?: boolean;
-  [key: string]: any; 
+  [key: string]: any;
 };
 
-interface BaseMiscellaneousModalProps {
+interface BaseModalProps {
   isOpen: boolean;
   onClose: () => void;
   title?: string;
   initialData?: MiscellaneousItem | null;
   categoria: string;
+  extraFields?: React.ReactNode;
   onSave: (payload: any) => Promise<boolean>;
-  children?: React.ReactNode; 
+  validate?: () => boolean;
 }
 
-export const BaseMiscellaneousModal = ({
+export const BaseModal = ({
   isOpen,
   onClose,
   title = "Nuevo Elemento",
   initialData,
   categoria,
+  extraFields,
   onSave,
-  children,
-}: BaseMiscellaneousModalProps) => {
+  validate,
+}: BaseModalProps) => {
   const [valor, setValor] = React.useState("");
   const [descripcion, setDescripcion] = React.useState("");
   const [activo, setActivo] = React.useState(true);
@@ -46,7 +50,7 @@ export const BaseMiscellaneousModal = ({
     severity: "success" as "success" | "error",
   });
 
- 
+  // Inicializar valores cuando se abre el modal
   React.useEffect(() => {
     if (isOpen) {
       if (initialData) {
@@ -71,33 +75,34 @@ export const BaseMiscellaneousModal = ({
       return;
     }
 
+    // Validación personalizada del componente hijo
+    if (validate && !validate()) {
+      return;
+    }
+
     setSaving(true);
     try {
-      const payload = {
+      const payload: any = {
         categoria,
         valor: valor.toUpperCase(),
         descripcion,
         activo,
       };
 
-    
       const success = await onSave(payload);
-      
+
       if (success) {
         triggerNotification("Elemento guardado correctamente", "success");
         setTimeout(onClose, 1000);
+      } else {
+        triggerNotification("Error al guardar el elemento", "error");
       }
     } catch (error) {
       console.error("Error:", error);
-      triggerNotification("Error al guardar el elemento", "error");
+      triggerNotification("Error de conexión con el servidor", "error");
     } finally {
       setSaving(false);
     }
-  };
-
-
-  const updatePayload = (field: string, value: any) => {
-   
   };
 
   return (
@@ -152,37 +157,74 @@ export const BaseMiscellaneousModal = ({
         <DialogContent>
           <Box sx={{ mt: 2 }}>
             <Grid container spacing={2.5}>
-             
-              {children}
+              {/* ✅ Campos personalizados del componente hijo */}
+              {extraFields}
 
-            
+              {/* ✅ CAMPO VALOR (común a todos) */}
               <Grid size={12}>
-                <Typography sx={{fontWeight: 700, fontSize: "0.75rem",color: "#64748b",textTransform: "uppercase",mb: 0.5,}}>
+                <Typography
+                  sx={{
+                    fontWeight: 700,
+                    fontSize: "0.75rem",
+                    color: "#64748b",
+                    textTransform: "uppercase",
+                    mb: 0.5,
+                  }}
+                >
                   Valor *
                 </Typography>
-
-                <TextField fullWidth value={valor} onChange={(e) => setValor(e.target.value)}
-                  placeholder={categoria === "CIUDAD" ? "Ej: CARACAS" : "Ej: NUEVO VALOR"}
+                <TextField
+                  fullWidth
+                  value={valor}
+                  onChange={(e) => setValor(e.target.value)}
+                  placeholder={
+                    categoria === "CIUDAD" ? "Ej: CARACAS" : "Ej: NUEVO VALOR"
+                  }
                   size="small"
-                  autoFocus/>
+                  autoFocus
+                />
               </Grid>
 
-             
+              {/* ✅ CAMPO DESCRIPCIÓN (común a todos) */}
               <Grid size={12}>
-                <Typography sx={{fontWeight: 700,fontSize: "0.75rem",color: "#64748b",textTransform: "uppercase",mb: 0.5,}}>
+                <Typography
+                  sx={{
+                    fontWeight: 700,
+                    fontSize: "0.75rem",
+                    color: "#64748b",
+                    textTransform: "uppercase",
+                    mb: 0.5,
+                  }}
+                >
                   Descripción
                 </Typography>
-                <TextField fullWidth multiline rows={3} value={descripcion} onChange={(e) => setDescripcion(e.target.value)}
-                  placeholder="Descripción opcional del elemento" size="small" />
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={3}
+                  value={descripcion}
+                  onChange={(e) => setDescripcion(e.target.value)}
+                  placeholder="Descripción opcional del elemento"
+                  size="small"
+                />
               </Grid>
 
-             
+              {/* ✅ SWITCH ACTIVO (común a todos) */}
               <Grid size={12}>
                 <FormControlLabel
-                  control={<Switch checked={activo} onChange={(e) => setActivo(e.target.checked)}
-                      sx={{ "& .MuiSwitch-switchBase.Mui-checked": {color: "#2e7d32",},
-                        "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {backgroundColor: "#2e7d32",},
-                      }}/>
+                  control={
+                    <Switch
+                      checked={activo}
+                      onChange={(e) => setActivo(e.target.checked)}
+                      sx={{
+                        "& .MuiSwitch-switchBase.Mui-checked": {
+                          color: "#2e7d32",
+                        },
+                        "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+                          backgroundColor: "#2e7d32",
+                        },
+                      }}
+                    />
                   }
                   label={
                     <Typography

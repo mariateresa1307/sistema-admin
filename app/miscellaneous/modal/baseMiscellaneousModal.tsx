@@ -7,7 +7,8 @@ import {
 import Grid from "@mui/material/Grid";
 import { Close as CloseIcon } from "@mui/icons-material";
 
-type MiscellaneousItem = {
+// ✅ EXPORTAR MiscellaneousItem
+export type MiscellaneousItem = {
   _id?: string;
   id?: string;
   categoria: string;
@@ -16,28 +17,31 @@ type MiscellaneousItem = {
   padreId?: string;
   padreNombre?: string;
   activo?: boolean;
-  [key: string]: any; // Para campos adicionales
+  [key: string]: any;
 };
 
-interface BaseMiscellaneousModalProps {
+interface BaseModalProps {
   isOpen: boolean;
   onClose: () => void;
   title?: string;
   initialData?: MiscellaneousItem | null;
   categoria: string;
+  extraFields?: React.ReactNode;
   onSave: (payload: any) => Promise<boolean>;
-  children?: React.ReactNode; // Para campos personalizados
+  validate?: () => boolean;
 }
 
-export const BaseMiscellaneousModal = ({
+// ✅ EXPORTAR BaseModal
+export const BaseModal = ({
   isOpen,
   onClose,
   title = "Nuevo Elemento",
   initialData,
   categoria,
+  extraFields,
   onSave,
-  children,
-}: BaseMiscellaneousModalProps) => {
+  validate,
+}: BaseModalProps) => {
   const [valor, setValor] = React.useState("");
   const [descripcion, setDescripcion] = React.useState("");
   const [activo, setActivo] = React.useState(true);
@@ -73,33 +77,34 @@ export const BaseMiscellaneousModal = ({
       return;
     }
 
+    // Validación personalizada del componente hijo
+    if (validate && !validate()) {
+      return;
+    }
+
     setSaving(true);
     try {
-      const payload = {
+      const payload: any = {
         categoria,
         valor: valor.toUpperCase(),
         descripcion,
         activo,
       };
 
-      // Llamar al onSave del componente padre (que agregará campos específicos)
       const success = await onSave(payload);
-      
+
       if (success) {
         triggerNotification("Elemento guardado correctamente", "success");
         setTimeout(onClose, 1000);
+      } else {
+        triggerNotification("Error al guardar el elemento", "error");
       }
     } catch (error) {
       console.error("Error:", error);
-      triggerNotification("Error al guardar el elemento", "error");
+      triggerNotification("Error de conexión con el servidor", "error");
     } finally {
       setSaving(false);
     }
-  };
-
-  // Funciones para que los hijos puedan actualizar el payload
-  const updatePayload = (field: string, value: any) => {
-    // Esto se maneja en el onSave del componente padre
   };
 
   return (
@@ -154,10 +159,10 @@ export const BaseMiscellaneousModal = ({
         <DialogContent>
           <Box sx={{ mt: 2 }}>
             <Grid container spacing={2.5}>
-              {/* Campos personalizados de los hijos */}
-              {children}
+             
+              {extraFields}
 
-              {/* CAMPO VALOR */}
+              {/* CAMPO VALOR (común a todos) */}
               <Grid size={12}>
                 <Typography
                   sx={{
@@ -182,7 +187,7 @@ export const BaseMiscellaneousModal = ({
                 />
               </Grid>
 
-              {/* CAMPO DESCRIPCIÓN */}
+              {/* ✅ CAMPO DESCRIPCIÓN (común a todos) */}
               <Grid size={12}>
                 <Typography
                   sx={{
@@ -206,7 +211,7 @@ export const BaseMiscellaneousModal = ({
                 />
               </Grid>
 
-              {/* SWITCH ACTIVO */}
+              {/* ✅ SWITCH ACTIVO (común a todos) */}
               <Grid size={12}>
                 <FormControlLabel
                   control={
