@@ -2,6 +2,7 @@
 import * as React from "react";
 import { Typography, Grid, Chip, Box } from "@mui/material";
 import { TIPO_INCIDENCIA } from "app/utils/constants";
+import { TipoIncidenciaKey } from "app/utils/types";
 
 interface CategoriaRedFieldsProps {
   isOpen: boolean;
@@ -78,7 +79,8 @@ export const CategoriaRedFields = ({
         bgcolor: '#f8fafc',
         minHeight: '56px'
       }}>
-        {TIPO_INCIDENCIA.map((tipo) => {
+        {(Object.keys(TIPO_INCIDENCIA) as TipoIncidenciaKey[]).map((tipoKey) => {
+          const tipo = TIPO_INCIDENCIA[tipoKey];
           const isSelected = tipoIncidencia.includes(tipo);
           const colors = getTipoColor(tipo, isSelected);
           return (
