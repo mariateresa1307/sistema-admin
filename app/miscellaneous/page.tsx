@@ -49,25 +49,17 @@ const TABS_CONFIG: TabConfig[] = [
 export default function MiscellaneousPage() {
   const [tabValue, setTabValue] = useState(0);
   const currentCategoria = TABS_CONFIG[tabValue].categoria;
-
-  // Estados de UI
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<MiscellaneousItem | null>(null);
-
-  // Estados para modales de Estados y Localidades
   const [estadosDialogOpen, setEstadosDialogOpen] = useState(false);
   const [localidadesDialogOpen, setLocalidadesDialogOpen] = useState(false);
   const [ciudadSeleccionada, setCiudadSeleccionada] = useState<MiscellaneousItem | null>(null);
-
-  // Estados para modal de Subcategorías
   const [subcategoriasDialogOpen, setSubcategoriasDialogOpen] = useState(false);
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<MiscellaneousItem | null>(null);
-
-  // ✅ NUEVO: Estado para las soluciones del caso
   const [soluciones, setSoluciones] = useState<MiscellaneousItem[]>([]);
 
-  // Hook personalizado
+
   const {
     rows,
     loading,
@@ -84,22 +76,19 @@ export default function MiscellaneousPage() {
     ciudades, 
   } = useMiscellaneous(currentCategoria);
 
-  // ✅ NUEVO: Cargar soluciones cuando la categoría es CAUSA_RAIZ
-  useEffect(() => {
-    if (currentCategoria === 'CAUSA_RAIZ') {
-      fetch('http://localhost:4000/miscellaneous?categoria=SOLUCION_CASO')
-        .then(res => res.json())
-        .then(data => {
-          const solucionesData = Array.isArray(data) ? data : [];
-          setSoluciones(solucionesData.filter((s: MiscellaneousItem) => s.activo !== false));
-        })
-        .catch(err => console.error("Error al cargar soluciones:", err));
-    } else {
-      setSoluciones([]);
-    }
-  }, [currentCategoria]);
+useEffect(() => {
+  if (isDetailOpen && selectedItem?.categoria === 'CAUSA_RAIZ') {
+    fetch('http://localhost:4000/miscellaneous?categoria=SOLUCION_CASO')
+      .then(res => res.json())
+      .then(data => {
+        const solucionesData = Array.isArray(data) ? data : [];
+        setSoluciones(solucionesData.filter((s: MiscellaneousItem) => s.activo !== false));
+      })
+      .catch(err => console.error("Error al cargar soluciones:", err));
+  }
+}, [isDetailOpen, selectedItem]);
 
-  // Handlers
+
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
     setSelectedItem(null);
@@ -357,19 +346,21 @@ export default function MiscellaneousPage() {
         categoria={currentCategoria}
       />
 
-      {/* Modal Detalle */}
-      <CardSeeMiscellaneousModal
-        open={isDetailOpen}
-        onClose={() => {
-          setIsDetailOpen(false);
-          setSelectedItem(null);
-        }}
-        item={selectedItem}
-        onEditClick={handleTransitionToEdit}
-        onDelete={handleDelete}
-        localidades={localidadesParaDetalle}
-        subcategorias={subcategoriasParaDetalle}
-      />
+      
+<CardSeeMiscellaneousModal
+  open={isDetailOpen}
+  onClose={() => {
+    setIsDetailOpen(false);
+    setSelectedItem(null);
+  }}
+  item={selectedItem}
+  onEditClick={handleTransitionToEdit}
+  onDelete={handleDelete}
+  localidades={localidadesParaDetalle}
+  subcategorias={subcategoriasParaDetalle}
+  soluciones={soluciones} // ✅ NUEVO
+  causasRaiz={causasRaiz}
+/>
 
       {/* Modal Estados */}
       <EstadosDialog
