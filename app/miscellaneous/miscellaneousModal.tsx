@@ -29,7 +29,7 @@ export const MiscellaneousModal = ({
   const [subcategoriaSeleccionada, setSubcategoriaSeleccionada] = React.useState("");
   const [ciudadSeleccionada, setCiudadSeleccionada] = React.useState("");
   const [causaRaizSeleccionada, setCausaRaizSeleccionada] = React.useState("");
-  const [nivelSeveridadSeleccionado, setNivelSeveridadSeleccionado] = React.useState(""); // ✅ Estado para nivel de severidad
+  const [nivelSeveridadSeleccionado, setNivelSeveridadSeleccionado] = React.useState(""); 
 
   const [estados, setEstados] = React.useState<MiscellaneousItem[]>([]);
   const [categorias, setCategorias] = React.useState<MiscellaneousItem[]>([]);
@@ -129,7 +129,6 @@ export const MiscellaneousModal = ({
       const payload = { ...basePayload };
       delete payload.padreNombre;
 
-      // CIUDAD → requiere ESTADO
       if (categoria === "CIUDAD" && estadoSeleccionado) {
         const estado = estados.find((e) => (e._id || e.id) === estadoSeleccionado);
         if (estado) {
@@ -137,7 +136,6 @@ export const MiscellaneousModal = ({
         }
       }
 
-      // SUBCATEGORIA → requiere CATEGORIA_RED
       if (categoria === "SUBCATEGORIA" && categoriaSeleccionada) {
         const cat = categorias.find((c) => (c._id || c.id) === categoriaSeleccionada);
         if (cat) {
@@ -145,7 +143,6 @@ export const MiscellaneousModal = ({
         }
       }
 
-      // DETALLE → requiere SUBCATEGORIA
       if (categoria === "DETALLE" && subcategoriaSeleccionada) {
         const subcat = subcategorias.find((s) => (s._id || s.id) === subcategoriaSeleccionada);
         if (subcat) {
@@ -169,7 +166,6 @@ export const MiscellaneousModal = ({
         }
       }
 
-      // ✅ NUEVO: TIPO_CLIENTE → requiere NIVEL DE SEVERIDAD
       if (categoria === "TIPO_CLIENTE" && nivelSeveridadSeleccionado) {
         payload.nivelSeveridad = nivelSeveridadSeleccionado;
         console.log("✅ [handleSave] Agregado nivelSeveridad:", payload.nivelSeveridad);
@@ -273,7 +269,6 @@ export const MiscellaneousModal = ({
           />
         );
 
-      // ✅ NUEVO: TIPO_CLIENTE
       case "TIPO_CLIENTE":
         return (
           <TipoClienteFields

@@ -44,7 +44,6 @@ const TABS_CONFIG: TabConfig[] = [
   { label: "Tipo Cliente", icon: <PeopleIcon />, categoria: "TIPO_CLIENTE" },
   { label: "Grupo Destino", icon: <GroupWorkIcon />, categoria: "GRUPO_DESTINO" },
    { label: "Última Milla", icon: <CableIcon />, categoria: "ULTIMA_MILLA" },
-  { label: "Nivel de Severidad", icon: <MoreHorizIcon />, categoria: "severidad_fallas" },
 ];
 
 export default function MiscellaneousPage() {
