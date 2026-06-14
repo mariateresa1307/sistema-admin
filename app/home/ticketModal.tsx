@@ -1241,7 +1241,7 @@ export default function TicketModal({
                 />
               </Grid>
               <Grid size={{ xs: 12, sm: 12 }}>
-                {/* TODO_ALE: ES un select option, solo aparece al momento de editar */}
+                {/* ES un select option, solo aparece al momento de editar */}
                 <TextField
                   fullWidth
                   multiline
@@ -1255,7 +1255,7 @@ export default function TicketModal({
                 />
               </Grid>
               <Grid size={{ xs: 12, sm: 12 }}>
-                {/* TODO_ALE: ES un select option, solo aparece al momento de editar */}
+                {/*  ES un select option, solo aparece al momento de editar */}
                 <TextField
                   fullWidth
                   multiline

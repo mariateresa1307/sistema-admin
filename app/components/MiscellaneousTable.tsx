@@ -514,10 +514,9 @@ export const MiscellaneousTable = ({
         ),
       });
     }
-    // ✅ NUEVO: Caso TIPO_CLIENTE - Mostrar Nivel de Severidad asociado
     else if (currentCategoria === "TIPO_CLIENTE") {
       baseColumns.push({
-        field: "nivelSeveridad", // ✅ CAMBIADO: de "padreNombre" a "nivelSeveridad"
+        field: "nivelSeveridad", 
         headerName: "Nivel de Severidad",
         flex: 1.2,
         minWidth: 200,
