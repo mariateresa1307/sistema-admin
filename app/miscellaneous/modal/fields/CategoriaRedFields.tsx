@@ -43,7 +43,6 @@ export const CategoriaRedFields = ({
     });
   };
 
-  // Función para obtener color según el tipo
   const getTipoColor = (tipo: string, isSelected: boolean) => {
     if (!isSelected) return { bgcolor: '#e0e0e0', color: '#616161' };
     

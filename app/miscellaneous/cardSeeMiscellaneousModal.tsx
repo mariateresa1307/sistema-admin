@@ -8,7 +8,8 @@ import {
   Close as CloseIcon, Edit as EditIcon, Delete as DeleteIcon, 
   Map as MapIcon, Place as PlaceIcon, Category as CategoryIcon, 
   Info as InfoIcon, CheckCircle as CheckCircleIcon, Cancel as CancelIcon,
-  ReportProblem as ReportProblemIcon, AccountTree as AccountTreeIcon
+  ReportProblem as ReportProblemIcon, AccountTree as AccountTreeIcon,
+  Warning as WarningIcon
 } from "@mui/icons-material";
 import { ConfirmDialog } from "../components/confirmDialog"
 
@@ -23,7 +24,8 @@ type MiscellaneousItem = {
   activo?: boolean;
   createdAt?: string;
   updatedAt?: string;
-  tipoIncidencia?: string[]; // ✅ CAMBIADO: Ahora es array
+  tipoIncidencia?: string[];
+  nivelSeveridad?: string; 
 };
 
 interface CardSeeMiscellaneousModalProps {
@@ -32,6 +34,8 @@ interface CardSeeMiscellaneousModalProps {
   item: MiscellaneousItem | null;
   localidades: MiscellaneousItem[];
   subcategorias: MiscellaneousItem[];
+  soluciones?: MiscellaneousItem[];
+  causasRaiz?: MiscellaneousItem[];
   onEditClick: () => void;
   onDelete: (item: MiscellaneousItem) => void;
 }
@@ -50,6 +54,23 @@ const getColorByTipoIncidencia = (tipoIncidencia: string): string => {
   return '#1976d2';
 };
 
+// ✅ NUEVA: Función para obtener color del nivel de severidad
+const getNivelSeveridadConfig = (nivel: string) => {
+  const nivelUpper = (nivel || '').toUpperCase().trim();
+  
+  if (nivelUpper === 'ALTO') {
+    return { bgcolor: '#ffcdd2', color: '#c62828', icon: '🔴', label: 'Alto' };
+  }
+  if (nivelUpper === 'MEDIO') {
+    return { bgcolor: '#fff3e0', color: '#e65100', icon: '🟠', label: 'Medio' };
+  }
+  if (nivelUpper === 'BAJO') {
+    return { bgcolor: '#c8e6c9', color: '#2e7d32', icon: '🟢', label: 'Bajo' };
+  }
+  
+  return { bgcolor: '#f5f5f5', color: '#616161', icon: '⚪', label: nivel || 'No especificado' };
+};
+
 const getIconByCategoria = (categoria: string) => {
   switch (categoria) {
     case 'CIUDAD':
@@ -64,6 +85,8 @@ const getIconByCategoria = (categoria: string) => {
     case 'CAUSA_RAIZ':
     case 'SOLUCION_CASO':
       return <ReportProblemIcon sx={{ fontSize: 28, color: '#c62828' }} />;
+    case 'TIPO_CLIENTE':
+      return <WarningIcon sx={{ fontSize: 28, color: '#ed6c02' }} />;
     default:
       return <InfoIcon sx={{ fontSize: 28, color: '#000027' }} />;
   }
@@ -82,12 +105,16 @@ export const CardSeeMiscellaneousModal = ({
   item,
   localidades = [],
   subcategorias = [],
+  soluciones = [],
+  causasRaiz = [],
   onEditClick,
   onDelete
 }: CardSeeMiscellaneousModalProps) => {
   if (!item) return null;
   const localidadesList = localidades || [];
   const subcategoriasList = subcategorias || [];
+  const solucionesList = soluciones || [];
+  const causasRaizList = causasRaiz || [];
 
   const [confirmDeleteOpen, setConfirmDeleteOpen] = React.useState(false);
 
@@ -136,17 +163,51 @@ export const CardSeeMiscellaneousModal = ({
     const itemIdStr = getIdAsString(item._id || item.id);
     
     if (!itemIdStr) {
-      console.warn('⚠️ [Modal] Item sin ID válido:', item);
       return [];
     }
 
-    const asociadas = subcategoriasList.filter((sub) => {
+    return subcategoriasList.filter((sub) => {
       const subPadreIdStr = getIdAsString(sub.padreId);
       return subPadreIdStr === itemIdStr && sub.activo !== false;
     });
-
-    return asociadas;
   }, [item, subcategoriasList]);
+
+  const solucionesAsociadas = React.useMemo(() => {
+    if (item.categoria !== 'CAUSA_RAIZ') {
+      return [];
+    }
+
+    const itemIdStr = getIdAsString(item._id || item.id);
+    
+    if (!itemIdStr) {
+      return [];
+    }
+
+    return solucionesList.filter((sol) => {
+      const solPadreIdStr = getIdAsString(sol.padreId);
+      return solPadreIdStr === itemIdStr && sol.activo !== false;
+    });
+  }, [item, solucionesList]);
+
+  const causasRaizAsociadas = React.useMemo(() => {
+    if (item.categoria !== 'SOLUCION_CASO') {
+      return [];
+    }
+
+    const itemPadreIdStr = getIdAsString(item.padreId);
+    
+    if (!itemPadreIdStr) {
+      return [];
+    }
+
+    return causasRaizList.filter((causa) => {
+      const causaIdStr = getIdAsString(causa._id || causa.id);
+      return causaIdStr === itemPadreIdStr && causa.activo !== false;
+    });
+  }, [item, causasRaizList]);
+
+  // ✅ NUEVA: Obtener configuración del nivel de severidad
+  const nivelSeveridadConfig = item.nivelSeveridad ? getNivelSeveridadConfig(item.nivelSeveridad) : null;
 
   return (
     <>
@@ -198,7 +259,7 @@ export const CardSeeMiscellaneousModal = ({
 
         <DialogContent sx={{ p: 3 }}>
           <Grid container spacing={2}>
-            {/* ✅ Tipo de Incidencia - SOLO para CATEGORIA_RED - AHORA MUESTRA ARRAY */}
+            {/* Tipo de Incidencia - SOLO para CATEGORIA_RED */}
             {item.categoria === 'CATEGORIA_RED' && (
               <Grid size={{ xs: 12, sm: 6 }}>
                 <Box sx={{ 
@@ -251,7 +312,9 @@ export const CardSeeMiscellaneousModal = ({
               </Grid>
             )}
 
-            <Grid size={item.categoria === 'CATEGORIA_RED' ? { xs: 12, sm: 6 } : { xs: 12 }}>
+           
+
+            <Grid size={item.categoria === 'CATEGORIA_RED' || item.categoria === 'TIPO_CLIENTE' ? { xs: 12, sm: 6 } : { xs: 12 }}>
               <Box sx={infoBoxStyle}>
                 <Typography sx={labelStyle}>
                   <CategoryIcon sx={{ fontSize: 14, mr: 0.5, verticalAlign: 'text-bottom' }} />
@@ -296,6 +359,46 @@ export const CardSeeMiscellaneousModal = ({
               </Box>
             </Grid>
 
+             {/* ✅ NUEVO: Nivel de Severidad - SOLO para TIPO_CLIENTE */}
+            {item.categoria === 'TIPO_CLIENTE' && (
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <Box sx={{ 
+                  ...infoBoxStyle, 
+                  borderColor: nivelSeveridadConfig?.color || '#ed6c02',
+                  borderWidth: '2px'
+                }}>
+                  <Typography sx={{ 
+                    ...labelStyle, 
+                    color: nivelSeveridadConfig?.color || '#ed6c02',
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 0.5 
+                  }}>
+                    <WarningIcon sx={{ fontSize: 16 }} />
+                    Nivel de Severidad
+                  </Typography>
+                  
+                  {nivelSeveridadConfig ? (
+                    <Chip
+                      label={`${nivelSeveridadConfig.icon} ${nivelSeveridadConfig.label}`}
+                      size="medium"
+                      sx={{
+                        bgcolor: nivelSeveridadConfig.bgcolor,
+                        color: nivelSeveridadConfig.color,
+                        fontWeight: 700,
+                        borderRadius: '6px',
+                        mt: 0.5,
+                      }}
+                    />
+                  ) : (
+                    <Typography variant="body2" sx={{ color: '#9e9e9e', fontStyle: 'italic', mt: 0.5 }}>
+                      No especificado
+                    </Typography>
+                  )}
+                </Box>
+              </Grid>
+            )}
+
             {item.padreNombre && (
               <Grid size={12}>
                 <Box sx={{ ...infoBoxStyle, bgcolor: '#e3f2fd', borderColor: '#1976d2' }}>
@@ -336,6 +439,76 @@ export const CardSeeMiscellaneousModal = ({
                             fontWeight: 600,
                             borderRadius: '6px',
                             '& .MuiChip-icon': { color: '#7b1fa2' }
+                          }}
+                        />
+                      ))}
+                    </Box>
+                  )}
+                </Box>
+              </Grid>
+            )}
+
+            {item.categoria === 'CAUSA_RAIZ' && (
+              <Grid size={12}>
+                <Box sx={{ ...infoBoxStyle, bgcolor: '#e8f5e9', borderColor: '#2e7d32' }}>
+                  <Typography sx={{ ...labelStyle, color: '#2e7d32', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <CheckCircleIcon sx={{ fontSize: 14 }} />
+                    Soluciones del caso asociadas ({solucionesAsociadas.length})
+                  </Typography>
+                  
+                  {solucionesAsociadas.length === 0 ? (
+                    <Typography variant="body2" sx={{ color: '#9e9e9e', fontStyle: 'italic', mt: 1 }}>
+                      No hay soluciones registradas para esta causa raíz
+                    </Typography>
+                  ) : (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+                      {solucionesAsociadas.map((sol) => (
+                        <Chip
+                          key={getIdAsString(sol._id || sol.id)}
+                          label={sol.valor}
+                          size="small"
+                          icon={<CheckCircleIcon sx={{ fontSize: 14 }} />}
+                          sx={{
+                            bgcolor: '#c8e6c9',
+                            color: '#2e7d32',
+                            fontWeight: 600,
+                            borderRadius: '6px',
+                            '& .MuiChip-icon': { color: '#2e7d32' }
+                          }}
+                        />
+                      ))}
+                    </Box>
+                  )}
+                </Box>
+              </Grid>
+            )}
+
+            {item.categoria === 'SOLUCION_CASO' && (
+              <Grid size={12}>
+                <Box sx={{ ...infoBoxStyle, bgcolor: '#ffebee', borderColor: '#c62828' }}>
+                  <Typography sx={{ ...labelStyle, color: '#c62828', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <ReportProblemIcon sx={{ fontSize: 14 }} />
+                    Causa raíz asociada ({causasRaizAsociadas.length})
+                  </Typography>
+                  
+                  {causasRaizAsociadas.length === 0 ? (
+                    <Typography variant="body2" sx={{ color: '#9e9e9e', fontStyle: 'italic', mt: 1 }}>
+                      No hay causa raíz asociada
+                    </Typography>
+                  ) : (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+                      {causasRaizAsociadas.map((causa) => (
+                        <Chip
+                          key={getIdAsString(causa._id || causa.id)}
+                          label={causa.valor}
+                          size="small"
+                          icon={<ReportProblemIcon sx={{ fontSize: 14 }} />}
+                          sx={{
+                            bgcolor: '#ffcdd2',
+                            color: '#c62828',
+                            fontWeight: 600,
+                            borderRadius: '6px',
+                            '& .MuiChip-icon': { color: '#c62828' }
                           }}
                         />
                       ))}

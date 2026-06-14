@@ -55,7 +55,6 @@ export const CiudadFields = ({
     }
   }, [initialData, isOpen]);
 
-  // Notificar al padre cuando cambia el estado
   React.useEffect(() => {
     onEstadoChange(estadoSeleccionado);
   }, [estadoSeleccionado, onEstadoChange]);

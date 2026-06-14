@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo, ReactElement, useCallback } from "react";
+import { useState, useMemo, ReactElement, useCallback, useEffect } from "react";
 import { ContainerBox } from "../components/containerBox";
 import { FloatingAddButton } from "../components/FloatingAddButton";
 import { MiscellaneousModal } from "./miscellaneousModal";
@@ -43,7 +43,7 @@ const TABS_CONFIG: TabConfig[] = [
   { label: "Tipo Cliente", icon: <PeopleIcon />, categoria: "TIPO_CLIENTE" },
   { label: "Grupo Destino", icon: <GroupWorkIcon />, categoria: "GRUPO_DESTINO" },
    { label: "Última Milla", icon: <CableIcon />, categoria: "ULTIMA_MILLA" },
-  { label: "Nivel de Severidad", icon: <MoreHorizIcon />, categoria: "severidad_fallas" },
+ 
 ];
 
 export default function MiscellaneousPage() {
@@ -64,6 +64,9 @@ export default function MiscellaneousPage() {
   const [subcategoriasDialogOpen, setSubcategoriasDialogOpen] = useState(false);
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<MiscellaneousItem | null>(null);
 
+  // ✅ NUEVO: Estado para las soluciones del caso
+  const [soluciones, setSoluciones] = useState<MiscellaneousItem[]>([]);
+
   // Hook personalizado
   const {
     rows,
@@ -80,6 +83,21 @@ export default function MiscellaneousPage() {
     localidades,
     ciudades, 
   } = useMiscellaneous(currentCategoria);
+
+  // ✅ NUEVO: Cargar soluciones cuando la categoría es CAUSA_RAIZ
+  useEffect(() => {
+    if (currentCategoria === 'CAUSA_RAIZ') {
+      fetch('http://localhost:4000/miscellaneous?categoria=SOLUCION_CASO')
+        .then(res => res.json())
+        .then(data => {
+          const solucionesData = Array.isArray(data) ? data : [];
+          setSoluciones(solucionesData.filter((s: MiscellaneousItem) => s.activo !== false));
+        })
+        .catch(err => console.error("Error al cargar soluciones:", err));
+    } else {
+      setSoluciones([]);
+    }
+  }, [currentCategoria]);
 
   // Handlers
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
@@ -143,14 +161,13 @@ export default function MiscellaneousPage() {
       const success = await addItem({
         categoria: 'LOCALIDAD',
         valor: valor.toUpperCase(),
-        ciudadId: ciudadSeleccionada._id, // ✅ Usar ciudadId en lugar de padreId
+        ciudadId: ciudadSeleccionada._id,
         padreNombre: ciudadSeleccionada.valor,
         activo: true,
       });
       
       console.log('✅ Resultado de agregar localidad:', success);
       
-      // ✅ Forzar recarga de datos relacionados
       if (success) {
         await fetchRelatedData();
       }
@@ -183,7 +200,7 @@ export default function MiscellaneousPage() {
       await addItem({
         categoria: 'SUBCATEGORIA',
         valor: valor.toUpperCase(),
-        categoriaId: categoriaSeleccionada._id, // ✅ Usar categoriaId
+        categoriaId: categoriaSeleccionada._id,
         padreNombre: categoriaSeleccionada.valor,
         activo: true,
       });
@@ -196,10 +213,27 @@ export default function MiscellaneousPage() {
     await deleteItem(subcategoria);
   };
 
-  // Datos filtrados
+  // ✅ MODIFICADO: Datos filtrados con soluciones asociadas para CAUSA_RAIZ
   const filteredRows = useMemo(() => {
-    return rows.filter(r => r.categoria === currentCategoria);
-  }, [rows, currentCategoria]);
+    const rowsFiltradas = rows.filter(r => r.categoria === currentCategoria);
+    
+    // Si es CAUSA_RAIZ, agregar las soluciones asociadas a cada causa
+    if (currentCategoria === 'CAUSA_RAIZ') {
+      return rowsFiltradas.map(causa => {
+        const causaId = causa._id || causa.id;
+        const solucionesAsociadas = soluciones.filter(
+          sol => sol.padreId === causaId && sol.activo !== false
+        );
+        
+        return {
+          ...causa,
+          solucionesAsociadas: solucionesAsociadas
+        };
+      });
+    }
+    
+    return rowsFiltradas;
+  }, [rows, currentCategoria, soluciones]);
 
   const estados = useMemo(() => getEstados(), [getEstados]);
 
@@ -209,8 +243,8 @@ export default function MiscellaneousPage() {
     return getLocalidadesByCiudad(selectedItem._id);
   }, [selectedItem, getLocalidadesByCiudad]);
 
-    // subcategoriasParaDetalle  para el modal de detalle
-    const subcategoriasParaDetalle = useMemo(() => {
+  // subcategoriasParaDetalle para el modal de detalle
+  const subcategoriasParaDetalle = useMemo(() => {
     if (!selectedItem?._id || selectedItem.categoria !== 'CATEGORIA_RED') return [];
     return getSubcategoriasByCategoria(selectedItem._id);
   }, [selectedItem, getSubcategoriasByCategoria]);
@@ -219,7 +253,7 @@ export default function MiscellaneousPage() {
   const localidadesParaGestion = useMemo(() => {
     if (!ciudadSeleccionada?._id) return [];
     return getLocalidadesByCiudad(ciudadSeleccionada._id);
-  }, [ciudadSeleccionada, getLocalidadesByCiudad, localidades]); // ✅ Agregar localidades como dependencia
+  }, [ciudadSeleccionada, getLocalidadesByCiudad, localidades]);
 
   const subcategorias = useMemo(() => {
     if (!categoriaSeleccionada?._id) return [];

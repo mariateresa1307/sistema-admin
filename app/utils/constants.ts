@@ -13,3 +13,10 @@ export const CATEGORIA_RED = [
   "AMBIENTE",
   "IT"
 ] 
+
+
+export const NIVEL_SEVERIDAD = [
+  "BAJO ", 
+  "MEDIO",
+  "ALTO"
+] 
