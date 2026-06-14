@@ -8,6 +8,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import PlaceIcon from '@mui/icons-material/Place';
 import MapIcon from '@mui/icons-material/Map';
 import CategoryIcon from '@mui/icons-material/Category';
+import WarningIcon from '@mui/icons-material/Warning';
 import { MiscellaneousItem } from "../miscellaneous/useMiscellaneous";
 
 interface MiscellaneousTableProps {
@@ -45,6 +46,21 @@ export const MiscellaneousTable = ({
     );
     
     return result;
+  };
+
+  const getTipoIncidenciaConfig = (tipo: string) => {
+    const tipoUpper = (tipo || '').toUpperCase();
+    
+    if (tipoUpper.includes('PUNTUAL')) {
+      return { bgcolor: '#fff3e0', color: '#e65100', icon: '⚠️' };
+    }
+    if (tipoUpper.includes('MASIVA')) {
+      return { bgcolor: '#ffebee', color: '#c62828', icon: '🚨' };
+    }
+    if (tipoUpper.includes('MANTENIMIENTO')) {
+      return { bgcolor: '#e3f2fd', color: '#1565c0', icon: '🔧' };
+    }
+    return { bgcolor: '#f5f5f5', color: '#616161', icon: 'ℹ️' };
   };
 
   const columns = useMemo((): GridColDef[] => {
@@ -139,7 +155,53 @@ export const MiscellaneousTable = ({
           );
         },
       });
-    } else if (currentCategoria === 'SUBCATEGORIA') {
+
+      // Columna Estado para CIUDAD
+      baseColumns.push({
+        field: "activo",
+        headerName: "Estado",
+        width: 120,
+        align: 'center',
+        headerAlign: 'center',
+        renderCell: (params) => (
+          <Chip
+            label={params.value !== false ? "Activo" : "Inactivo"}
+            size="small"
+            sx={{
+              bgcolor: params.value !== false ? '#e8f5e9' : '#ffebee',
+              color: params.value !== false ? '#2e7d32' : '#c62828',
+              fontWeight: 'bold',
+            }}
+          />
+        ),
+      });
+
+      // Botón gestionar localidades
+      baseColumns.push({
+        field: "gestionarLocalidades",
+        headerName: "Gestionar",
+        width: 100,
+        align: 'center',
+        headerAlign: 'center',
+        sortable: false,
+        renderCell: (params) => (
+          <Tooltip title="Agregar/Editar localidades">
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenLocalidades(params.row as MiscellaneousItem);
+              }}
+              sx={{ color: '#1976d2', bgcolor: '#e3f2fd', '&:hover': { bgcolor: '#bbdefb' } }}
+            >
+              <PlaceIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        ),
+      });
+    } 
+    //  Caso SUBCATEGORIA
+    else if (currentCategoria === 'SUBCATEGORIA') {
       baseColumns.push({
         field: "padreNombre",
         headerName: "Categoría",
@@ -159,7 +221,111 @@ export const MiscellaneousTable = ({
           </Typography>
         ),
       });
-    } else {
+
+      // Columna Estado para SUBCATEGORIA
+      baseColumns.push({
+        field: "activo",
+        headerName: "Estado",
+        width: 120,
+        align: 'center',
+        headerAlign: 'center',
+        renderCell: (params) => (
+          <Chip
+            label={params.value !== false ? "Activo" : "Inactivo"}
+            size="small"
+            sx={{
+              bgcolor: params.value !== false ? '#e8f5e9' : '#ffebee',
+              color: params.value !== false ? '#2e7d32' : '#c62828',
+              fontWeight: 'bold',
+            }}
+          />
+        ),
+      });
+    } 
+  
+    else if (currentCategoria === 'CATEGORIA_RED') {
+      baseColumns.push({
+        field: "tipoIncidencia",
+        headerName: "Tipo de Incidencia",
+        flex: 1.2,
+        minWidth: 200,
+        renderCell: (params) => {
+          const tipo = params.value;
+          
+          if (!tipo) {
+            return (
+              <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                Sin tipo de incidencia
+              </Typography>
+            );
+          }
+
+          const config = getTipoIncidenciaConfig(tipo);
+
+          return (
+            <Chip
+              label={`${config.icon} ${tipo}`}
+              size="small"
+              sx={{
+                bgcolor: config.bgcolor,
+                color: config.color,
+                fontWeight: 700,
+                borderRadius: '6px',
+                fontSize: '0.75rem',
+                height: '28px',
+                px: 1
+              }}
+            />
+          );
+        },
+      });
+
+      // Columna Estado para CATEGORIA_RED
+      baseColumns.push({
+        field: "activo",
+        headerName: "Estado",
+        width: 120,
+        align: 'center',
+        headerAlign: 'center',
+        renderCell: (params) => (
+          <Chip
+            label={params.value !== false ? "Activo" : "Inactivo"}
+            size="small"
+            sx={{
+              bgcolor: params.value !== false ? '#e8f5e9' : '#ffebee',
+              color: params.value !== false ? '#2e7d32' : '#c62828',
+              fontWeight: 'bold',
+            }}
+          />
+        ),
+      });
+
+      // Botón gestionar subcategorías
+      baseColumns.push({
+        field: "gestionarSubcategorias",
+        headerName: "Subcategorías",
+        width: 130,
+        align: 'center',
+        headerAlign: 'center',
+        sortable: false,
+        renderCell: (params) => (
+          <Tooltip title="Gestionar subcategorías">
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenSubcategorias(params.row as MiscellaneousItem);
+              }}
+              sx={{ color: '#7b1fa2', bgcolor: '#f3e5f5', '&:hover': { bgcolor: '#e1bee7' } }}
+            >
+              <CategoryIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        ),
+      });
+    } 
+    
+    else {
       baseColumns.push({
         field: "descripcion",
         headerName: "Detalles",
@@ -192,56 +358,6 @@ export const MiscellaneousTable = ({
               fontWeight: 'bold',
             }}
           />
-        ),
-      });
-    }
-
-    if (currentCategoria === 'CIUDAD') {
-      baseColumns.push({
-        field: "gestionarLocalidades",
-        headerName: "Gestionar",
-        width: 100,
-        align: 'center',
-        headerAlign: 'center',
-        sortable: false,
-        renderCell: (params) => (
-          <Tooltip title="Agregar/Editar localidades">
-            <IconButton
-              size="small"
-              onClick={(e) => {
-                e.stopPropagation();
-                onOpenLocalidades(params.row as MiscellaneousItem);
-              }}
-              sx={{ color: '#1976d2', bgcolor: '#e3f2fd', '&:hover': { bgcolor: '#bbdefb' } }}
-            >
-              <PlaceIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        ),
-      });
-    }
-
-    if (currentCategoria === 'CATEGORIA_RED') {
-      baseColumns.push({
-        field: "gestionarSubcategorias",
-        headerName: "Subcategorías",
-        width: 130,
-        align: 'center',
-        headerAlign: 'center',
-        sortable: false,
-        renderCell: (params) => (
-          <Tooltip title="Gestionar subcategorías">
-            <IconButton
-              size="small"
-              onClick={(e) => {
-                e.stopPropagation();
-                onOpenSubcategorias(params.row as MiscellaneousItem);
-              }}
-              sx={{ color: '#7b1fa2', bgcolor: '#f3e5f5', '&:hover': { bgcolor: '#e1bee7' } }}
-            >
-              <CategoryIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
         ),
       });
     }

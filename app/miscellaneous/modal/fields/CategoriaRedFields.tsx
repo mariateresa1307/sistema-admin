@@ -20,15 +20,24 @@ export const CategoriaRedFields = ({
     if (isOpen) {
       if (initialData?.tipoIncidencia) {
         setTipoIncidencia(initialData.tipoIncidencia);
+        console.log("✅ [CategoriaRedFields] Cargado desde initialData:", initialData.tipoIncidencia);
       } else {
         setTipoIncidencia("");
+        console.log("🔄 [CategoriaRedFields] Resetado a vacío");
       }
     }
   }, [initialData, isOpen]);
 
   React.useEffect(() => {
+    console.log("📤 [CategoriaRedFields] Emitiendo al padre:", tipoIncidencia);
     onTipoIncidenciaChange(tipoIncidencia);
   }, [tipoIncidencia, onTipoIncidenciaChange]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    console.log("🎯 [CategoriaRedFields] Usuario seleccionó:", newValue);
+    setTipoIncidencia(newValue);
+  };
 
   return (
     <Grid size={12}>
@@ -50,7 +59,7 @@ export const CategoriaRedFields = ({
         label="Tipo de Incidencia"
         name="tipoIncidencia"
         value={tipoIncidencia}
-        onChange={(e) => setTipoIncidencia(e.target.value)}
+        onChange={handleChange}
         size="small"
       >
         {TIPO_INCIDENCIA.map((tipo) => (

@@ -42,10 +42,8 @@ const TABS_CONFIG: TabConfig[] = [
   { label: "Solución Caso", icon: <CheckCircleIcon />, categoria: "SOLUCION_CASO" },
   { label: "Tipo Cliente", icon: <PeopleIcon />, categoria: "TIPO_CLIENTE" },
   { label: "Grupo Destino", icon: <GroupWorkIcon />, categoria: "GRUPO_DESTINO" },
-  { label: "Plataformas", icon: <StorageIcon />, categoria: "PLATAFORMA" },
-  { label: "Servicios", icon: <DevicesIcon />, categoria: "SERVICIO" },
-  { label: "Última Milla", icon: <CableIcon />, categoria: "ULTIMA_MILLA" },
-  { label: "Por Definir", icon: <MoreHorizIcon />, categoria: "POR_DEFINIR" },
+   { label: "Última Milla", icon: <CableIcon />, categoria: "ULTIMA_MILLA" },
+  { label: "Nivel de Severidad", icon: <MoreHorizIcon />, categoria: "severidad_fallas" },
 ];
 
 export default function MiscellaneousPage() {
@@ -211,6 +209,12 @@ export default function MiscellaneousPage() {
     return getLocalidadesByCiudad(selectedItem._id);
   }, [selectedItem, getLocalidadesByCiudad]);
 
+    // subcategoriasParaDetalle  para el modal de detalle
+    const subcategoriasParaDetalle = useMemo(() => {
+    if (!selectedItem?._id || selectedItem.categoria !== 'CATEGORIA_RED') return [];
+    return getSubcategoriasByCategoria(selectedItem._id);
+  }, [selectedItem, getSubcategoriasByCategoria]);
+
   // Localidades para el modal de gestión
   const localidadesParaGestion = useMemo(() => {
     if (!ciudadSeleccionada?._id) return [];
@@ -330,6 +334,7 @@ export default function MiscellaneousPage() {
         onEditClick={handleTransitionToEdit}
         onDelete={handleDelete}
         localidades={localidadesParaDetalle}
+        subcategorias={subcategoriasParaDetalle}
       />
 
       {/* Modal Estados */}
