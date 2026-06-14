@@ -123,6 +123,15 @@ interface TicketModalProps {
   onSave: (ticketData: any) => void;
 }
 
+const initialFormState = {
+  numeroTicket: '', tipoIncidencia: '', asunto: '', categoria: '', subcategoria: '', detalle: '',
+  tipoCliente: '', tiposervicio: '', estado: '', municipio: '', ciudad: '', localidad: '',
+  nodo: '', abonado: '', nombreCliente: '', operatorResponsable: USUARIO_LOGUEADO, ttZoho: '', ttClienteProveedor: '',
+  horaInicioFalla: '', horaDeteccionNoc: '', horaInicioAtencion: '', horaEscalamiento: '', serviciosAfectados: [] as string[],
+  horaFinAfectacion: '', horaCierreFalla: '', requiereEscalamiento: 'NO', escaladoA: '',
+  causaRaiz: '', SolucionCaso: '', estatus: 'PRELIMINAR', descripcion: '', turnoAsignado: 'DIURNO'
+};
+
 export default function TicketModal({ open, onClose, onSave }: TicketModalProps) {
   const [activeStep, setActiveStep] = useState(0);
   const [openModal, setOpenModal] = useState(false);
@@ -131,17 +140,9 @@ export default function TicketModal({ open, onClose, onSave }: TicketModalProps)
   const label = { slotProps: { input: { 'aria-label': 'Color switch demo' } } };
   const pasos = ['Clasificación e Infraestructura', 'Tiempos y Cierre Operativo'];
   const [categoriaRed, setCategoriaRed] = useState([]);
+  const [subcategorias, setSubcategorias] = useState([]);
 
-
-
-  const [form, setForm] = useState({
-    numeroTicket: '', tipoIncidencia: '', asunto: '', categoria: '', plataforma: '', detalle: '',
-    tipoCliente: '', tiposervicio: '', subcategoria: '', estado: '', municipio: '', ciudad: '', localidad: '',
-    nodo: '', abonado: '', nombreCliente: '', operatorResponsable: USUARIO_LOGUEADO, ttZoho: '', ttClienteProveedor: '',
-    horaInicioFalla: '', horaDeteccionNoc: '', horaInicioAtencion: '', horaEscalamiento: '', serviciosAfectados: [] as string[],
-    horaFinAfectacion: '', horaCierreFalla: '', requiereEscalamiento: 'NO', escaladoA: '',
-    causaRaiz: '', SolucionCaso: '', estatus: 'PRELIMINAR', descripcion: '', turnoAsignado: 'DIURNO'
-  });
+  const [form, setForm] = useState(initialFormState);
 
   
   const tiemposCalculados = useMemo(() => {
@@ -254,20 +255,25 @@ export default function TicketModal({ open, onClose, onSave }: TicketModalProps)
   }, []);
 
   const handleCategoriaChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const categoria = e.target.value;
-    const prefijo = categoria.substring(0, 4).toUpperCase();
+    const categoria = categoriaRed.find(categoria => categoria._id === e.target.value);
+    if(!categoria) throw new Error("Categoria no encontrada");
+    const prefijo = categoria.valor.substring(0, 4).toUpperCase();
     const numeroTicket = !form.numeroTicket || !form.numeroTicket.startsWith(prefijo)
       ? `${prefijo}-${Math.floor(100000 + Math.random() * 900000)}`
       : form.numeroTicket;
 
     setForm(prev => ({
       ...prev,
-      categoria,
-      plataforma: '',
+      categoria: categoria._id,
+      subcategoria: '',
       subcategoria: '',
       numeroTicket
     }));
-  }, [form.numeroTicket]);
+
+    getMiscellaneous({ categoria: "SUBCATEGORIA", padreId: categoria._id  }).then((subcategoriaResponse) => {
+      setSubcategorias(subcategoriaResponse.data)
+    })
+  }, [form.numeroTicket, categoriaRed]);
 
   const handleTipoClienteChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const tipoCliente = e.target.value;
@@ -303,12 +309,18 @@ export default function TicketModal({ open, onClose, onSave }: TicketModalProps)
     } catch (err) { }
   }, []);
 
-   const customClose = useCallback(() => {
-    // clear state 
+  const customClose = useCallback(() => {
+    setActiveStep(0);
+    setOpenModal(false);
+    setContratos(['GPON', 'ONT', 'IAD']);
+    setPreSaved(null);
+    setCategoriaRed([]);
+    setSubcategorias([]);
+    setForm(initialFormState);
 
     // close form
-    onClose()
-  }, [])
+    onClose();
+  }, [onClose]);
 
   // Guardar ticket pre-saved
   useEffect(() => {
@@ -427,15 +439,15 @@ export default function TicketModal({ open, onClose, onSave }: TicketModalProps)
                 select
                 fullWidth
                 required
-                label="SubCategoría"
-                name="plataforma"
-                value={form.plataforma}
+                label="Subcategoría"
+                name="subcategoria"
+                value={form.subcategoria}
                 onChange={handleChange}
                 size="small"
                 disabled={!form.categoria}
               >
-                {(plataformasPorCategoria[form.categoria] || []).map((p) => (
-                  <MenuItem key={p} value={p}>{p}</MenuItem>
+                {subcategorias.map((p) => (
+                  <MenuItem key={p._id} value={p._id}>{p.valor}</MenuItem>
                 ))}
               </TextField>
             </Grid>
@@ -451,8 +463,8 @@ export default function TicketModal({ open, onClose, onSave }: TicketModalProps)
                 size="small"
                 disabled={!form.categoria}
               >
-                {(subcategoriasPorServicio[form.subcategoria] || []).map((p) => (
-                  <MenuItem key={p} value={p}>{p}</MenuItem>
+                {(subcategoriasPorServicio[form.subcategoria] || []).map((v) => (
+                  <MenuItem key={v} value={v}>{v}</MenuItem>
                 ))}
               </TextField>
             </Grid>
