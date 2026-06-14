@@ -26,6 +26,7 @@ import CableIcon from '@mui/icons-material/Cable';
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 import MapIcon from '@mui/icons-material/Map';
 import FmdGoodIcon from '@mui/icons-material/FmdGood';
+import WarningIcon from '@mui/icons-material/Warning';
 
 type TabConfig = {
   label: string;
@@ -43,23 +44,32 @@ const TABS_CONFIG: TabConfig[] = [
   { label: "Tipo Cliente", icon: <PeopleIcon />, categoria: "TIPO_CLIENTE" },
   { label: "Grupo Destino", icon: <GroupWorkIcon />, categoria: "GRUPO_DESTINO" },
    { label: "Última Milla", icon: <CableIcon />, categoria: "ULTIMA_MILLA" },
- 
+  { label: "Nivel de Severidad", icon: <MoreHorizIcon />, categoria: "severidad_fallas" },
 ];
 
 export default function MiscellaneousPage() {
   const [tabValue, setTabValue] = useState(0);
   const currentCategoria = TABS_CONFIG[tabValue].categoria;
+
+  // Estados de UI
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<MiscellaneousItem | null>(null);
+
+  // Estados para modales de Estados y Localidades
   const [estadosDialogOpen, setEstadosDialogOpen] = useState(false);
   const [localidadesDialogOpen, setLocalidadesDialogOpen] = useState(false);
   const [ciudadSeleccionada, setCiudadSeleccionada] = useState<MiscellaneousItem | null>(null);
+
+  // Estados para modal de Subcategorías
   const [subcategoriasDialogOpen, setSubcategoriasDialogOpen] = useState(false);
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<MiscellaneousItem | null>(null);
+
+  // ✅ NUEVOS: Estados para soluciones y causas raíz
   const [soluciones, setSoluciones] = useState<MiscellaneousItem[]>([]);
+  const [causasRaiz, setCausasRaiz] = useState<MiscellaneousItem[]>([]);
 
-
+  // Hook personalizado
   const {
     rows,
     loading,
@@ -76,19 +86,37 @@ export default function MiscellaneousPage() {
     ciudades, 
   } = useMiscellaneous(currentCategoria);
 
-useEffect(() => {
-  if (isDetailOpen && selectedItem?.categoria === 'CAUSA_RAIZ') {
-    fetch('http://localhost:4000/miscellaneous?categoria=SOLUCION_CASO')
-      .then(res => res.json())
-      .then(data => {
+  // ✅ Cargar soluciones y causas raíz cuando sea necesario
+  useEffect(() => {
+    // Cargar soluciones del caso
+    const loadSoluciones = async () => {
+      try {
+        const res = await fetch('http://localhost:4000/miscellaneous?categoria=SOLUCION_CASO');
+        const data = await res.json();
         const solucionesData = Array.isArray(data) ? data : [];
         setSoluciones(solucionesData.filter((s: MiscellaneousItem) => s.activo !== false));
-      })
-      .catch(err => console.error("Error al cargar soluciones:", err));
-  }
-}, [isDetailOpen, selectedItem]);
+      } catch (error) {
+        console.error("Error al cargar soluciones:", error);
+      }
+    };
 
+    // Cargar causas raíz
+    const loadCausasRaiz = async () => {
+      try {
+        const res = await fetch('http://localhost:4000/miscellaneous?categoria=CAUSA_RAIZ');
+        const data = await res.json();
+        const causasData = Array.isArray(data) ? data : [];
+        setCausasRaiz(causasData.filter((c: MiscellaneousItem) => c.activo !== false));
+      } catch (error) {
+        console.error("Error al cargar causas raíz:", error);
+      }
+    };
 
+    loadSoluciones();
+    loadCausasRaiz();
+  }, []); // Se ejecuta solo al montar el componente
+
+  // Handlers
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
     setSelectedItem(null);
@@ -202,7 +230,7 @@ useEffect(() => {
     await deleteItem(subcategoria);
   };
 
-  // ✅ MODIFICADO: Datos filtrados con soluciones asociadas para CAUSA_RAIZ
+  // Datos filtrados
   const filteredRows = useMemo(() => {
     const rowsFiltradas = rows.filter(r => r.categoria === currentCategoria);
     
@@ -232,7 +260,7 @@ useEffect(() => {
     return getLocalidadesByCiudad(selectedItem._id);
   }, [selectedItem, getLocalidadesByCiudad]);
 
-  // subcategoriasParaDetalle para el modal de detalle
+  // Subcategorias para el modal de detalle
   const subcategoriasParaDetalle = useMemo(() => {
     if (!selectedItem?._id || selectedItem.categoria !== 'CATEGORIA_RED') return [];
     return getSubcategoriasByCategoria(selectedItem._id);
@@ -346,21 +374,21 @@ useEffect(() => {
         categoria={currentCategoria}
       />
 
-      
-<CardSeeMiscellaneousModal
-  open={isDetailOpen}
-  onClose={() => {
-    setIsDetailOpen(false);
-    setSelectedItem(null);
-  }}
-  item={selectedItem}
-  onEditClick={handleTransitionToEdit}
-  onDelete={handleDelete}
-  localidades={localidadesParaDetalle}
-  subcategorias={subcategoriasParaDetalle}
-  soluciones={soluciones} // ✅ NUEVO
-  causasRaiz={causasRaiz}
-/>
+      {/* Modal Detalle */}
+      <CardSeeMiscellaneousModal
+        open={isDetailOpen}
+        onClose={() => {
+          setIsDetailOpen(false);
+          setSelectedItem(null);
+        }}
+        item={selectedItem}
+        onEditClick={handleTransitionToEdit}
+        onDelete={handleDelete}
+        localidades={localidadesParaDetalle}
+        subcategorias={subcategoriasParaDetalle}
+        soluciones={soluciones} // ✅ AHORA DEFINIDO
+        causasRaiz={causasRaiz} // ✅ AHORA DEFINIDO
+      />
 
       {/* Modal Estados */}
       <EstadosDialog
