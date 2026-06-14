@@ -14,11 +14,11 @@ import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import PersonIcon from '@mui/icons-material/Person';
 import { FormStepper } from '../components/formStepper';
-import saveTicket from '@/lib/api';
+import { saveTicket } from '@/lib/api';
 import ElementoModal from '../components/elementoTicketModal';
 import AddIcon from '@mui/icons-material/Add';
 import { getMiscellaneous } from '@/lib/api'; // TODO_ALE: importar la funcion para consultar api
-import { TIPO_INCIDENCIA } from 'app/utils/constants';
+import { TICKET_STATUS, TIPO_INCIDENCIA } from 'app/utils/constants';
 
 // --- FUNCIONES AUXILIARES ---
 const getLocalDateTimeString = (date = new Date()) => {
@@ -127,7 +127,7 @@ export default function TicketModal({ open, onClose, onSave }: TicketModalProps)
   const [activeStep, setActiveStep] = useState(0);
   const [openModal, setOpenModal] = useState(false);
   const [contratos, setContratos] = useState(['GPON', 'ONT', 'IAD']);
-  const [preSaved, setPreSaved] = useState<boolean>(false);
+  const [preSaved, setPreSaved] = useState<string|null>(null);
   const label = { slotProps: { input: { 'aria-label': 'Color switch demo' } } };
   const pasos = ['Clasificación e Infraestructura', 'Tiempos y Cierre Operativo'];
   const [categoriaRed, setCategoriaRed] = useState([]);
@@ -135,7 +135,7 @@ export default function TicketModal({ open, onClose, onSave }: TicketModalProps)
 
 
   const [form, setForm] = useState({
-    numeroTicket: '', tipoIncidencia: 'INCIDENCIA PUNTUAL', asunto: '', categoria: '', plataforma: '', detalle: '',
+    numeroTicket: '', tipoIncidencia: '', asunto: '', categoria: '', plataforma: '', detalle: '',
     tipoCliente: '', tiposervicio: '', subcategoria: '', estado: '', municipio: '', ciudad: '', localidad: '',
     nodo: '', abonado: '', nombreCliente: '', operatorResponsable: USUARIO_LOGUEADO, ttZoho: '', ttClienteProveedor: '',
     horaInicioFalla: '', horaDeteccionNoc: '', horaInicioAtencion: '', horaEscalamiento: '', serviciosAfectados: [] as string[],
@@ -199,7 +199,11 @@ export default function TicketModal({ open, onClose, onSave }: TicketModalProps)
   useEffect(() => {
     if(form.tipoIncidencia) {
       getMiscellaneous({ categoria: 'CATEGORIA_RED', tipoIncidencia: form.tipoIncidencia}).then((data) => {
+
         setCategoriaRed(data.data)
+        if(data.data.length === 0) {
+          setForm(prevState => ({...prevState, categoria: '' }))
+        }
       })
     }
   }, [getMiscellaneous, form.tipoIncidencia])
@@ -299,23 +303,26 @@ export default function TicketModal({ open, onClose, onSave }: TicketModalProps)
     } catch (err) { }
   }, []);
 
+   const customClose = useCallback(() => {
+    // clear state 
+
+    // close form
+    onClose()
+  }, [])
+
   // Guardar ticket pre-saved
   useEffect(() => {
     if (activeStep > 0 && !preSaved) {
       const handleSaveTicket = async () => {
-        await saveTicket({
-          method: 'post',
-          data: {
+        const result = await saveTicket({
             caseNumber: form.numeroTicket,
             incidentType: form.tipoIncidencia,
             subject: form.asunto,
             networkCategory: form.categoria,
             description: form.descripcion,
-            status: "presaved",
-          },
+            status: TICKET_STATUS.presaved,
         });
-        setPreSaved(true);
-        console.log("Saved!");
+        setPreSaved(result.data._id);
       };
       handleSaveTicket();
     }
@@ -345,15 +352,17 @@ export default function TicketModal({ open, onClose, onSave }: TicketModalProps)
 
     onSave(finalFormData);
     setActiveStep(0);
-    onClose();
-  }, [form, tiemposCalculados, onSave, onClose]);
+    customClose();
+  }, [form, tiemposCalculados, onSave, customClose]);
+
+ 
 
   return (
-    <Modal open={open} onClose={onClose}>
+    <Modal open={open} onClose={customClose}>
       <Box sx={modalStyle} component="form" onSubmit={handleSubmit}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
           <Typography variant="h5" sx={{ color: '#000027', fontWeight: 600 }}>Apertura y Tipificación - NOC</Typography>
-          <IconButton onClick={onClose} edge="end"><CloseIcon /></IconButton>
+          <IconButton onClick={customClose} edge="end"><CloseIcon /></IconButton>
         </Box>
         <FormStepper activeStep={activeStep} steps={pasos} />
         <Divider sx={{ mb: 3 }} />
@@ -803,7 +812,7 @@ export default function TicketModal({ open, onClose, onSave }: TicketModalProps)
           <Button
             variant="outlined"
             color="error"
-            onClick={onClose}
+            onClick={customClose}
             sx={{ borderRadius: '50px', px: 3, fontWeight: 600, textTransform: 'none' }}
           >
             Descartar

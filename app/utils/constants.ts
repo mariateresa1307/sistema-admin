@@ -13,3 +13,8 @@ export const CATEGORIA_RED = [
   "AMBIENTE",
   "IT"
 ] 
+
+
+export const TICKET_STATUS = {
+  presaved: 'PRESAVED'
+}
