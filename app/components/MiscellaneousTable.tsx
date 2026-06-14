@@ -156,7 +156,6 @@ export const MiscellaneousTable = ({
         },
       });
 
-      // Columna Estado para CIUDAD
       baseColumns.push({
         field: "activo",
         headerName: "Estado",
@@ -176,7 +175,6 @@ export const MiscellaneousTable = ({
         ),
       });
 
-      // Botón gestionar localidades
       baseColumns.push({
         field: "gestionarLocalidades",
         headerName: "Gestionar",
@@ -200,7 +198,6 @@ export const MiscellaneousTable = ({
         ),
       });
     } 
-    //  Caso SUBCATEGORIA
     else if (currentCategoria === 'SUBCATEGORIA') {
       baseColumns.push({
         field: "padreNombre",
@@ -222,7 +219,6 @@ export const MiscellaneousTable = ({
         ),
       });
 
-      // Columna Estado para SUBCATEGORIA
       baseColumns.push({
         field: "activo",
         headerName: "Estado",
@@ -242,17 +238,18 @@ export const MiscellaneousTable = ({
         ),
       });
     } 
-  
     else if (currentCategoria === 'CATEGORIA_RED') {
+      // ✅ CAMBIADO: Ahora maneja array de tipos de incidencia
       baseColumns.push({
         field: "tipoIncidencia",
         headerName: "Tipo de Incidencia",
-        flex: 1.2,
-        minWidth: 200,
+        flex: 1.5,
+        minWidth: 280,
         renderCell: (params) => {
-          const tipo = params.value;
+          const tipos = params.value || [];
+          const tiposArray = Array.isArray(tipos) ? tipos : (tipos ? [tipos] : []);
           
-          if (!tipo) {
+          if (tiposArray.length === 0) {
             return (
               <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
                 Sin tipo de incidencia
@@ -260,27 +257,32 @@ export const MiscellaneousTable = ({
             );
           }
 
-          const config = getTipoIncidenciaConfig(tipo);
-
           return (
-            <Chip
-              label={`${config.icon} ${tipo}`}
-              size="small"
-              sx={{
-                bgcolor: config.bgcolor,
-                color: config.color,
-                fontWeight: 700,
-                borderRadius: '6px',
-                fontSize: '0.75rem',
-                height: '28px',
-                px: 1
-              }}
-            />
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, alignItems: 'center' }}>
+              {tiposArray.map((tipo) => {
+                const config = getTipoIncidenciaConfig(tipo);
+                return (
+                  <Chip
+                    key={tipo}
+                    label={`${config.icon} ${tipo}`}
+                    size="small"
+                    sx={{
+                      bgcolor: config.bgcolor,
+                      color: config.color,
+                      fontWeight: 700,
+                      borderRadius: '6px',
+                      fontSize: '0.7rem',
+                      height: '24px',
+                      px: 0.8
+                    }}
+                  />
+                );
+              })}
+            </Box>
           );
         },
       });
 
-      // Columna Estado para CATEGORIA_RED
       baseColumns.push({
         field: "activo",
         headerName: "Estado",
@@ -300,7 +302,6 @@ export const MiscellaneousTable = ({
         ),
       });
 
-      // Botón gestionar subcategorías
       baseColumns.push({
         field: "gestionarSubcategorias",
         headerName: "Subcategorías",
@@ -324,7 +325,6 @@ export const MiscellaneousTable = ({
         ),
       });
     } 
-    
     else {
       baseColumns.push({
         field: "descripcion",

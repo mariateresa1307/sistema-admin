@@ -24,7 +24,8 @@ export const MiscellaneousModal = ({
 }: MiscellaneousModalProps) => {
   const [estadoSeleccionado, setEstadoSeleccionado] = React.useState("");
   const [categoriaSeleccionada, setCategoriaSeleccionada] = React.useState("");
-  const [tipoIncidencia, setTipoIncidencia] = React.useState("");
+  // ✅ CAMBIADO: Ahora es array
+  const [tipoIncidencia, setTipoIncidencia] = React.useState<string[]>([]);
   const [subcategoriaSeleccionada, setSubcategoriaSeleccionada] = React.useState("");
   const [ciudadSeleccionada, setCiudadSeleccionada] = React.useState("");
   const [causaRaizSeleccionada, setCausaRaizSeleccionada] = React.useState("");
@@ -41,7 +42,7 @@ export const MiscellaneousModal = ({
 
     setEstadoSeleccionado("");
     setCategoriaSeleccionada("");
-    setTipoIncidencia("");
+    setTipoIncidencia([]); // ✅ Resetear como array vacío
     setSubcategoriaSeleccionada("");
     setCiudadSeleccionada("");
     setCausaRaizSeleccionada("");
@@ -120,7 +121,6 @@ export const MiscellaneousModal = ({
 
   const modalTitle = title || getDefaultTitle();
 
-  // ✅ FUNCIÓN onSave CON LOGS COMPLETOS
   const handleSave = async (basePayload: any): Promise<boolean> => {
     try {
       console.log("═══════════════════════════════════════");
@@ -182,27 +182,26 @@ export const MiscellaneousModal = ({
         }
       }
 
-      // ✅ CATEGORIA_RED → tipo de incidencia (CON LOGS DETALLADOS)
+      // ✅ CATEGORIA_RED → tipo de incidencia (ARRAY)
       if (categoria === "CATEGORIA_RED") {
         console.log("🎯 [handleSave] ═══ PROCESANDO CATEGORIA_RED ═══");
         console.log("🎯 [handleSave] tipoIncidencia actual:", tipoIncidencia);
-        console.log("🎯 [handleSave] tipoIncidencia es truthy?", Boolean(tipoIncidencia));
+        console.log("🎯 [handleSave] tipoIncidencia es array?", Array.isArray(tipoIncidencia));
         
-        if (tipoIncidencia) {
-          payload.tipoIncidencia = tipoIncidencia;
-          console.log("✅ [handleSave] ✅✅✅ AGREGADO tipoIncidencia al payload:", payload.tipoIncidencia);
-        } else {
+        if (tipoIncidencia.length === 0) {
           console.warn("⚠️ [handleSave] ⚠️⚠️⚠️ tipoIncidencia está VACÍO!");
+          alert('Debes seleccionar al menos un tipo de incidencia');
+          return false;
+        } else {
+          payload.tipoIncidencia = tipoIncidencia; // ✅ Array completo
+          console.log("✅ [handleSave] ✅✅✅ AGREGADO tipoIncidencia al payload:", payload.tipoIncidencia);
         }
       }
 
       console.log("═══════════════════════════════════════");
       console.log("🚀 [handleSave] PAYLOAD FINAL COMPLETO:", payload);
-      console.log("🚀 [handleSave] ¿Tiene tipoIncidencia?", "tipoIncidencia" in payload);
-      console.log("🚀 [handleSave] Valor de tipoIncidencia:", payload.tipoIncidencia);
       console.log("═══════════════════════════════════════");
 
-      // Hacer la petición
       const isEditMode = Boolean(initialData?._id || initialData?.id);
       const id = initialData?._id || initialData?.id;
       const url = isEditMode && id
@@ -261,7 +260,7 @@ export const MiscellaneousModal = ({
           <CategoriaRedFields
             isOpen={isOpen}
             initialData={initialData}
-            onTipoIncidenciaChange={setTipoIncidencia}
+            onTipoIncidenciaChange={setTipoIncidencia} // ✅ Ahora recibe array
           />
         );
 

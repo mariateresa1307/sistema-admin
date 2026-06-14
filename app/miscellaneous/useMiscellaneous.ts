@@ -32,7 +32,7 @@ export const useMiscellaneous = (currentCategoria: string) => {
 
   // Estados específicos para cada tipo de dato
   const [estados, setEstados] = useState<MiscellaneousItem[]>([]);
-  const [ciudades, setCiudades] = useState<MiscellaneousItem[]>([]); // ✅ NUEVO
+  const [ciudades, setCiudades] = useState<MiscellaneousItem[]>([]);
   const [categorias, setCategorias] = useState<MiscellaneousItem[]>([]);
   const [localidades, setLocalidades] = useState<MiscellaneousItem[]>([]);
   const [subcategorias, setSubcategorias] = useState<MiscellaneousItem[]>([]);
@@ -84,32 +84,26 @@ export const useMiscellaneous = (currentCategoria: string) => {
     // Cargar datos según la categoría actual
     switch (currentCategoria) {
       case 'CIUDAD':
-        // Necesitamos localidades para mostrar en la tabla
         promises.push(fetchByCategoria('LOCALIDAD').then(setLocalidades));
         break;
         
       case 'LOCALIDAD':
-        // Necesitamos ciudades para el selector al crear una localidad
         promises.push(fetchByCategoria('CIUDAD').then(setCiudades));
         break;
         
       case 'SUBCATEGORIA':
-        // Necesitamos categorías para el selector
         promises.push(fetchByCategoria('CATEGORIA_RED').then(setCategorias));
         break;
         
       case 'CATEGORIA_RED':
-        // Necesitamos subcategorías para mostrar en la tabla
         promises.push(fetchByCategoria('SUBCATEGORIA').then(setSubcategorias));
         break;
         
       case 'DETALLE':
-        // Necesitamos subcategorías para el selector
         promises.push(fetchByCategoria('SUBCATEGORIA').then(setSubcategorias));
         break;
         
       case 'SOLUCION_CASO':
-        // Necesitamos causas raíz para el selector
         promises.push(fetchByCategoria('CAUSA_RAIZ').then(setCategorias));
         break;
     }
@@ -122,9 +116,8 @@ export const useMiscellaneous = (currentCategoria: string) => {
     fetchRelatedData();
   }, [fetchItems, fetchRelatedData]);
 
+  // ✅ CORREGIDO: Eliminado el window.confirm
   const deleteItem = useCallback(async (item: MiscellaneousItem): Promise<boolean> => {
-    if (!window.confirm(`¿Estás seguro de eliminar "${item.valor}"?`)) return false;
-
     try {
       const res = await fetch(`${API_URL}/${item._id || item.id}`, {
         method: 'DELETE',
@@ -214,7 +207,7 @@ export const useMiscellaneous = (currentCategoria: string) => {
     getCategorias,
     getCiudades,
     localidades,
-    ciudades, // ✅ Exponer ciudades
+    ciudades,
     subcategorias,
   };
 };

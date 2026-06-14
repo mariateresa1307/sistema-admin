@@ -11,6 +11,7 @@ import {
   ReportProblem as ReportProblemIcon, AccountTree as AccountTreeIcon
 } from "@mui/icons-material";
 import { ConfirmDialog } from "../components/confirmDialog"
+
 type MiscellaneousItem = {
   _id?: string;
   id?: string;
@@ -22,7 +23,7 @@ type MiscellaneousItem = {
   activo?: boolean;
   createdAt?: string;
   updatedAt?: string;
-  tipoIncidencia?: string;
+  tipoIncidencia?: string[]; // ✅ CAMBIADO: Ahora es array
 };
 
 interface CardSeeMiscellaneousModalProps {
@@ -40,13 +41,11 @@ const formatCategoria = (categoria: string): string => {
 };
 
 const getColorByTipoIncidencia = (tipoIncidencia: string): string => {
-  const tipoLower = tipoIncidencia?.toLowerCase() || '';
+  const tipoUpper = (tipoIncidencia || '').toUpperCase();
   
-  if (tipoLower.includes('mayor') || tipoLower.includes('critic')) return '#c62828';
-  if (tipoLower.includes('menor') || tipoLower.includes('baj')) return '#2e7d32';
-  if (tipoLower.includes('media') || tipoLower.includes('moder')) return '#ed6c02';
-  if (tipoLower.includes('alta')) return '#d32f2f';
-  if (tipoLower.includes('baja')) return '#388e3c';
+  if (tipoUpper.includes('PUNTUAL')) return '#e65100';
+  if (tipoUpper.includes('MASIVA')) return '#c62828';
+  if (tipoUpper.includes('MANTENIMIENTO')) return '#1565c0';
   
   return '#1976d2';
 };
@@ -90,7 +89,6 @@ export const CardSeeMiscellaneousModal = ({
   const localidadesList = localidades || [];
   const subcategoriasList = subcategorias || [];
 
-  // ✅ Estado para controlar el diálogo de confirmación
   const [confirmDeleteOpen, setConfirmDeleteOpen] = React.useState(false);
 
   const labelStyle = {
@@ -116,19 +114,16 @@ export const CardSeeMiscellaneousModal = ({
     height: '100%'
   };
 
-  // ✅ Handler para abrir el diálogo de confirmación
   const handleDeleteClick = () => {
     setConfirmDeleteOpen(true);
   };
 
-  // ✅ Handler para confirmar la eliminación
   const handleConfirmDelete = () => {
     onDelete(item);
     setConfirmDeleteOpen(false);
     onClose();
   };
 
-  // ✅ Handler para cancelar la eliminación
   const handleCancelDelete = () => {
     setConfirmDeleteOpen(false);
   };
@@ -145,36 +140,16 @@ export const CardSeeMiscellaneousModal = ({
       return [];
     }
 
-    console.log('🔍 [Modal] Buscando subcategorías para categoría:', {
-      itemId: itemIdStr,
-      itemValor: item.valor,
-      totalSubcategorias: subcategoriasList.length,
-      subcategoriasDisponibles: subcategoriasList.map(s => ({
-        valor: s.valor,
-        padreId: getIdAsString(s.padreId),
-        categoria: s.categoria
-      }))
-    });
-
     const asociadas = subcategoriasList.filter((sub) => {
       const subPadreIdStr = getIdAsString(sub.padreId);
-      const coincide = subPadreIdStr === itemIdStr && sub.activo !== false;
-      
-      if (coincide) {
-        console.log(`✅ [Modal] Subcategoría encontrada: "${sub.valor}" (padreId: ${subPadreIdStr})`);
-      }
-      
-      return coincide;
+      return subPadreIdStr === itemIdStr && sub.activo !== false;
     });
 
-    console.log(`📊 [Modal] Total subcategorías asociadas: ${asociadas.length}`);
-    
     return asociadas;
   }, [item, subcategoriasList]);
 
   return (
     <>
-      {/* ✅ Diálogo de confirmación */}
       <ConfirmDialog
         open={confirmDeleteOpen}
         onClose={handleCancelDelete}
@@ -195,7 +170,6 @@ export const CardSeeMiscellaneousModal = ({
           }
         }}
       >
-        {/* Header */}
         <Box
           sx={{
             bgcolor: '#000027',
@@ -224,41 +198,59 @@ export const CardSeeMiscellaneousModal = ({
 
         <DialogContent sx={{ p: 3 }}>
           <Grid container spacing={2}>
-            {/* Tipo de Incidencia - SOLO para CATEGORIA_RED */}
+            {/* ✅ Tipo de Incidencia - SOLO para CATEGORIA_RED - AHORA MUESTRA ARRAY */}
             {item.categoria === 'CATEGORIA_RED' && (
               <Grid size={{ xs: 12, sm: 6 }}>
                 <Box sx={{ 
                   ...infoBoxStyle, 
-                  bgcolor: `${getColorByTipoIncidencia(item.tipoIncidencia || '')}10`,
-                  borderColor: getColorByTipoIncidencia(item.tipoIncidencia || ''),
+                  borderColor: '#1976d2',
                   borderWidth: '2px'
                 }}>
                   <Typography sx={{ 
                     ...labelStyle, 
-                    color: getColorByTipoIncidencia(item.tipoIncidencia || ''),
+                    color: '#1976d2',
                     display: 'flex', 
                     alignItems: 'center', 
                     gap: 0.5 
                   }}>
                     <AccountTreeIcon sx={{ fontSize: 16 }} />
-                    Tipo de Incidencia
+                    Tipos de Incidencia
                   </Typography>
-                  <Chip
-                    label={item.tipoIncidencia || 'No especificado'}
-                    size="small"
-                    sx={{
-                      bgcolor: item.tipoIncidencia ? getColorByTipoIncidencia(item.tipoIncidencia) : '#e0e0e0',
-                      color: item.tipoIncidencia ? 'white' : '#616161',
-                      fontWeight: 700,
-                      borderRadius: '6px',
-                      mt: 0.5
-                    }}
-                  />
+                  
+                  {(() => {
+                    const tipos = item.tipoIncidencia || [];
+                    const tiposArray = Array.isArray(tipos) ? tipos : (tipos ? [tipos] : []);
+                    
+                    if (tiposArray.length === 0) {
+                      return (
+                        <Typography variant="body2" sx={{ color: '#9e9e9e', fontStyle: 'italic', mt: 0.5 }}>
+                          No especificado
+                        </Typography>
+                      );
+                    }
+                    
+                    return (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                        {tiposArray.map((tipo) => (
+                          <Chip
+                            key={tipo}
+                            label={tipo}
+                            size="small"
+                            sx={{
+                              bgcolor: getColorByTipoIncidencia(tipo),
+                              color: 'white',
+                              fontWeight: 700,
+                              borderRadius: '6px',
+                            }}
+                          />
+                        ))}
+                      </Box>
+                    );
+                  })()}
                 </Box>
               </Grid>
             )}
 
-            {/* Valor */}
             <Grid size={item.categoria === 'CATEGORIA_RED' ? { xs: 12, sm: 6 } : { xs: 12 }}>
               <Box sx={infoBoxStyle}>
                 <Typography sx={labelStyle}>
@@ -271,7 +263,6 @@ export const CardSeeMiscellaneousModal = ({
               </Box>
             </Grid>
 
-            {/* Estado */}
             <Grid size={{ xs: 12, sm: 6 }}>
               <Box sx={infoBoxStyle}>
                 <Typography sx={labelStyle}>Estado</Typography>
@@ -289,10 +280,9 @@ export const CardSeeMiscellaneousModal = ({
               </Box>
             </Grid>
 
-            {/* Categoría */}
             <Grid size={{ xs: 12, sm: 6 }}>
               <Box sx={infoBoxStyle}>
-                <Typography sx={labelStyle}>Categoría</Typography>
+                <Typography sx={labelStyle}>Seccion</Typography>
                 <Chip
                   label={formatCategoria(item.categoria)}
                   size="small"
@@ -306,7 +296,6 @@ export const CardSeeMiscellaneousModal = ({
               </Box>
             </Grid>
 
-            {/* Padre */}
             {item.padreNombre && (
               <Grid size={12}>
                 <Box sx={{ ...infoBoxStyle, bgcolor: '#e3f2fd', borderColor: '#1976d2' }}>
@@ -321,7 +310,6 @@ export const CardSeeMiscellaneousModal = ({
               </Grid>
             )}
 
-            {/* Subcategorías asociadas - SOLO para CATEGORIA_RED */}
             {item.categoria === 'CATEGORIA_RED' && (
               <Grid size={12}>
                 <Box sx={{ ...infoBoxStyle, bgcolor: '#f3e5f5', borderColor: '#7b1fa2' }}>
@@ -357,7 +345,6 @@ export const CardSeeMiscellaneousModal = ({
               </Grid>
             )}
 
-            {/* Descripción */}
             <Grid size={12}>
               <Box sx={infoBoxStyle}>
                 <Typography sx={labelStyle}>
@@ -374,7 +361,6 @@ export const CardSeeMiscellaneousModal = ({
               </Box>
             </Grid>
 
-            {/* Localidades - SOLO para CIUDAD */}
             {item.categoria === 'CIUDAD' && (
               <Grid size={12}>
                 <Box sx={{ ...infoBoxStyle, bgcolor: '#e0e3ff', borderColor: '#009dff' }}>
@@ -409,7 +395,6 @@ export const CardSeeMiscellaneousModal = ({
               </Grid>
             )}
 
-            {/* Fechas */}
             {(item.createdAt || item.updatedAt) && (
               <Grid size={12}>
                 <Divider sx={{ my: 1 }} />
@@ -457,7 +442,7 @@ export const CardSeeMiscellaneousModal = ({
           </Button>
           <Button
             variant="contained"
-            onClick={handleDeleteClick} // ✅ Cambiado de handleDelete a handleDeleteClick
+            onClick={handleDeleteClick}
             startIcon={<DeleteIcon />}
             sx={{
               bgcolor: '#d32f2f',
