@@ -7,25 +7,7 @@ import { FullScreenServiceDialog } from "./serviceModal";
 import { CardSeeServiceModal } from "./cardSeeServiceModal";
 import { GridCellParams, GridColDef } from "@mui/x-data-grid";
 import { Chip, Tabs, Tab, Box } from "@mui/material";
-
-type Service = {
-  _id?: string;
-  tipoServicio: string;
-  name: string;
-  city: string;
-  tipo_cliente: string;
-  id_netuno: string;
-  idRBS?: string;
-  id_circuito?: string;
-  serialONT?: string;
-  nodoA?: string;
-  nodoB?: string;
-  oltnodo?: string;
-  contrato?: number;
-  vlan?: number | string;
-  status?: string;
-  instalado?: boolean;
-};
+import { Service } from "app/utils/types";
 
 export default function RBSPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -72,7 +54,7 @@ export default function RBSPage() {
     switch (row.tipoServicio) {
       case "METROLAN": return `VLAN: ${row.vlan} | NodoA: ${row.nodoA || '-'}`;
       case "RBS": return `ID RBS: ${row.idRBS} | Serial: ${row.serialONT || '-'}`;
-      case "IU": return `ID: ${row.id_circuito} | Proveedor: ${row.tipo_cliente || '-'}`;
+      case "IU": return `ID: ${row.id_circuito} | Proveedor: ${row.tipoCliente || '-'}`;
       case "DOG": return `Circuito: ${row.id_circuito} | Contrato: ${row.contrato || '-'}`;
       case "Redes Compartidas": return `VLAN: ${row.vlan} | Equipo: ${row.nodoA || '-'}`;
       default: return "N/A";

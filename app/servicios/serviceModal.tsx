@@ -7,6 +7,8 @@ import {
 import Grid from "@mui/material/Grid";
 import { Close as CloseIcon, CloudUpload as UploadIcon, PhotoCamera, Schema as DiagramIcon, AddPhotoAlternate as AddIcon } from "@mui/icons-material";
 import { Switch, FormControlLabel } from "@mui/material";
+import { ConfiguracionInterface } from "app/utils/types";
+import { createService, updateService, getMiscellaneous } from "@/lib/api";
 
 
 const CIUDADES_VENEZUELA = ["Caracas", "Maracaibo", "Valencia", "Guarenas / Guatire", "Barquisimeto", "Maracay", "San Cristóbal", "Mérida", "Puerto la cruz"].sort();
@@ -20,7 +22,8 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
   const [tipoServicio, setTipoServicio] = React.useState(initialData?.tipoServicio || "RBS");
   const [imagePreview, setImagePreview] = React.useState<string | null>(initialData?.imageUrl || null);
   const [showImageSection, setShowImageSection] = React.useState(!!initialData?.imageUrl);
-
+  const [tipoCliente, setTipoCliente] = React.useState<Array<ConfiguracionInterface>>([])
+  const [form, setForm] = React.useState({})
   const [hasUltimaMilla, setHasUltimaMilla] = React.useState(initialData?.ultimaMilla || false);
   const [proveedorUM, setProveedorUM] = React.useState(initialData?.proveedorUM || "");
   const [notification, setNotification] = React.useState({ open: false, message: '', severity: 'success' as any });
@@ -35,6 +38,10 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
       setHasUltimaMilla(!!initialData.ultimaMilla);
       setProveedorUM(initialData.proveedorUM || "");
     }
+
+    getMiscellaneous({categoria: 'TIPO_CLIENTE'}).then((config) => {
+      setTipoCliente(config.data)
+    })
   }, [initialData]);
 
   const formRef = React.useRef<HTMLFormElement>(null);
@@ -66,7 +73,8 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
       tipoServicio,
       name: data.name || initialData?.name || "",
       city: data.city || initialData?.city || "",
-      tipo_cliente: data.tipo_cliente || initialData?.tipo_cliente || "",
+      tipoCliente: data.tipoCliente || initialData?.tipoCliente || "",
+      proveedorDelServicioCompartido: data.proveedorDelServicioCompartido || initialData?.proveedorDelServicioCompartido || "",
       diagramaRed: imagePreview || initialData?.diagramaRed || "",
       ipNetuno: data.ipNetuno || initialData?.ipNetuno || null,
       id_circuito: data.id_circuito || initialData?.id_circuito || null,
@@ -86,31 +94,21 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
     };
 
     try {
-      const url = isEditMode ? `http://localhost:4000/services/${initialData._id}` : 'http://localhost:4000/services';
+      const handler = isEditMode ? updateService : createService;
+      const response = await handler(payload, initialData?._id)
 
-      const response = await fetch(url, {
-        method: isEditMode ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (response.ok) {
+      if (response.status === 201) {
         triggerNotification("Servicio actualizado correctamente", "success");
         setTimeout(onClose, 1000);
       } else {
-        const err = await response.json();
+        const err = await response.data;
         triggerNotification(`Error: ${err.message || 'No se pudo guardar'}`, "error");
       }
     } catch (error) {
-      triggerNotification("Error de conexión con el servidor", "error");
+      debugger
+      triggerNotification(`Error, ${JSON.stringify(error)}`, "error");
     }
   };
-
-  const labelTipoCliente = (tipoServicio === "METROLAN" || tipoServicio === "IU") 
-    ? "Proveedor" 
-    : "POR DEFINIR";
-
-
 
   return (
     <>
@@ -132,8 +130,8 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
       </Snackbar>
 
       <Dialog open={isOpen} onClose={onClose} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: '18px', p: 1 } }}>
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 0 }}>
-          <Typography variant="h6" sx={{ fontWeight: 700 }}>{title}</Typography>
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 0, fontWeight: 700 }}>
+          {title}
           <IconButton onClick={onClose} size="small"><CloseIcon /></IconButton>
         </DialogTitle>
 
@@ -178,9 +176,15 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
                 </TextField>
               </Grid>
               <Grid size={6}>
-                <Typography sx={labelStyle}>{labelTipoCliente}</Typography>
-                <TextField select fullWidth name="tipo_cliente" defaultValue={initialData?.tipo_cliente ||''} size="small">
+                <Typography sx={labelStyle}>{"Proveedor del servicio compartido"}</Typography>
+                <TextField select fullWidth name="proveedorDelServicioCompartido" defaultValue={initialData?.proveedorDelServicioCompartido ||''} size="small">
                   {opcionesCliente.map((c) => <MenuItem key={c} value={c}>{c}</MenuItem>)}
+                </TextField>
+              </Grid>
+              <Grid size={6}>
+                <Typography sx={labelStyle}>Tipo de cliente</Typography>
+                <TextField select fullWidth name="tipoCliente" defaultValue={initialData?.tipoCliente || ''} size="small">
+                  {tipoCliente.map((c) => <MenuItem key={c._id} value={c._id}>{c.valor}</MenuItem>)}
                 </TextField>
               </Grid>
 

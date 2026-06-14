@@ -27,3 +27,24 @@ export interface TicketModalProps {
   onClose: () => void;
   onSave: (ticketData: any) => void;
 }
+
+
+export type Service = {
+  _id?: string;
+  tipoServicio: string;
+  name: string;
+  city: string;
+  tipoCliente: string;
+  proveedorDelServicioCompartido: string;
+  id_netuno: string;
+  idRBS?: string;
+  id_circuito?: string;
+  serialONT?: string;
+  nodoA?: string;
+  nodoB?: string;
+  oltnodo?: string;
+  contrato?: number;
+  vlan?: number | string;
+  status?: string;
+  instalado?: boolean;
+};
