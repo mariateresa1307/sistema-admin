@@ -28,3 +28,10 @@ export const TIPO_SERVICIO = {
   REDES_COMPARTIDAS: "REDES_COMPARTIDAS",
   UI: "UI"
 }
+
+
+export const NIVEL_SEVERIDAD = [
+  "BAJO ", 
+  "MEDIO",
+  "ALTO"
+] 
