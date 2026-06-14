@@ -5,9 +5,7 @@ import { CiudadFields } from "./modal/fields/ciudadFields";
 import { SubcategoriaFields } from "./modal/fields/subcategoriaFields";
 import { CategoriaRedFields } from "./modal/fields/CategoriaRedFields";
 import { DetalleFields } from "./modal/fields/detalleFields";
-//import { LocalidadFields } from "./modal/fields/localidadFields";
 import { SolucionCasoFields } from "./modal/fields/solucionCasoFields";
-
 
 interface MiscellaneousModalProps {
   isOpen: boolean;
@@ -24,32 +22,27 @@ export const MiscellaneousModal = ({
   initialData,
   categoria,
 }: MiscellaneousModalProps) => {
-
-  // Estados para los campos específicos
   const [estadoSeleccionado, setEstadoSeleccionado] = React.useState("");
   const [categoriaSeleccionada, setCategoriaSeleccionada] = React.useState("");
-  const [tipoIncidencia, setTipoIncidencia] = React.useState("");
+  // ✅ CAMBIADO: Ahora es array
+  const [tipoIncidencia, setTipoIncidencia] = React.useState<string[]>([]);
   const [subcategoriaSeleccionada, setSubcategoriaSeleccionada] = React.useState("");
   const [ciudadSeleccionada, setCiudadSeleccionada] = React.useState("");
   const [causaRaizSeleccionada, setCausaRaizSeleccionada] = React.useState("");
 
-  // Estados para las opciones de los selectores
   const [estados, setEstados] = React.useState<MiscellaneousItem[]>([]);
   const [categorias, setCategorias] = React.useState<MiscellaneousItem[]>([]);
   const [subcategorias, setSubcategorias] = React.useState<MiscellaneousItem[]>([]);
   const [ciudades, setCiudades] = React.useState<MiscellaneousItem[]>([]);
   const [causasRaiz, setCausasRaiz] = React.useState<MiscellaneousItem[]>([]);
-  // Función de validación
   const [validateFn, setValidateFn] = React.useState<() => boolean>(() => () => true);
 
-  // Cargar datos según la categoría
   React.useEffect(() => {
     if (!isOpen) return;
 
-    // Resetear estados al cambiar de categoría
     setEstadoSeleccionado("");
     setCategoriaSeleccionada("");
-    setTipoIncidencia("");
+    setTipoIncidencia([]); // ✅ Resetear como array vacío
     setSubcategoriaSeleccionada("");
     setCiudadSeleccionada("");
     setCausaRaizSeleccionada("");
@@ -57,10 +50,9 @@ export const MiscellaneousModal = ({
     setCategorias([]);
     setSubcategorias([]);
     setCiudades([]);
-     setCausasRaiz([]);
+    setCausasRaiz([]);
     setValidateFn(() => () => true);
 
-    // Cargar ESTADOS si es CIUDAD
     if (categoria === "CIUDAD") {
       fetch("http://localhost:4000/miscellaneous?categoria=ESTADO")
         .then(res => res.json())
@@ -71,7 +63,6 @@ export const MiscellaneousModal = ({
         .catch(err => console.error("Error al cargar estados:", err));
     }
 
-    // Cargar CATEGORÍAS si es SUBCATEGORIA
     if (categoria === "SUBCATEGORIA") {
       fetch("http://localhost:4000/miscellaneous?categoria=CATEGORIA_RED")
         .then(res => res.json())
@@ -82,7 +73,6 @@ export const MiscellaneousModal = ({
         .catch(err => console.error("Error al cargar categorías:", err));
     }
 
-    // Cargar SUBCATEGORÍAS si es DETALLE
     if (categoria === "DETALLE") {
       fetch("http://localhost:4000/miscellaneous?categoria=SUBCATEGORIA")
         .then(res => res.json())
@@ -93,7 +83,6 @@ export const MiscellaneousModal = ({
         .catch(err => console.error("Error al cargar subcategorías:", err));
     }
 
-    // ✅ Cargar CIUDADES si es LOCALIDAD
     if (categoria === "LOCALIDAD") {
       fetch("http://localhost:4000/miscellaneous?categoria=CIUDAD")
         .then(res => res.json())
@@ -104,7 +93,6 @@ export const MiscellaneousModal = ({
         .catch(err => console.error("Error al cargar ciudades:", err));
     }
 
-      //  Cargar CAUSAS_RAIZ si es SOLUCION_CASO
     if (categoria === "SOLUCION_CASO") {
       fetch("http://localhost:4000/miscellaneous?categoria=CAUSA_RAIZ")
         .then(res => res.json())
@@ -116,39 +104,32 @@ export const MiscellaneousModal = ({
     }
   }, [categoria, isOpen]);
 
- 
-
-
-
-  // Título por defecto según la categoría
   const getDefaultTitle = () => {
     if (initialData) return "Editar Elemento";
     
     switch (categoria) {
-      case "CIUDAD":
-        return "Nueva Ciudad";
-      case "SUBCATEGORIA":
-        return "Nueva Subcategoría";
-      case "CATEGORIA_RED":
-        return "Nueva Categoría de Red";
-      case "ESTADO":
-        return "Nuevo Estado";
-      case "LOCALIDAD":
-        return "Nueva Localidad";
-      case "DETALLE":
-        return "Nuevo Detalle";
-      case "SOLUCION_CASO":
-        return "Nueva Solución del Caso";
-      default:
-        return "Nuevo Elemento";
+      case "CIUDAD": return "Nueva Ciudad";
+      case "SUBCATEGORIA": return "Nueva Subcategoría";
+      case "CATEGORIA_RED": return "Nueva Categoría de Red";
+      case "ESTADO": return "Nuevo Estado";
+      case "LOCALIDAD": return "Nueva Localidad";
+      case "DETALLE": return "Nuevo Detalle";
+      case "SOLUCION_CASO": return "Nueva Solución del Caso";
+      default: return "Nuevo Elemento";
     }
   };
 
   const modalTitle = title || getDefaultTitle();
 
-  // FUNCIÓN onSave
   const handleSave = async (basePayload: any): Promise<boolean> => {
     try {
+      console.log("═══════════════════════════════════════");
+      console.log("📦 [handleSave] INICIO");
+      console.log("📦 [handleSave] basePayload recibido:", basePayload);
+      console.log("📦 [handleSave] tipoIncidencia del estado:", tipoIncidencia);
+      console.log("📦 [handleSave] categoría:", categoria);
+      console.log("═══════════════════════════════════════");
+      
       const payload = { ...basePayload };
 
       // CIUDAD → requiere ESTADO
@@ -157,6 +138,7 @@ export const MiscellaneousModal = ({
         if (estado) {
           payload.estadoId = estado._id || estado.id;
           payload.padreNombre = estado.valor;
+          console.log("✅ [handleSave] Agregado estadoId:", payload.estadoId);
         }
       }
 
@@ -166,6 +148,7 @@ export const MiscellaneousModal = ({
         if (cat) {
           payload.categoriaId = cat._id || cat.id;
           payload.padreNombre = cat.valor;
+          console.log("✅ [handleSave] Agregado categoriaId:", payload.categoriaId);
         }
       }
 
@@ -175,37 +158,59 @@ export const MiscellaneousModal = ({
         if (subcat) {
           payload.subcategoriaId = subcat._id || subcat.id;
           payload.padreNombre = subcat.valor;
+          console.log("✅ [handleSave] Agregado subcategoriaId:", payload.subcategoriaId);
         }
       }
 
-      //  LOCALIDAD → requiere CIUDAD
+      // LOCALIDAD → requiere CIUDAD
       if (categoria === "LOCALIDAD" && ciudadSeleccionada) {
         const ciudad = ciudades.find((c) => (c._id || c.id) === ciudadSeleccionada);
         if (ciudad) {
           payload.ciudadId = ciudad._id || ciudad.id;
           payload.padreNombre = ciudad.valor;
+          console.log("✅ [handleSave] Agregado ciudadId:", payload.ciudadId);
         }
       }
 
-        if (categoria === "SOLUCION_CASO" && causaRaizSeleccionada) {
+      // SOLUCION_CASO → requiere CAUSA_RAIZ
+      if (categoria === "SOLUCION_CASO" && causaRaizSeleccionada) {
         const causa = causasRaiz.find((c) => (c._id || c.id) === causaRaizSeleccionada);
         if (causa) {
           payload.causaId = causa._id || causa.id;
           payload.padreNombre = causa.valor;
+          console.log("✅ [handleSave] Agregado causaId:", payload.causaId);
         }
       }
 
-      // CATEGORIA_RED → tipo de incidencia
-      if (categoria === "CATEGORIA_RED" && tipoIncidencia) {
-        payload.tipoIncidencia = tipoIncidencia;
+      // ✅ CATEGORIA_RED → tipo de incidencia (ARRAY)
+      if (categoria === "CATEGORIA_RED") {
+        console.log("🎯 [handleSave] ═══ PROCESANDO CATEGORIA_RED ═══");
+        console.log("🎯 [handleSave] tipoIncidencia actual:", tipoIncidencia);
+        console.log("🎯 [handleSave] tipoIncidencia es array?", Array.isArray(tipoIncidencia));
+        
+        if (tipoIncidencia.length === 0) {
+          console.warn("⚠️ [handleSave] ⚠️⚠️⚠️ tipoIncidencia está VACÍO!");
+          alert('Debes seleccionar al menos un tipo de incidencia');
+          return false;
+        } else {
+          payload.tipoIncidencia = tipoIncidencia; // ✅ Array completo
+          console.log("✅ [handleSave] ✅✅✅ AGREGADO tipoIncidencia al payload:", payload.tipoIncidencia);
+        }
       }
 
-      // Hacer la petición
+      console.log("═══════════════════════════════════════");
+      console.log("🚀 [handleSave] PAYLOAD FINAL COMPLETO:", payload);
+      console.log("═══════════════════════════════════════");
+
       const isEditMode = Boolean(initialData?._id || initialData?.id);
       const id = initialData?._id || initialData?.id;
       const url = isEditMode && id
         ? `http://localhost:4000/miscellaneous/${id}`
         : "http://localhost:4000/miscellaneous";
+
+      console.log("🌐 [handleSave] Enviando a:", url);
+      console.log("🌐 [handleSave] Método:", isEditMode ? "PATCH" : "POST");
+      console.log("🌐 [handleSave] Body:", JSON.stringify(payload));
 
       const response = await fetch(url, {
         method: isEditMode ? "PATCH" : "POST",
@@ -215,18 +220,19 @@ export const MiscellaneousModal = ({
 
       if (!response.ok) {
         const err = await response.json();
-        console.error("Error del servidor:", err);
+        console.error("❌ [handleSave] Error del servidor:", err);
         return false;
       }
 
+      const result = await response.json();
+      console.log("✅ [handleSave] Respuesta exitosa:", result);
       return true;
     } catch (error) {
-      console.error("Error:", error);
+      console.error("❌ [handleSave] Error:", error);
       return false;
     }
   };
 
-  // Renderizar los campos específicos según la categoría
   const renderExtraFields = () => {
     switch (categoria) {
       case "CIUDAD":
@@ -254,7 +260,7 @@ export const MiscellaneousModal = ({
           <CategoriaRedFields
             isOpen={isOpen}
             initialData={initialData}
-            onTipoIncidenciaChange={setTipoIncidencia}
+            onTipoIncidenciaChange={setTipoIncidencia} // ✅ Ahora recibe array
           />
         );
 
@@ -269,19 +275,9 @@ export const MiscellaneousModal = ({
           />
         );
 
-      //  Caso LOCALIDAD
-case "LOCALIDAD":
-       /* return (
-          <LocalidadFields
-            isOpen={isOpen}
-            initialData={initialData}
-            ciudades={ciudades}
-            onCiudadChange={setCiudadSeleccionada}
-            onValidate={setValidateFn}
-          />
-        );*/
+      case "LOCALIDAD":
+        return null;
 
-   //  Caso SOLUCION_CASO
       case "SOLUCION_CASO":
         return (
           <SolucionCasoFields
@@ -292,14 +288,12 @@ case "LOCALIDAD":
             onValidate={setValidateFn}
           />
         );
-      
 
       default:
         return null;
     }
   };
 
-  // Función de validación
   const validate = () => {
     if (typeof validateFn === 'function') {
       const isValid = validateFn();
@@ -312,9 +306,9 @@ case "LOCALIDAD":
           alert("Debe seleccionar una subcategoría");
         } else if (categoria === "LOCALIDAD") {
           alert("Debe seleccionar una ciudad");
-        }else if (categoria === "SOLUCION_CASO") {
+        } else if (categoria === "SOLUCION_CASO") {
           alert("Debe seleccionar una causa raíz");
-             }
+        }
         return false;
       }
     }
