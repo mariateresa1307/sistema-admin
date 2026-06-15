@@ -584,7 +584,7 @@ export default function TicketModal({
 
   // Guardar ticket pre-saved
   useEffect(() => {
-    if (/*activeStep > 0 && !preSaved*/ true) {
+    if (activeStep > 0 && !preSaved) {
       const handleSaveTicket = async () => {
         const result = await saveTicket({
           caseNumber: form.numeroTicket,
