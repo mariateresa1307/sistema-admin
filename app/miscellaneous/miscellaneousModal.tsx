@@ -29,7 +29,7 @@ export const MiscellaneousModal = ({
   const [subcategoriaSeleccionada, setSubcategoriaSeleccionada] = React.useState("");
   const [ciudadSeleccionada, setCiudadSeleccionada] = React.useState("");
   const [causaRaizSeleccionada, setCausaRaizSeleccionada] = React.useState("");
-  const [nivelSeveridadSeleccionado, setNivelSeveridadSeleccionado] = React.useState(""); 
+  const [nivelSeveridadSeleccionado, setNivelSeveridadSeleccionado] = React.useState("");
 
   const [estados, setEstados] = React.useState<MiscellaneousItem[]>([]);
   const [categorias, setCategorias] = React.useState<MiscellaneousItem[]>([]);
@@ -108,7 +108,7 @@ export const MiscellaneousModal = ({
 
   const getDefaultTitle = () => {
     if (initialData) return "Editar Elemento";
-    
+
     switch (categoria) {
       case "CIUDAD": return "Nueva Ciudad";
       case "SUBCATEGORIA": return "Nueva Subcategoría";
@@ -140,6 +140,8 @@ export const MiscellaneousModal = ({
         const cat = categorias.find((c) => (c._id || c.id) === categoriaSeleccionada);
         if (cat) {
           payload.categoriaId = cat._id || cat.id;
+          payload.padreId = cat._id || cat.id;
+          payload.padreNombre = cat.valor;
         }
       }
 
@@ -147,6 +149,7 @@ export const MiscellaneousModal = ({
         const subcat = subcategorias.find((s) => (s._id || s.id) === subcategoriaSeleccionada);
         if (subcat) {
           payload.subcategoriaId = subcat._id || subcat.id;
+
         }
       }
 
@@ -172,7 +175,7 @@ export const MiscellaneousModal = ({
       }
 
       // CATEGORIA_RED → tipo de incidencia (ARRAY)
-      if (categoria === "CATEGORIA_RED") { 
+      if (categoria === "CATEGORIA_RED") {
         if (tipoIncidencia.length === 0) {
           alert('Debes seleccionar al menos un tipo de incidencia');
           return false;

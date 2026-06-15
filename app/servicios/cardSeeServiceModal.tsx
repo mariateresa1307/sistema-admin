@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import { Modal, Paper, Box, Typography, IconButton, Divider, Chip, Tooltip } from '@mui/material';
-import Grid from '@mui/material/Grid'; 
+import Grid from '@mui/material/Grid';
 import { motion, AnimatePresence } from 'framer-motion';
 import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
@@ -12,10 +12,10 @@ interface ServiceData {
   tipoServicio: string;
   name: string;
   city: string;
-  tipo_cliente: string;
-  ipNetuno: string;
-  id_netuno: string;
-  idRBS?: string; 
+  tipoCliente?: string; // ✅ Corregido: era tipoClienteSeleccionado
+  ipNetuno?: string;
+  id_netuno?: string;
+  idRBS?: string;
   id_circuito?: string;
   idServicio?: string;
   serialONT?: string;
@@ -26,6 +26,7 @@ interface ServiceData {
   vlan?: number | string;
   status?: string;
   instalado?: boolean;
+  proveedorDelServicioCompartido?: string;
 }
 
 interface CardSeeServiceModalProps {
@@ -36,7 +37,37 @@ interface CardSeeServiceModalProps {
 }
 
 export const CardSeeServiceModal = ({ open, onClose, service, onEditClick }: CardSeeServiceModalProps) => {
-  
+  // ✅ Estados dentro del componente
+  const [tipoClienteNombre, setTipoClienteNombre] = React.useState<string>('');
+  const [loadingTipoCliente, setLoadingTipoCliente] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!service?.tipoCliente) {
+      setTipoClienteNombre('');
+      return;
+    }
+
+    const obtenerNombreTipoCliente = async () => {
+      setLoadingTipoCliente(true);
+      try {
+        const res = await fetch(`http://localhost:4000/miscellaneous/${service.tipoCliente}`);
+        if (res.ok) {
+          const data = await res.json();
+          setTipoClienteNombre(data.valor || service.tipoCliente || '');
+        } else {
+          setTipoClienteNombre(service.tipoCliente || '');
+        }
+      } catch (error) {
+        console.error('Error al obtener tipo de cliente:', error);
+        setTipoClienteNombre(service.tipoCliente || '');
+      } finally {
+        setLoadingTipoCliente(false);
+      }
+    };
+
+    obtenerNombreTipoCliente();
+  }, [service?.tipoCliente]);
+
   if (!service) return null;
 
   // Función para obtener campos dinámicos según el tipo de servicio
@@ -44,18 +75,21 @@ export const CardSeeServiceModal = ({ open, onClose, service, onEditClick }: Car
     switch (s.tipoServicio) {
       case "METROLAN":
         return [
-          { label: "NOMBRE CLIENTE ", value: s.name },
+          { label: "NOMBRE CLIENTE", value: s.name },
           { label: "TIPO SERVICIO", value: s.tipoServicio },
-           { label: "ID SERVICIO", value: s.id_circuito },
+          { label: "ID SERVICIO", value: s.id_circuito },
           { label: "NODO A", value: s.nodoA },
           { label: "NODO B", value: s.nodoB },
-           { label: "IP NETUNO", value: s.ipNetuno },
+          { label: "IP NETUNO", value: s.ipNetuno },
           { label: "VLAN", value: s.vlan }
         ];
       case "RBS":
         return [
           { label: "ID NETUNO", value: s.id_netuno },
-           { label: "TIPO CLIENTE", value: s.tipo_cliente },
+          { 
+            label: "TIPO CLIENTE", 
+            value: loadingTipoCliente ? 'Cargando...' : (tipoClienteNombre || '—')
+          },
           { label: "ID RBS", value: s.idRBS },
           { label: "SERIAL ONT", value: s.serialONT },
           { label: "NODO A", value: s.nodoA },
@@ -81,7 +115,7 @@ export const CardSeeServiceModal = ({ open, onClose, service, onEditClick }: Car
         ];
       case "Redes Compartidas":
         return [
-          {label: "NOMBRE CLIENTE", value: s.name },
+          { label: "NOMBRE CLIENTE", value: s.name },
           { label: "CONTRATO", value: s.contrato },
           { label: "VLAN", value: s.vlan },
           { label: "NODO A", value: s.nodoA },
@@ -111,7 +145,7 @@ export const CardSeeServiceModal = ({ open, onClose, service, onEditClick }: Car
                 bgcolor: '#ffffff', position: 'relative', overflow: 'hidden'
               }}
             >
-              <Box sx={{ 
+              <Box sx={{
                 position: 'absolute', top: 0, left: 0, width: '100%', height: '5px',
                 bgcolor: service.status === "Activo" ? '#22c55e' : '#f59e0b'
               }} />
@@ -136,13 +170,12 @@ export const CardSeeServiceModal = ({ open, onClose, service, onEditClick }: Car
               <Divider sx={{ mb: 3.5, borderColor: '#f1f5f9' }} />
 
               <Grid container spacing={3}>
-             
                 <Grid size={{ xs: 12, sm: 3 }}>
                   <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748b', display: 'block' }}>ESTADO</Typography>
                   <Box sx={{ mt: 0.5 }}>
-                    <Chip 
-                      label={service.status === "Activo" ? "Activo" : "Inactivo"} 
-                      size="small" 
+                    <Chip
+                      label={service.status === "Activo" ? "Activo" : "Inactivo"}
+                      size="small"
                       color={service.status === "Activo" ? "success" : "warning"}
                     />
                   </Box>
@@ -151,7 +184,9 @@ export const CardSeeServiceModal = ({ open, onClose, service, onEditClick }: Car
                 {getDynamicFields(service).map((field, idx) => (
                   <Grid key={idx} size={{ xs: 12, sm: 5 }}>
                     <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748b', display: 'block' }}>{field.label}</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#334155' }}>{field.value || '—'}</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#334155' }}>
+                      {field.value || '—'}
+                    </Typography>
                   </Grid>
                 ))}
               </Grid>

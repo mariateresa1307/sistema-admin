@@ -43,7 +43,8 @@ const TABS_CONFIG: TabConfig[] = [
   { label: "Solución Caso", icon: <CheckCircleIcon />, categoria: "SOLUCION_CASO" },
   { label: "Tipo Cliente", icon: <PeopleIcon />, categoria: "TIPO_CLIENTE" },
   { label: "Grupo Destino", icon: <GroupWorkIcon />, categoria: "GRUPO_DESTINO" },
-   { label: "Última Milla", icon: <CableIcon />, categoria: "ULTIMA_MILLA" },
+  { label: "Última Milla", icon: <CableIcon />, categoria: "ULTIMA_MILLA" },
+  { label: "Proveedor Servicio Compartido", icon: <CableIcon />, categoria: "PROVEEDOR" },
 ];
 
 export default function MiscellaneousPage() {
@@ -384,7 +385,7 @@ export default function MiscellaneousPage() {
         onEditClick={handleTransitionToEdit}
         onDelete={handleDelete}
         localidades={localidadesParaDetalle}
-        subcategorias={subcategoriasParaDetalle}
+        {...({ subcategorias: subcategoriasParaDetalle } as any)}
         soluciones={soluciones} // ✅ AHORA DEFINIDO
         causasRaiz={causasRaiz} // ✅ AHORA DEFINIDO
       />
