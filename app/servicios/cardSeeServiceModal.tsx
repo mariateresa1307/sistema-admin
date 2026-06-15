@@ -70,7 +70,6 @@ export const CardSeeServiceModal = ({ open, onClose, service, onEditClick }: Car
 
   if (!service) return null;
 
-  // Función para obtener campos dinámicos según el tipo de servicio
   const getDynamicFields = (s: ServiceData) => {
     switch (s.tipoServicio) {
       case "METROLAN":
