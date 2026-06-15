@@ -24,7 +24,7 @@ import NavigateBeforeIcon from "@mui/icons-material/NavigateBefore";
 import ConfirmationNumberIcon from "@mui/icons-material/ConfirmationNumber";
 import PersonIcon from "@mui/icons-material/Person";
 import { FormStepper } from "../components/formStepper";
-import { saveTicket } from "@/lib/api";
+import { getService, saveTicket } from "@/lib/api";
 import ElementoModal from "../components/elementoTicketModal";
 import AddIcon from "@mui/icons-material/Add";
 import { getMiscellaneous } from "@/lib/api";
@@ -321,6 +321,7 @@ const initialFormState = {
   estatus: "PRELIMINAR",
   descripcion: "",
   turnoAsignado: "DIURNO",
+  bitacora: ''
 };
 
 export default function TicketModal({
@@ -330,11 +331,7 @@ export default function TicketModal({
 }: TicketModalProps) {
   const [activeStep, setActiveStep] = useState(0);
   const [openModal, setOpenModal] = useState(false);
-  const [serviciosAdfectados, setServiciosAfectados] = useState([
-    "GPON",
-    "ONT",
-    "IAD",
-  ]);
+  const [serviciosAdfectados, setServiciosAfectados] = useState([]);
   const [preSaved, setPreSaved] = useState<string | null>(null);
   const label = { slotProps: { input: { "aria-label": "Color switch demo" } } };
   const pasos = [
@@ -544,6 +541,9 @@ export default function TicketModal({
       updates.serviciosAfectados = [];
     }
 
+    getService({ tipoCliente: tipoCliente }).then((services) => {
+      setServiciosAfectados(services.data);
+    })
     setForm((prev) => ({ ...prev, ...updates }));
   };
 
@@ -572,7 +572,7 @@ export default function TicketModal({
   const customClose = useCallback(() => {
     setActiveStep(0);
     setOpenModal(false);
-    setServiciosAfectados(["GPON", "ONT", "IAD"]);
+    setServiciosAfectados([]);
     setPreSaved(null);
     setCategoriaRed([]);
     setSubcategorias([]);
@@ -593,6 +593,14 @@ export default function TicketModal({
           networkCategory: form.categoria,
           description: form.descripcion,
           status: TICKET_STATUS.EN_GESTION,
+          subcategoria: form.subcategoria,
+          detalle: form.detalle,
+          tipoCliente: form.tipoCliente,
+          serviciosAfectados: form.serviciosAfectados.map((sa) => sa._id),
+          ciudad: form.ciudad,
+          estado: form.estado,
+          localidad: form.localidad,
+          bitacora: form.bitacora
         });
         setPreSaved(result.data._id);
       };
@@ -835,9 +843,12 @@ export default function TicketModal({
                       size="small"
                       options={serviciosAdfectados}
                       value={form.serviciosAfectados}
-                      onChange={(e, newValue) =>
+                      onChange={(e, newValue) => { 
+                    
                         handleServiciosAfectadosChange(newValue)
-                      }
+                      }}
+                      getOptionKey={(option) => option._id}
+                      getOptionLabel={(option) => option.name}
                       ChipProps={{ size: "small", sx: { height: 24, m: 0.25 } }}
                       sx={{
                         "& .MuiOutlinedInput-root": {

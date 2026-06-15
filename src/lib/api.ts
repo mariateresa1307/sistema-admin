@@ -25,12 +25,10 @@ export const updateUser = (id: string, data: any) => api.put(`/user/${id}`, data
 export const deleteUser = (id: string) => api.delete(`/user/${id}`);
 export const toggleStatus = (id: string, status: boolean) => api.patch(`/user/${id}/status`, { isActive: status });
 
-export const getService = (search?: string) => api.get(`/service${search ? `?search=${search}` : ''}`);
-export const createService = (data: any) => api.post('/service', data);
-export const updateService = (id: string, data: any) => api.put(`/service/${id}`, data);
-export const deleteService = (id: string) => api.delete(`/service/${id}`);
+export const getService = (params?: any) => api.get(`/services`, {params});
+export const createService = (data: any) => api.post('/services', data);
+export const updateService = (data: any, id: string, ) => api.put(`/services/${id}`, data);
+export const deleteService = (id: string) => api.delete(`/services/${id}`);
 
 export const saveTicket = (data: any) => api.post('/tickets', data);
-
-// TODO_ALE: Agregar la ruta del controller para que el react la consulte.  
 export const getMiscellaneous = (params: any) => api.get('/miscellaneous', { params })  
