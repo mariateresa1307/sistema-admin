@@ -4,7 +4,6 @@ import { CustomDataGrid } from "../components/customDataGrid";
 import { CardSeeModal } from "./cardUserSeeModal";
 import { useState, useCallback, useEffect } from "react";
 import { getUsers } from "@/lib/api";
-
 import { Box, Chip,Typography } from "@mui/material";
 import { GridColDef, GridCellParams } from "@mui/x-data-grid";
 import { FloatingAddButton } from "../components/FloatingAddButton";
@@ -26,19 +25,15 @@ type Usuario = {
 export default function UsuariosPage() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
-
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<Usuario | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
-  // ✅ Estado para la notificación
   const [notification, setNotification] = useState({
     open: false,
     message: "",
     severity: "success" as "success" | "error",
   });
-
-
 
   const fetchUsuarios = useCallback(async () => {
     try {
@@ -75,13 +70,10 @@ export default function UsuariosPage() {
         const user = params.row as Usuario;
         return (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2, height: '100%' }}>
-       
-      
             <Typography 
               variant="body2" 
               sx={{ 
                 fontWeight: 600, 
-             
               }}
             >
               @{user.username}
@@ -95,7 +87,6 @@ export default function UsuariosPage() {
       headerName: "Nombre Completo",
       flex: 1.5,
       minWidth: 200,
-      
       valueGetter: (value, row) =>
         `${row?.primerNombre || ""} ${row?.primerApellido || ""}`.trim(),
     },
@@ -171,22 +162,20 @@ export default function UsuariosPage() {
     setIsDialogOpen(true);
   };
 
-  // ✅ Función unificada que se ejecuta al guardar de forma exitosa en el Formulario
+ 
   const handleFormSubmit = async () => {
     await fetchUsuarios();
     setSelectedUser(null);
-    
-    // ✅ Mostrar notificación de éxito
+  
     setNotification({
       open: true,
       message: selectedUser 
-        ? "✅ Usuario actualizado exitosamente" 
-        : "✅ Usuario creado exitosamente",
+        ? " Usuario actualizado exitosamente" 
+        : " Usuario creado exitosamente",
       severity: "success",
     });
   };
 
-  // ✅ Función para cerrar la notificación
   const handleCloseNotification = () => {
     setNotification({ ...notification, open: false });
   };
@@ -243,8 +232,6 @@ export default function UsuariosPage() {
         user={selectedUser}
         onEditClick={handleTransitionToEdit}
       />
-
-      {/* ✅ Notificación de éxito */}
       <Notification
         open={notification.open}
         message={notification.message}
