@@ -1,27 +1,28 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { Box, Drawer, Button, AppBar, Toolbar, List, Typography, IconButton, ListItemButton, ListItemIcon, ListItemText, Avatar, Collapse,  Menu,
-  MenuItem, Tooltip, Divider, Stack} from "@mui/material";
-import { Dashboard, People,  ExpandLess, ExpandMore, Logout, Settings, VerifiedUser, Assessment, } from "@mui/icons-material";
-import {  ThemeProvider, useTheme, type ThemeMode} from "../context/ThemeContext";
+import { Box, Drawer, Button, AppBar, Toolbar, List, Typography, IconButton, ListItemButton, ListItemIcon, ListItemText, Avatar, Collapse, Menu, MenuItem, Tooltip, Divider, Stack } from "@mui/material";
+import { Dashboard, People, ExpandLess, ExpandMore, Logout, Settings, VerifiedUser, Assessment } from "@mui/icons-material";
+import { ThemeProvider, useTheme, type ThemeMode } from "../context/ThemeContext";
+import { useAuth } from "../context/authContext";
+import { filterMenuByRole } from "../utils/permissions";
 import AcUnitIcon from '@mui/icons-material/AcUnit';
 import TicketModal from "../home/ticketModal";
 import { motion } from "motion/react";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
 import TuneIcon from '@mui/icons-material/Tune';
-
 import SettingsSuggestIcon from "@mui/icons-material/SettingsSuggest";
 
 const DRAWER_WIDTH = 260;
 const APP_BAR_HEIGHT = 64;
 
-type MenuItem = {
+type MenuItemType = {
   label: string;
   path: string;
   icon: React.ReactElement;
-  children?: { label: string; path: string; icon: React.ReactElement }[];
+  module?: string;
+  children?: { label: string; path: string; icon: React.ReactElement; module?: string }[];
 };
 
 type UserData = {
@@ -29,11 +30,12 @@ type UserData = {
   primerApellido: string;
 };
 
-const MENU_ITEMS: MenuItem[] = [
+const MENU_ITEMS: MenuItemType[] = [
   {
     label: "Dashboard",
     path: "/home",
     icon: <Dashboard />,
+    module: "dashboard",
   },
   {
     label: "Gestión",
@@ -43,22 +45,26 @@ const MENU_ITEMS: MenuItem[] = [
       { 
         label: "Usuarios", 
         path: "/user", 
-        icon: <People fontSize="small" /> 
+        icon: <People fontSize="small" />,
+        module: "usuarios",
       },
       {
-        label: "Reportes", // ✅ Opción agregada antes de Auditoría
+        label: "Reportes",
         path: "/report",
         icon: <Assessment fontSize="small" />,
+        module: "reportes",
       },
-       {
-        label: "Configuracion", // ✅ Opción agregada antes de Auditoría
+      {
+        label: "Configuracion",
         path: "/miscellaneous",
         icon: <TuneIcon fontSize="small" />,
+        module: "miscellaneous",
       },
       {
         label: "Auditoría",
         path: "/admin",
         icon: <VerifiedUser fontSize="small" />,
+        module: "auditoria",
       },
     ],
   },
@@ -66,10 +72,10 @@ const MENU_ITEMS: MenuItem[] = [
     label: "Servicios",
     path: "/servicios",
     icon: <People fontSize="small" />,
+    module: "servicios",
   },
 ];
 
-// ============ ESTILOS COMPARTIDOS ============
 const sharedStyles = {
   selectedButton: {
     "&.Mui-selected": {
@@ -85,17 +91,13 @@ const sharedStyles = {
   textSecondary: { "& span": { color: "text.secondary" } },
 };
 
-// ============ HOOKS PERSONALIZADOS ============
 function useUserData() {
-  const [modalOpen, setModalOpen] = useState(false);
   const [userData, setUserData] = React.useState<UserData>({
     primerNombre: "U",
     primerApellido: "S",
   });
-  const [mounted, setMounted] = React.useState(false);
   
   React.useEffect(() => {
-    setMounted(true);
     const stored = localStorage.getItem("userData");
     if (stored) {
       try {
@@ -106,10 +108,8 @@ function useUserData() {
     }
   }, []);
 
-  return { userData, mounted };
+  return { userData };
 }
-
-// ============ SUBCOMPONENTES ============
 
 const ThemeSwitcher = React.memo<{
   isDark: boolean;
@@ -207,10 +207,6 @@ const UserMenu = React.memo<{
         <IconButton
           onClick={(e) => setAnchorEl(e.currentTarget)}
           sx={{ color: "inherit", mx: 2 }}
-          aria-label="Abrir menú de configuración"
-          aria-controls={open ? "settings-menu" : undefined}
-          aria-haspopup="true"
-          aria-expanded={open ? "true" : undefined}
         >
           <SettingsSuggestIcon fontSize="large" />
         </IconButton>
@@ -232,10 +228,7 @@ const UserMenu = React.memo<{
           },
         }}
       >
-        <Typography
-          variant="subtitle2"
-          sx={{ mb: 2, fontWeight: 700, opacity: 0.8 }}
-        >
+        <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 700, opacity: 0.8 }}>
           CONFIGURACIÓN
         </Typography>
 
@@ -279,7 +272,7 @@ const UserMenu = React.memo<{
 UserMenu.displayName = "UserMenu";
 
 const SidebarItem = React.memo<{
-  item: MenuItem;
+  item: MenuItemType;
   pathname: string;
   isOpen: boolean;
   onNavigate: (path: string) => void;
@@ -340,12 +333,80 @@ const SidebarItem = React.memo<{
 });
 SidebarItem.displayName = "SidebarItem";
 
+// ✅ SIDEBAR CON FALLBACK - CORREGIDO
 const Sidebar = React.memo<{
   pathname: string;
   onNavigate: (path: string) => void;
   onLogout: () => void;
 }>(({ pathname, onNavigate, onLogout }) => {
   const [open] = React.useState(true);
+  const { user, isLoading } = useAuth();
+
+  // ✅ MOVER useMemo ANTES del return condicional (reglas de hooks)
+  const filteredMenuItems = React.useMemo(() => {
+    console.log("🔍 [Sidebar] Filtrando menú con role:", user?.role);
+    return filterMenuByRole(MENU_ITEMS, user?.role);
+  }, [user?.role]);
+
+  console.log("🔍 [Sidebar] isLoading:", isLoading);
+  console.log("🔍 [Sidebar] user:", user);
+  console.log("🔍 [Sidebar] user.role:", user?.role);
+  console.log("✅ [Sidebar] Menu filtrado:", filteredMenuItems.length, "items");
+
+  // ✅ Solo mostrar spinner si isLoading es true Y no tenemos user
+  if (isLoading && !user) {
+    console.log("⏳ [Sidebar] Esperando carga del usuario...");
+    return (
+      <Drawer
+        variant="permanent"
+        sx={{
+          width: DRAWER_WIDTH,
+          flexShrink: 0,
+          "& .MuiDrawer-paper": {
+            width: DRAWER_WIDTH,
+            color: "text.primary",
+            marginTop: `${APP_BAR_HEIGHT}px`,
+            height: `calc(100% - ${APP_BAR_HEIGHT}px)`,
+            border: "none",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          },
+        }}
+      >
+        <Typography variant="body2" color="text.secondary">
+          Cargando menú...
+        </Typography>
+      </Drawer>
+    );
+  }
+
+  // ✅ Si no hay user después de cargar, mostrar menú vacío
+  if (!user) {
+    console.warn("⚠️ [Sidebar] No hay usuario, mostrando menú mínimo");
+    return (
+      <Drawer
+        variant="permanent"
+        sx={{
+          width: DRAWER_WIDTH,
+          flexShrink: 0,
+          "& .MuiDrawer-paper": {
+            width: DRAWER_WIDTH,
+            color: "text.primary",
+            marginTop: `${APP_BAR_HEIGHT}px`,
+            height: `calc(100% - ${APP_BAR_HEIGHT}px)`,
+            border: "none",
+          },
+        }}
+      >
+        <List sx={{ pt: 2, flexGrow: 1 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
+            Sin permisos
+          </Typography>
+        </List>
+      </Drawer>
+    );
+  }
 
   return (
     <Drawer
@@ -365,7 +426,7 @@ const Sidebar = React.memo<{
       }}
     >
       <List sx={{ pt: 2, flexGrow: 1 }}>
-        {MENU_ITEMS.map((item) => (
+        {filteredMenuItems.map((item) => (
           <SidebarItem
             key={item.path}
             item={item}
@@ -395,7 +456,6 @@ const Sidebar = React.memo<{
 });
 Sidebar.displayName = "Sidebar";
 
-// ============ COMPONENTE PRINCIPAL ============
 function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();

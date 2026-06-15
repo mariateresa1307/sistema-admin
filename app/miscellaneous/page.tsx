@@ -10,9 +10,7 @@ import { SubcategoriasDialog } from "../components/subcategoriasDialog";
 import { MiscellaneousTable } from "../components/MiscellaneousTable";
 import { useMiscellaneous, MiscellaneousItem } from "./useMiscellaneous";
 import { GridCellParams } from "@mui/x-data-grid";
-import {
-  Tabs, Tab, Box, Snackbar, Alert, Button, Typography
-} from "@mui/material";
+import { Tabs, Tab, Box, Snackbar, Alert, Button, Typography} from "@mui/material";
 import CategoryIcon from '@mui/icons-material/Category';
 import LocationCityIcon from '@mui/icons-material/LocationCity';
 import BuildIcon from '@mui/icons-material/Build';
@@ -27,6 +25,8 @@ import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 import MapIcon from '@mui/icons-material/Map';
 import FmdGoodIcon from '@mui/icons-material/FmdGood';
 import WarningIcon from '@mui/icons-material/Warning';
+import ProtectedRoute from "../components/protectedRoute";
+import DashboardLayout from "../components/dashboardLayout";
 
 type TabConfig = {
   label: string;

@@ -7,7 +7,6 @@ import {
 import Grid from "@mui/material/Grid";
 import { Close as CloseIcon } from "@mui/icons-material";
 
-// ✅ EXPORTAR MiscellaneousItem
 export type MiscellaneousItem = {
   _id?: string;
   id?: string;

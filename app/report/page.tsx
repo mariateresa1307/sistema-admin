@@ -6,6 +6,7 @@ import Grid from "@mui/material/Grid";
 import { Download, BarChart as ChartIcon } from "@mui/icons-material";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import Divider from '@mui/material/Divider';
+import ProtectedRoute from "../components/protectedRoute"; // ✅ NUEVO
 
 const data = [{ name: 'CORE', fallas: 40 }, { name: 'IT', fallas: 30 }, { name: 'Acceso', fallas: 20 }];
 
@@ -35,14 +36,14 @@ const KpiCard = ({ title, value, color, subtitle }: { title: string; value: stri
   </Grid>
 );
 
-export default function ReportesPage() {
+// ✅ Componente interno con el contenido real
+function ReportesContent() {
   const [openModal, setOpenModal] = useState(false);
   const [filters, setFilters] = useState({
     grupo: "A", plataforma: "TODAS", servicio: "TODOS", fechaInicio: "", fechaFin: ""
   });
 
   return (
-
     <Box sx={{ p: 1, maxWidth: 1600, mx: "auto" }}>
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1}}>
         <Box >
@@ -76,7 +77,6 @@ export default function ReportesPage() {
               <MenuItem value="CORE">AMBIENTE</MenuItem>
               <MenuItem value="CORE">COMPONENTES</MenuItem>
               <MenuItem value="CORE">IT</MenuItem>
-
             </TextField>
           </Grid>
           <Grid size={{ xs: 12, md: 3 }}>
@@ -157,5 +157,14 @@ export default function ReportesPage() {
         </DialogActions>
       </Dialog>
     </Box>
+  );
+}
+
+// ✅ Exportar la página protegida
+export default function ReportesPage() {
+  return (
+    <ProtectedRoute module="reportes">
+      <ReportesContent />
+    </ProtectedRoute>
   );
 }
