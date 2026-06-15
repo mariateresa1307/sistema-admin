@@ -11,7 +11,7 @@ import {
   Link,
   InputAdornment,
 } from '@mui/material';
-import { Mail, Lock, Hub as HubIcon } from '@mui/icons-material'; // Importamos el icono Hub
+import { Mail, Lock, Hub as HubIcon } from '@mui/icons-material';
 import { motion, Variants } from 'motion/react';
 import api from '@/../src/lib/api';
 
@@ -58,10 +58,35 @@ export default function LoginPage() {
       });
 
       if (response.data) {
+        // ✅ Guardar token
         if (response.data.access_token) {
           localStorage.setItem('token', response.data.access_token);
         }
-        router.push('/home');
+        
+        // ✅ Guardar usuario COMPLETO
+        if (response.data.user) {
+          const userData = response.data.user;
+          
+          // ✅ CORREGIDO: Normalizar roles a español (consistente con AuthContext)
+          const roleMap: Record<string, string> = {
+            'administrador': 'admin',
+            'admin': 'admin',
+            'operador': 'operador',      // ← CAMBIADO: era 'operator'
+            'operator': 'operador',      // ← CAMBIADO: era 'operator'
+            'editor': 'editor',          // ← CAMBIADO: era 'operator_edit'
+            'operator_edit': 'editor',   // ← CAMBIADO: era 'operator_edit'
+            'operator editor': 'editor', // ← NUEVO
+            'operador editor': 'editor', // ← NUEVO
+          };
+          
+          userData.role = roleMap[userData.role?.toLowerCase()] || 'operador';
+          
+          console.log("✅ Usuario guardado con role:", userData.role);
+          console.log("✅ Usuario completo:", userData);
+          localStorage.setItem('userData', JSON.stringify(userData));
+        }
+        
+        window.location.href = '/home';
       }
     } catch (error: any) {
       if (error.response) {
@@ -112,11 +137,8 @@ export default function LoginPage() {
           border: '1px solid rgba(255, 255, 255, 0.18)',
         }}>
           
-          {/* NUEVO BLOQUE: TÍTULO E ICONO NOC */}
           <Box sx={{ textAlign: 'center', mb: 4 }}>
-          
-              <HubIcon sx={{ fontSize: 50, color: 'white' }} />
-            
+            <HubIcon sx={{ fontSize: 50, color: 'white' }} />
             <Typography variant="h4" sx={{ color: 'white', fontWeight: 800, letterSpacing: '1px' }}>
               NOC HELPDESK
             </Typography>
@@ -126,7 +148,6 @@ export default function LoginPage() {
           </Box>
           
           <Box component="form" onSubmit={handleSubmit} noValidate>
-            {/* ... tus TextField de email y password permanecen iguales ... */}
             <TextField
               fullWidth variant="standard" placeholder="Email" name="email" margin="normal"
               InputProps={{

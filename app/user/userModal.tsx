@@ -55,11 +55,11 @@ export const FullScreenUserDialog = ({
   const [isActive, setIsActive] = React.useState<boolean>(true);
   const [role, setRole] = React.useState<string>('admin');
 
-  const ROLES_USUARIO = [
-    { value: "admin", label: "Administrador" },
-    { value: "operador", label: "Operador" },
-    { value: "editor", label: "Operator Editor" },
-  ];
+const ROLES_USUARIO = [
+  { value: "admin", label: "Administrador" },
+  { value: "operador", label: "Operador" },
+  { value: "editor", label: "Operator Editor" },
+];
 
   const formRef = React.useRef<HTMLFormElement>(null);
 
@@ -289,39 +289,38 @@ export const FullScreenUserDialog = ({
               />
             </Grid>
 
-            {!isEditMode && (
-              <Grid size={6}>
-                <FormControl
-                  variant="outlined"
-                  fullWidth
-                  required={!isEditMode}
-                  size="small"
-                >
-                  <InputLabel htmlFor="clave" shrink>
-                    Contraseña
-                  </InputLabel>
-                  <OutlinedInput
-                    id="clave"
-                    name="clave"
-                    type={showPassword ? "text" : "password"}
-                    label="Contraseña"
-                    notched
-                    endAdornment={
-                      <InputAdornment position="end">
-                        <IconButton
-                          onClick={handleClickShowPassword}
-                          onMouseDown={handleMouseDownPassword}
-                          edge="end"
-                          size="small"
-                        >
-                          {showPassword ? <VisibilityOff /> : <Visibility />}
-                        </IconButton>
-                      </InputAdornment>
-                    }
-                  />
-                </FormControl>
-              </Grid>
-            )}
+            {/* ✅ CAMPO DE CONTRASEÑA - AHORA VISIBLE EN AMBOS MODOS */}
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <FormControl variant="outlined" fullWidth required={!isEditMode} size="small">
+                <InputLabel htmlFor="clave" shrink>
+                  {isEditMode ? "Nueva Contraseña (opcional)" : "Contraseña"}
+                </InputLabel>
+                <OutlinedInput
+                  id="clave"
+                  name="clave"
+                  type={showPassword ? "text" : "password"}
+                  label={isEditMode ? "Nueva Contraseña (opcional)" : "Contraseña"}
+                  notched
+                  endAdornment={
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={handleClickShowPassword}
+                        onMouseDown={handleMouseDownPassword}
+                        edge="end"
+                        size="small"
+                      >
+                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  }
+                />
+              </FormControl>
+              {isEditMode && (
+                <Typography variant="caption" sx={{ color: "#64748b", mt: 0.5, display: "block" }}>
+                  Dejar en blanco para mantener la contraseña actual
+                </Typography>
+              )}
+            </Grid>
 
             <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
