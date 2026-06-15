@@ -48,3 +48,26 @@ export type Service = {
   status?: string;
   instalado?: boolean;
 };
+
+
+export type Tickets = {
+  id: string;
+  _id: string;
+  username: string;
+  email: string;
+  asuntoCaso: string;
+  ticketCodigo: string;
+  primerNombre: string;
+  primerApellido: string;
+  responsable: string;
+  estado: 'PRELIMINAR' | 'ACTIVO' | 'CERRADO';
+};
+
+
+export type Pagination<T> = {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+};
