@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { ContainerBox } from "../components/containerBox";
 import { CustomDataGrid } from "../components/customDataGrid";
 import { MetricsCarousel } from "../components/metricsCarousel";
@@ -25,7 +25,7 @@ export default function HomePage() {
       setTickets(tickets.data);
       setLoading(false);
     });
-  }, [page]);
+  }, [page.page, page.pageSize, setLoading, setLoading, getTickets]);
 
   const metrics = {
     total: 0,
@@ -122,6 +122,11 @@ export default function HomePage() {
     },
   ];
 
+  const handlePagination = (model) => {
+      setPage(model);
+  };
+
+
   return (
     <ContainerBox
       title="Administración de Incidencias y actividades"
@@ -139,17 +144,15 @@ export default function HomePage() {
         }}
       >
         <CustomDataGrid
-          rows={tickets?.data || []} // Tu buscador interno ahora filtra reactivamente este prop
+          rows={tickets?.data || []}
           columns={columns}
           loading={loading}
           onCellClick={handleCellClick}
           paginationModel={{
             page: tickets?.page || 0,
-            pageSize: 2
+            pageSize: tickets?.data.length || 0
           }}
-          onPaginationModelChange={(params) => {
-            setPage(params)
-          }}
+          onPaginationModelChange={handlePagination}
           pageSizeOptions={[2, 5, 10]}
           paginationMode="server"
           rowCount={tickets?.total || 0}
