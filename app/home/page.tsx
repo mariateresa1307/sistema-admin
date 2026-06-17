@@ -21,7 +21,7 @@ export default function HomePage() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   useEffect(() => {
-    getTickets({ page: page.page, limit: page.pageSize }).then((tickets) => {
+    getTickets({ page: page.page + 1, limit: page.pageSize }).then((tickets) => {
       setTickets(tickets.data);
       setLoading(false);
     });
@@ -149,7 +149,7 @@ export default function HomePage() {
           loading={loading}
           onCellClick={handleCellClick}
           paginationModel={{
-            page: tickets?.page || 0,
+            page: tickets?.page -1 || 0,
             pageSize: tickets?.data.length || 0
           }}
           onPaginationModelChange={handlePagination}
