@@ -606,6 +606,11 @@ export default function TicketModal({
       };
       handleSaveTicket();
     }
+
+    // Necesita actualizar el preguardado
+    if(preSaved && activeStep === 0 ) {
+      console.log("updated")
+    }
   }, [
     activeStep,
     preSaved,
@@ -991,9 +996,11 @@ export default function TicketModal({
                 fullWidth
                 id="outlined-multiline-flexible"
                 label="Bitacora"
+                name="bitacora"
                 multiline
                 maxRows={4}
-              />
+                onChange={handleChange}
+              >{form.bitacora}</TextField>
             </Grid>
             <Grid size={{ xs: 4 }}>
               <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
