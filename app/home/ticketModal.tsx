@@ -665,6 +665,31 @@ export default function TicketModal({
     );
   };
 
+  const handleFullSave = async () => {
+
+        const result = await saveTicket({
+          horaInicioFalla: form.horaInicioFalla,
+          horaDeteccionNoc: form.horaDeteccionNoc,
+          horaInicioAtencion: form.horaInicioAtencion,
+          horaEscalamiento: form.horaEscalamiento,
+          horaFinAfectacion: form.horaFinAfectacion,
+          horaCierreFalla: form.horaCierreFalla,
+          requiereEscalamiento: form.requiereEscalamiento,
+          causaRaiz: form.causaRaiz,
+          SolucionCaso: form.SolucionCaso,
+          turnoAsignado: form.turnoAsignado,
+          ttZoho: form.ttZoho,
+          ttClienteProveedor: form.ttClienteProveedor,
+          operatorResponsable: form.operatorResponsable,
+          detalle: form.detalle,
+
+          ttClienteProveedor: form.ttClienteProveedor,
+          ttClienteProveedor: form.ttClienteProveedor,
+          
+        });
+       
+  }
+
   return (
     <Modal open={open} onClose={customClose}>
       <Box sx={modalStyle} component="form" onSubmit={handleSubmit}>
@@ -1351,7 +1376,8 @@ export default function TicketModal({
             </Button>
           ) : (
             <Button
-              type="submit"
+              type="button"
+              onClick={handleFullSave}
               variant="contained"
               startIcon={<SaveIcon />}
               sx={{
