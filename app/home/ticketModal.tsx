@@ -28,7 +28,7 @@ import { getService, saveTicket } from "@/lib/api";
 import ElementoModal from "../components/elementoTicketModal";
 import AddIcon from "@mui/icons-material/Add";
 import { getMiscellaneous } from "@/lib/api";
-import { TICKET_STATUS, TIPO_INCIDENCIA } from "app/utils/constants";
+import { TICKET_STATUS, TIPO_CLIENTE, TIPO_INCIDENCIA } from "app/utils/constants";
 import {
   TipoIncidenciaKey,
   SimpleConfigOpt,
@@ -533,7 +533,7 @@ export default function TicketModal({
     const tipoCliente = e.target.value;
     const updates: any = { tipoCliente };
 
-    if (tipoCliente !== "RESIDENCIAL") {
+    if (tipoCliente !== TIPO_CLIENTE.RESIDENCIAL) {
       updates.nodo = "";
       updates.abonado = "";
       updates.nombreCliente = "";
@@ -564,7 +564,7 @@ export default function TicketModal({
     (e: React.MouseEvent<HTMLInputElement>) => {
       try {
         (e.target as any).showPicker();
-      } catch (err) {}
+      } catch (err) { }
     },
     [],
   );
@@ -591,7 +591,6 @@ export default function TicketModal({
           incidentType: form.tipoIncidencia,
           subject: form.asunto,
           networkCategory: form.categoria,
-          description: form.descripcion,
           status: TICKET_STATUS.EN_GESTION,
           subcategoria: form.subcategoria,
           detalle: form.detalle,
@@ -600,7 +599,10 @@ export default function TicketModal({
           ciudad: form.ciudad,
           estado: form.estado,
           localidad: form.localidad,
-          bitacora: form.bitacora
+          bitacora: form.bitacora,
+          nodo: form.nodo,
+          abonado: form.abonado,
+          nombreCliente: form.nombreCliente
         });
         setPreSaved(result.data._id);
       };
@@ -608,7 +610,7 @@ export default function TicketModal({
     }
 
     // Necesita actualizar el preguardado
-    if(preSaved && activeStep === 0 ) {
+    if (preSaved && activeStep === 0) {
       console.log("updated")
     }
   }, [
@@ -840,7 +842,7 @@ export default function TicketModal({
 
             {form.tipoIncidencia !== TIPO_INCIDENCIA.FALLA_MASIVA &&
               tipoCliente.find((TC) => TC._id === form.tipoCliente)?.valor !==
-                "RESIDENCIAL" && (
+              TIPO_CLIENTE.RESIDENCIAL && (
                 <>
                   <Grid size={{ xs: 12, sm: 4 }}>
                     <Autocomplete
@@ -848,8 +850,8 @@ export default function TicketModal({
                       size="small"
                       options={serviciosAdfectados}
                       value={form.serviciosAfectados}
-                      onChange={(e, newValue) => { 
-                    
+                      onChange={(e, newValue) => {
+
                         handleServiciosAfectadosChange(newValue)
                       }}
                       getOptionKey={(option) => option._id}
@@ -954,43 +956,45 @@ export default function TicketModal({
               </>
             )}
 
-            {form.tipoCliente === "RESIDENCIAL" && (
-              <>
-                <Grid size={{ xs: 12, sm: 4 }}>
-                  <TextField
-                    fullWidth
-                    required
-                    label="Nodo Afectado"
-                    name="nodo"
-                    value={form.nodo}
-                    onChange={handleChange}
-                    size="small"
-                  />
-                </Grid>
-                <Grid size={{ xs: 12, sm: 4 }}>
-                  <TextField
-                    fullWidth
-                    required
-                    label="Abonado"
-                    name="abonado"
-                    value={form.abonado}
-                    onChange={handleChange}
-                    size="small"
-                  />
-                </Grid>
-                <Grid size={{ xs: 12, sm: 4 }}>
-                  <TextField
-                    fullWidth
-                    required
-                    label="Nombre del Cliente"
-                    name="nombreCliente"
-                    value={form.nombreCliente}
-                    onChange={handleChange}
-                    size="small"
-                  />
-                </Grid>
-              </>
-            )}
+            {
+              tipoCliente.find((TC) => TC._id === form.tipoCliente)?.valor ===
+              TIPO_CLIENTE.RESIDENCIAL && (
+                <>
+                  <Grid size={{ xs: 12, sm: 4 }}>
+                    <TextField
+                      fullWidth
+                      required
+                      label="Nodo Afectado"
+                      name="nodo"
+                      value={form.nodo}
+                      onChange={handleChange}
+                      size="small"
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 4 }}>
+                    <TextField
+                      fullWidth
+                      required
+                      label="Abonado"
+                      name="abonado"
+                      value={form.abonado}
+                      onChange={handleChange}
+                      size="small"
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 4 }}>
+                    <TextField
+                      fullWidth
+                      required
+                      label="Nombre del Cliente"
+                      name="nombreCliente"
+                      value={form.nombreCliente}
+                      onChange={handleChange}
+                      size="small"
+                    />
+                  </Grid>
+                </>
+              )}
             <Grid size={{ xs: 12 }}>
               <TextField
                 fullWidth
