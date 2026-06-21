@@ -321,7 +321,10 @@ const initialFormState = {
   estatus: "PRELIMINAR",
   descripcion: "",
   turnoAsignado: "DIURNO",
-  bitacora: ''
+  bitacora: '',
+  operador: '',
+  severidad: '',
+  imputable: ''
 };
 
 export default function TicketModal({
@@ -667,27 +670,33 @@ export default function TicketModal({
 
   const handleFullSave = async () => {
 
-        const result = await saveTicket({
-          horaInicioFalla: form.horaInicioFalla,
-          horaDeteccionNoc: form.horaDeteccionNoc,
-          horaInicioAtencion: form.horaInicioAtencion,
-          horaEscalamiento: form.horaEscalamiento,
-          horaFinAfectacion: form.horaFinAfectacion,
-          horaCierreFalla: form.horaCierreFalla,
-          requiereEscalamiento: form.requiereEscalamiento,
-          causaRaiz: form.causaRaiz,
-          SolucionCaso: form.SolucionCaso,
-          turnoAsignado: form.turnoAsignado,
-          ttZoho: form.ttZoho,
-          ttClienteProveedor: form.ttClienteProveedor,
-          operatorResponsable: form.operatorResponsable,
-          detalle: form.detalle,
+    await saveTicket({
+      horaInicioFalla: form.horaInicioFalla,
+      horaDeteccionNoc: form.horaDeteccionNoc,
+      horaInicioAtencion: form.horaInicioAtencion,
+      horaEscalamiento: form.horaEscalamiento,
+      horaFinAfectacion: form.horaFinAfectacion,
+      horaCierreFalla: form.horaCierreFalla,
+      requiereEscalamiento: form.requiereEscalamiento,
+      causaRaiz: form.causaRaiz,
+      SolucionCaso: form.SolucionCaso,
+      turnoAsignado: form.turnoAsignado,
+      ttZoho: form.ttZoho,
+      ttClienteProveedor: form.ttClienteProveedor,
+      operatorResponsable: form.operatorResponsable,
+      detalle: form.detalle,
 
-          ttClienteProveedor: form.ttClienteProveedor,
-          ttClienteProveedor: form.ttClienteProveedor,
-          
-        });
-       
+      operador: form.operador,
+      severidad: form.severidad,
+      imputable: form.imputable
+
+    });
+
+    
+    alert("ok")
+
+    customClose()
+
   }
 
   return (

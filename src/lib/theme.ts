@@ -7,7 +7,7 @@ const theme = createTheme({
     mode: 'light', // Esto cambiará el fondo negro por uno blanco/claro profesional
     primary: {
       main: '#1976d2', // Azul estándar de Material UI
-      light: 'red'//'#6f6fff', 
+      light: '#6f6fff',
     },
     secondary: {
       main: '#9c27b0',
