@@ -149,8 +149,8 @@ export default function HomePage() {
           loading={loading}
           onCellClick={handleCellClick}
           paginationModel={{
-            page: tickets?.page -1 || 0,
-            pageSize: tickets?.data.length || 0
+            page: tickets?.page - 1 || 0,
+            pageSize: tickets?.data.length || page.pageSize,
           }}
           onPaginationModelChange={handlePagination}
           pageSizeOptions={[2, 5, 10]}
