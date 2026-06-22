@@ -71,62 +71,7 @@ const modalStyle = {
 
 const USUARIO_LOGUEADO = "NOC_User";
 
-const estructuraJerarquica: Record<
-  string,
-  { estado: string; localidades: string[] }
-> = {
-  CARACAS: {
-    estado: "DISTRITO CAPITAL",
-    localidades: [
-      "Head End Los Narajos",
-      "Parque Central",
-      "Torre Credi Card",
-      "Cubo Negro",
-      "Parque Cristal",
-      "La Urbina",
-      "El encantado",
-      "Caricuao",
-      "El Valle",
-      "Manzanares",
-      "Santa Mónica",
-      "San Bernandino",
-      "Mariches",
-      "Valle Arriba",
-      "El Paraíso",
-      "Plaza las Américas",
-    ],
-  },
-  ARAIRA: { estado: "MIRANDA", localidades: ["HUB Araira"] },
-  "GUARENAS / GUARENAS": {
-    estado: "MIRANDA",
-    localidades: ["Head End Guatire", "CC Buena Aventura"],
-  },
-  VALENCIA: {
-    estado: "CARABOBO",
-    localidades: [
-      "Head End Valencia",
-      "Flor Amarillo",
-      "San Diego",
-      "Naguanagua",
-      "Sambil",
-    ],
-  },
-  "PUERTO CABELLO": {
-    estado: "CARABOBO",
-    localidades: ["Head End Puerto Cabello"],
-  },
-  MARACAIBO: {
-    estado: "ZULIA",
-    localidades: ["Head End Maracaibo", "El Dividive"],
-  },
-  "SAN CRISTOBAL": {
-    estado: "TACHIRA",
-    localidades: ["Head End San Cristobal", "Las Vegas"],
-  },
-  MARACAY: { estado: "ARAGUA", localidades: ["HUB Site Maracay"] },
-  "LA VICTORIA": { estado: "ARAGUA", localidades: ["Hub La Victoria"] },
-  CARRIZAL: { estado: "ALTOS MIRANDINOS", localidades: ["HUB Carrizal"] },
-};
+// Ciudades y localidades se cargan dinámicamente desde la API (declaradas dentro del componente)
 
 
 
@@ -195,6 +140,8 @@ export default function TicketModal({
   const [tipoCliente, setTipoCliente] = useState<Array<ConfiguracionInterface>>(
     [],
   );
+  const [ciudadesOptions, setCiudadesOptions] = useState<Array<any>>([]);
+  const [localidadesOptions, setLocalidadesOptions] = useState<Array<any>>([]);
   const [form, setForm] = useState(initialFormState);
 
   const showTipoClienteInput =
@@ -268,6 +215,33 @@ export default function TicketModal({
     }
   }, [open]);
 
+  // Cargar lista de ciudades al montar
+  useEffect(() => {
+    getMiscellaneous({ categoria: "CIUDAD" }).then((res) => {
+      const ciudades = res.data || [];
+      setCiudadesOptions(ciudades);
+
+      // Si el formulario trae una ciudad por _id en modo edición antiguo, convertirla a su nombre
+      if (form.ciudad) {
+        const byId = ciudades.find((c: any) => c._id === form.ciudad);
+        if (byId) {
+          setForm((prev) => ({ ...prev, ciudad: byId.valor, estado: byId.padreNombre || prev.estado }));
+        }
+      }
+    });
+  }, [getMiscellaneous]);
+
+  // Si se establece una ciudad (por edición), cargar sus localidades
+  useEffect(() => {
+    if (form.ciudad) {
+      getMiscellaneous({ categoria: "LOCALIDAD", padreNombre: form.ciudad }).then((res) => {
+        setLocalidadesOptions(res.data || []);
+      });
+    } else {
+      setLocalidadesOptions([]);
+    }
+  }, [form.ciudad, getMiscellaneous]);
+
   useEffect(() => {
     if (form.tipoIncidencia) {
       getMiscellaneous({
@@ -337,14 +311,19 @@ export default function TicketModal({
 
   const handleCiudadChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const ciudad = e.target.value;
-      const estado =
-        ciudad && estructuraJerarquica[ciudad]
-          ? estructuraJerarquica[ciudad].estado
-          : "";
-      setForm((prev) => ({ ...prev, ciudad, estado, localidad: "" }));
+      const ciudadValue = e.target.value;
+      const selected = ciudadesOptions.find((c: any) => c.valor === ciudadValue) || ciudadesOptions.find((c: any) => c._id === ciudadValue);
+      const estado = selected?.padreNombre || "";
+      const ciudadName = selected?.valor || ciudadValue;
+
+      setForm((prev) => ({ ...prev, ciudad: ciudadName, estado, localidad: "" }));
+
+      // Cargar localidades asociadas a la ciudad seleccionada por padreNombre
+      getMiscellaneous({ categoria: "LOCALIDAD", padreNombre: ciudadName }).then((res) => {
+        setLocalidadesOptions(res.data || []);
+      });
     },
-    [],
+    [ciudadesOptions, getMiscellaneous],
   );
 
   const handleCategoriaChange = useCallback(
@@ -793,9 +772,9 @@ export default function TicketModal({
                 onChange={handleCiudadChange}
                 size="small"
               >
-                {Object.keys(estructuraJerarquica).map((ciu) => (
-                  <MenuItem key={ciu} value={ciu}>
-                    {ciu}
+                {ciudadesOptions.map((c: any) => (
+                  <MenuItem key={c._id || c.valor} value={c.valor}>
+                    {c.valor}
                   </MenuItem>
                 ))}
               </TextField>
@@ -807,6 +786,7 @@ export default function TicketModal({
                     fullWidth
                     disabled
                     label="Estado"
+                    name="estado"
                     value={form.estado}
                     size="small"
                   />
@@ -822,13 +802,11 @@ export default function TicketModal({
                     onChange={handleChange}
                     size="small"
                   >
-                    {(estructuraJerarquica[form.ciudad]?.localidades || []).map(
-                      (loc) => (
-                        <MenuItem key={loc} value={loc}>
-                          {loc}
-                        </MenuItem>
-                      ),
-                    )}
+                    {localidadesOptions.map((loc: any) => (
+                      <MenuItem key={loc._id || loc.valor} value={loc.valor}>
+                        {loc.valor}
+                      </MenuItem>
+                    ))}
                   </TextField>
                 </Grid>
               </>
