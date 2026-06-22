@@ -6,19 +6,23 @@ import AssessmentIcon from '@mui/icons-material/Assessment';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import { getTicketsStats } from '@/lib/api';
 
 interface MetricsCarouselProps {
-  metrics: {
-    total: number;
-    preliminar: number;
+
+    totalIncidencias: number;
+    enGestion: number;
     activo: number;
     cerrado: number;
-  };
 }
 
-export function MetricsCarousel({ metrics }: MetricsCarouselProps) {
+export function MetricsCarousel() {
   const carouselRef = useRef<HTMLDivElement>(null);
   const [dragConstraints, setDragConstraints] = useState({ right: 0, left: 0 });
+  const [ state, setState] = useState<MetricsCarouselProps>({
+    totalIncidencias: 0 , enGestion: 0, activo: 0, cerrado: 0
+  })
+
 
   useEffect(() => {
     if (carouselRef.current) {
@@ -26,13 +30,19 @@ export function MetricsCarousel({ metrics }: MetricsCarouselProps) {
       const offsetWidth = carouselRef.current.offsetWidth;
       setDragConstraints({ right: 0, left: offsetWidth - scrollWidth - 30 });
     }
-  }, [metrics]);
+  }, [carouselRef]);
+
+  useEffect(() => {
+    getTicketsStats().then(ticketsStats => {
+      setState(ticketsStats.data)
+    })
+  }, [setState])
 
   const cardsData: { title: string; count: number; color: string; icon: React.ReactElement<{ sx?: any }> }[] = [
-    { title: "Total Incidencias", count: metrics.total, color: "#4f46e5", icon: <AssessmentIcon /> },
-    { title: "Preliminares", count: metrics.preliminar, color: "#f59e0b", icon: <WarningAmberIcon /> },
-    { title: "Casos Activos", count: metrics.activo, color: "#10b981", icon: <AssignmentIcon /> },
-    { title: "Casos Cerrados", count: metrics.cerrado, color: "#ef4444", icon: <CheckCircleOutlineIcon /> },
+    { title: "Total Incidencias", count: state.totalIncidencias, color: "#4f46e5", icon: <AssessmentIcon /> },
+    { title: "En gestión", count: state.enGestion, color: "#f59e0b", icon: <WarningAmberIcon /> },
+    { title: "Casos Activos", count: state.activo, color: "#10b981", icon: <AssignmentIcon /> },
+    { title: "Casos Cerrados", count: state.cerrado, color: "#ef4444", icon: <CheckCircleOutlineIcon /> },
   ];
 
   return (

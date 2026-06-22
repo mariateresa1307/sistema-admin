@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { ContainerBox } from "../components/containerBox";
 import { CustomDataGrid } from "../components/customDataGrid";
-import { MetricsCarousel } from "../components/metricsCarousel";
+import { MetricsCarousel } from "./metricsCarousel";
 import { TicketDetailModal } from "./cardDetailModal";
 import { GridColDef, GridCellParams } from "@mui/x-data-grid";
 import { Chip, Box } from "@mui/material";
@@ -26,14 +26,6 @@ export default function HomePage() {
       setLoading(false);
     });
   }, [page.page, page.pageSize, setLoading, setLoading, getTickets]);
-
-  const metrics = {
-    total: 0,
-    preliminar: 0,
-    activo: 0,
-    cerrado: 0,
-  };
-
 
 
   const handleSaveTicket = (nuevoTicketData: any) => {
@@ -132,7 +124,7 @@ export default function HomePage() {
       title="Administración de Incidencias y actividades"
       subtitle="Monitorización en tiempo real de operaciones."
     >
-      <MetricsCarousel metrics={metrics} />
+      <MetricsCarousel  />
 
       <Box
         sx={{
