@@ -113,7 +113,8 @@ const initialFormState = {
   bitacora: '',
   operador: '',
   severidad: '',
-  imputable: ''
+  imputable: '',
+  afectacion: false
 };
 
 export default function TicketModal({
@@ -428,7 +429,8 @@ export default function TicketModal({
           bitacora: form.bitacora,
           nodo: form.nodo,
           abonado: form.abonado,
-          nombreCliente: form.nombreCliente
+          nombreCliente: form.nombreCliente,
+          afectacion: form.afectacion
         });
         setPreSaved(result.data._id);
       };
@@ -864,7 +866,10 @@ export default function TicketModal({
             </Grid>
             <Grid size={{ xs: 4 }}>
               <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-                <Switch {...label} />
+                <Switch {...label} name="afectacion" onChange={e => {
+                  
+                  setForm(pv => ({...pv, afectacion: e.target.checked }))
+                }}/>
                 <Typography>Afectacion</Typography>
               </Stack>
             </Grid>

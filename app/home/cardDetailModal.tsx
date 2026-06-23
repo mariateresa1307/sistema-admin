@@ -12,8 +12,8 @@ interface TicketDetailModalProps {
   open: boolean;
   onClose: () => void;
   ticket: {
-    ticketCodigo: string;
-    asuntoCaso: string;
+    caseNumber: string;
+    subject: string;
     email: string;
     estado: string; // 'ACTIVO' | 'PRELIMINAR' | 'CERRADO'
     responsable: string; // Nombre completo mapeado externamente
@@ -58,7 +58,7 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
                 </Box>
                 
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  {onEditClick && (
+                
                     <Tooltip title="Editar Registro">
                       <IconButton 
                         onClick={onEditClick} 
@@ -68,7 +68,7 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
                         <EditIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
-                  )}
+                
                   <IconButton onClick={onClose} size="small" sx={{ color: '#94a3b8', '&:hover': { color: '#0f172a' } }}>
                     <CloseIcon />
                   </IconButton>
@@ -84,7 +84,7 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
                     Asunto de Caso / Contexto
                   </Typography>
                   <Typography variant="body1" sx={{ fontWeight: 600, color: '#0f172a', mt: 0.5, lineHeight: 1.4 }}>
-                    {ticket.asuntoCaso}
+                    {ticket.subject}
                   </Typography>
                 </Grid>
 
@@ -94,7 +94,7 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
                   </Typography>
                   <Box sx={{ mt: 0.5 }}>
                     <Typography variant="body2" sx={{ fontWeight: 700, color: '#4f46e5', bgcolor: '#4f46e50d', px: 1, py: 0.4, borderRadius: '6px', display: 'inline-block' }}>
-                      {ticket.ticketCodigo}
+                      {ticket.caseNumber}
                     </Typography>
                   </Box>
                 </Grid>
@@ -104,7 +104,7 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
                     Contacto / Email
                   </Typography>
                   <Typography variant="body2" sx={{ fontWeight: 600, color: '#334155', mt: 0.8, wordBreak: 'break-all' }}>
-                    {ticket.email}
+                    {ticket.email || "-"}
                   </Typography>
                 </Grid>
 

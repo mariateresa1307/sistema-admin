@@ -12,15 +12,15 @@ interface MetricsCarouselProps {
 
     totalIncidencias: number;
     enGestion: number;
-    activo: number;
-    cerrado: number;
+    casosActivos: number;
+    casosCerrados: number;
 }
 
 export function MetricsCarousel() {
   const carouselRef = useRef<HTMLDivElement>(null);
   const [dragConstraints, setDragConstraints] = useState({ right: 0, left: 0 });
   const [ state, setState] = useState<MetricsCarouselProps>({
-    totalIncidencias: 0 , enGestion: 0, activo: 0, cerrado: 0
+    totalIncidencias: 0 , enGestion: 0, casosActivos: 0, casosCerrados: 0
   })
 
 
@@ -41,8 +41,8 @@ export function MetricsCarousel() {
   const cardsData: { title: string; count: number; color: string; icon: React.ReactElement<{ sx?: any }> }[] = [
     { title: "Total Incidencias", count: state.totalIncidencias, color: "#4f46e5", icon: <AssessmentIcon /> },
     { title: "En gestión", count: state.enGestion, color: "#f59e0b", icon: <WarningAmberIcon /> },
-    { title: "Casos Activos", count: state.activo, color: "#10b981", icon: <AssignmentIcon /> },
-    { title: "Casos Cerrados", count: state.cerrado, color: "#ef4444", icon: <CheckCircleOutlineIcon /> },
+    { title: "Casos Activos", count: state.casosActivos, color: "#10b981", icon: <AssignmentIcon /> },
+    { title: "Casos Cerrados", count: state.casosCerrados, color: "#ef4444", icon: <CheckCircleOutlineIcon /> },
   ];
 
   return (
