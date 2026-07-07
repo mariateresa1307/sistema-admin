@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { Typography, TextField, MenuItem, Grid } from "@mui/material";
-import { NIVEL_SEVERIDAD } from "app/utils/constants"; // ✅ Usar constantes
+import { NIVEL_SEVERIDAD } from "app/utils/constants";
 
 interface TipoClienteFieldsProps {
   isOpen: boolean;
@@ -65,8 +65,8 @@ export const TipoClienteFields = ({
         helperText={!nivelSeleccionado ? "Seleccione un nivel de severidad" : ""}
       >
         {NIVEL_SEVERIDAD.map((nivel) => (
-          <MenuItem key={nivel} value={nivel.trim()}>
-            {nivel.trim()}
+          <MenuItem key={nivel.value} value={nivel.value}>
+            {nivel.label}
           </MenuItem>
         ))}
       </TextField>

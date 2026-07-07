@@ -11,6 +11,7 @@ import {
   Warning as WarningIcon, CalendarToday as CalendarIcon, Update as UpdateIcon
 } from "@mui/icons-material";
 import { ConfirmDialog } from "../components/confirmDialog"
+import { getNivelSeveridadConfig } from "app/utils/auxiliares";
 
 type MiscellaneousItem = {
   _id?: string;
@@ -51,22 +52,6 @@ const getColorByTipoIncidencia = (tipoIncidencia: string): string => {
   if (tipoUpper.includes('MANTENIMIENTO')) return '#1565c0';
   
   return '#1976d2';
-};
-
-const getNivelSeveridadConfig = (nivel: string) => {
-  const nivelUpper = (nivel || '').toUpperCase().trim();
-  
-  if (nivelUpper === 'ALTO') {
-    return { bgcolor: '#ffcdd2', color: '#c62828', icon: '🔴', label: 'Alto' };
-  }
-  if (nivelUpper === 'MEDIO') {
-    return { bgcolor: '#fff3e0', color: '#e65100', icon: '🟠', label: 'Medio' };
-  }
-  if (nivelUpper === 'BAJO') {
-    return { bgcolor: '#c8e6c9', color: '#2e7d32', icon: '🟢', label: 'Bajo' };
-  }
-  
-  return { bgcolor: '#f5f5f5', color: '#616161', icon: '⚪', label: nivel || 'No especificado' };
 };
 
 const getIconByCategoria = (categoria: string) => {

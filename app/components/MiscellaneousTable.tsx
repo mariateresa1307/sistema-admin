@@ -12,6 +12,7 @@ import WarningIcon from "@mui/icons-material/Warning";
 import ReportProblemIcon from "@mui/icons-material/ReportProblem";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import { MiscellaneousItem } from "../miscellaneous/useMiscellaneous";
+import { getNivelSeveridadConfig } from "app/utils/auxiliares";
 
 interface MiscellaneousTableProps {
   rows: MiscellaneousItem[];
@@ -534,27 +535,12 @@ export const MiscellaneousTable = ({
               </Typography>
             );
           }
-          // Función para obtener color según el nivel
-          const getNivelColor = (nivel: string) => {
-            const nivelUpper = nivel.toUpperCase().trim();
-            if (nivelUpper === "ALTO") {
-              return { bgcolor: "#ffcdd2", color: "#c62828", icon: "🔴" };
-            }
-            if (nivelUpper === "MEDIO") {
-              return { bgcolor: "#fff3e0", color: "#e65100", icon: "🟠" };
-            }
-            if (nivelUpper === "BAJO") {
-              return { bgcolor: "#c8e6c9", color: "#2e7d32", icon: "🟢" };
-            }
-            return { bgcolor: "#f5f5f5", color: "#616161", icon: "⚪" };
-          };
-
-          const config = getNivelColor(nivelSeveridad);
+          const config = getNivelSeveridadConfig(nivelSeveridad);
 
           return (
             <Box sx={{ display: "flex", alignItems: "center", gap: 0.8 }}>
               <Chip
-                label={`${config.icon} ${nivelSeveridad}`}
+                label={`${config.icon} ${config.label}`}
                 size="small"
                 sx={{
                   bgcolor: config.bgcolor,

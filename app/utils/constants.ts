@@ -1,3 +1,5 @@
+import { NivelSeveridadItem } from "./types";
+
 export const TIPO_INCIDENCIA = {
   FALLA_MASIVA: "FALLA MASIVA",
   FALLA_PUNTUAL: "FALLA PUNTUAL",
@@ -30,11 +32,37 @@ export const TIPO_SERVICIO = {
 }
 
 
-export const NIVEL_SEVERIDAD = [
-  "BAJO ", 
-  "MEDIO",
-  "ALTO"
-] 
+export const NIVEL_SEVERIDAD: NivelSeveridadItem[] = [
+  {
+    label: "Bajo",
+    value: "BAJO",
+    bgcolor: "#c8e6c9",
+    color: "#2e7d32",
+    icon: "🟢",
+  },
+  {
+    label: "Medio",
+    value: "MEDIO",
+    bgcolor: "#fff3e0",
+    color: "#e65100",
+    icon: "🟠",
+  },
+  {
+    label: "Alto",
+    value: "ALTO",
+    bgcolor: "#ffcdd2",
+    color: "#c62828",
+    icon: "🔴",
+  },
+];
+
+export const NIVEL_SEVERIDAD_DEFAULT: NivelSeveridadItem = {
+  label: "No especificado",
+  value: "",
+  bgcolor: "#f5f5f5",
+  color: "#616161",
+  icon: "⚪",
+};
 
 export const TIPO_CLIENTE = {
   BANCA: "BANCA", 

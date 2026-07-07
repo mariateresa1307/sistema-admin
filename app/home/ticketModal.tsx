@@ -28,6 +28,7 @@ import { getService, saveTicket, getUsers, getMiscellaneous } from "@/lib/api";
 import ElementoModal from "../components/elementoTicketModal";
 import AddIcon from "@mui/icons-material/Add";
 import { TICKET_STATUS, TIPO_CLIENTE, TIPO_INCIDENCIA, NIVEL_SEVERIDAD } from "app/utils/constants";
+import { getNivelSeveridadConfig } from "app/utils/auxiliares";
 import {
   TipoIncidenciaKey,
   SimpleConfigOpt,
@@ -52,22 +53,6 @@ const diffMin = (start: string, end: string): number => {
   if (!start || !end) return 0;
   const diff = new Date(end).getTime() - new Date(start).getTime();
   return diff > 0 ? Math.round(diff / 1000 / 60) : 0;
-};
-
-const getNivelSeveridadConfig = (nivel: string) => {
-  const nivelUpper = (nivel || "").toUpperCase().trim();
-
-  if (nivelUpper === "ALTO") {
-    return { bgcolor: "#ffcdd2", color: "#c62828" };
-  }
-  if (nivelUpper === "MEDIO") {
-    return { bgcolor: "#fff3e0", color: "#e65100" };
-  }
-  if (nivelUpper === "BAJO") {
-    return { bgcolor: "#c8e6c9", color: "#2e7d32" };
-  }
-
-  return { bgcolor: "#f5f5f5", color: "#616161" };
 };
 
 const modalStyle = {
@@ -1271,10 +1256,42 @@ export default function TicketModal({
                 value={form.severidad}
                 onChange={handleChange}
                 size="small"
+                SelectProps={{
+                  renderValue: (selected) => {
+                    const config = getNivelSeveridadConfig(selected as string);
+                    return (
+                      <Chip
+                        label={`${config.icon} ${config.label}`}
+                        size="small"
+                        sx={{
+                          fontWeight: 700,
+                          borderRadius: "6px",
+                          fontSize: "0.72rem",
+                          px: 1,
+                          bgcolor: config.bgcolor,
+                          color: config.color,
+                          width: "100%"
+                        }}
+                      />
+                    );
+                  },
+                }}
               >
                 {NIVEL_SEVERIDAD.map((nivel) => (
-                  <MenuItem key={nivel} value={nivel.trim()}>
-                    {nivel.trim()}
+                  <MenuItem key={nivel.value} value={nivel.value}>
+                    <Chip
+                      label={`${nivel.icon} ${nivel.label}`}
+                      size="small"
+                      sx={{
+                        fontWeight: 700,
+                        borderRadius: "6px",
+                        fontSize: "0.72rem",
+                        px: 1,
+                        bgcolor: nivel.bgcolor,
+                        color: nivel.color,
+                        width: "100%"
+                      }}
+                    />
                   </MenuItem>
                 ))}
               </TextField>
