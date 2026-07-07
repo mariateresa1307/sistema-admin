@@ -15,7 +15,7 @@ interface TicketDetailModalProps {
     caseNumber: string;
     subject: string;
     email: string;
-    estado: string; // 'ACTIVO' | 'PRELIMINAR' | 'CERRADO'
+    status: string; // 'ACTIVO' | 'PRELIMINAR' | 'CERRADO'
     responsable: string; // Nombre completo mapeado externamente
     detallesAdicionales?: string;
   } | null;
@@ -26,6 +26,7 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
   return (
     <AnimatePresence>
       {open && ticket && (
+        console.log("Ticket Detail:", ticket),
         <Modal open={open} onClose={onClose} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2 }}>
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -45,7 +46,7 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
               {/* Barra de estado estética superior */}
               <Box sx={{ 
                 position: 'absolute', top: 0, left: 0, width: '100%', height: '5px',
-                bgcolor: ticket.estado === 'ACTIVO' ? '#22c55e' : ticket.estado === 'PRELIMINAR' ? '#eab308' : '#ef4444'
+                bgcolor: ticket.status === 'ACTIVO' ? '#22c55e' : ticket.status === 'PRELIMINAR' ? '#eab308' : '#ef4444'
               }} />
 
               {/* Cabecera */}
@@ -81,7 +82,7 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
               <Grid container spacing={3}>
                 <Grid size={12}>
                   <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700, letterSpacing: '0.5px' }}>
-                    Asunto de Caso / Contexto
+                    Asunto de Caso 
                   </Typography>
                   <Typography variant="body1" sx={{ fontWeight: 600, color: '#0f172a', mt: 0.5, lineHeight: 1.4 }}>
                     {ticket.subject}
@@ -101,10 +102,10 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
 
                 <Grid size={{ xs: 6, sm: 4 }}>
                   <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700, letterSpacing: '0.5px' }}>
-                    Contacto / Email
+                   Posee afectacion
                   </Typography>
                   <Typography variant="body2" sx={{ fontWeight: 600, color: '#334155', mt: 0.8, wordBreak: 'break-all' }}>
-                    {ticket.email || "-"}
+                    {ticket.caseNumber || "-"}
                   </Typography>
                 </Grid>
 
@@ -114,12 +115,12 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
                   </Typography>
                   <Box sx={{ mt: 0.5 }}>
                     <Chip 
-                      label={ticket.estado} 
+                      label={ticket.status} 
                       size="small"
                       sx={{ 
                         fontWeight: 700, borderRadius: '6px', fontSize: '0.72rem', px: 0.5,
-                        bgcolor: ticket.estado === 'ACTIVO' ? '#e8f5e9' : ticket.estado === 'PRELIMINAR' ? '#fff9c4' : '#ffebee',
-                        color: ticket.estado === 'ACTIVO' ? '#2e7d32' : ticket.estado === 'PRELIMINAR' ? '#f57f17' : '#c62828'
+                        bgcolor: ticket.status === 'ACTIVO' ? '#e8f5e9' : ticket.status === 'PRELIMINAR' ? '#fff9c4' : '#ffebee',
+                        color: ticket.status === 'ACTIVO' ? '#2e7d32' : ticket.status === 'PRELIMINAR' ? '#f57f17' : '#c62828'
                       }} 
                     />
                   </Box>
@@ -133,8 +134,8 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
                         Responsable Asignado
                       </Typography>
                       <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b' }}>
-                        {console.log(ticket)}
-                        {ticket.operatorResponsable}
+                      
+                        {ticket.responsable || "-"}
                       </Typography>
                     </Box>
                   </Box>
