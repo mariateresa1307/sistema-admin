@@ -17,6 +17,7 @@ export interface ConfiguracionInterface {
   padreNombre: string | null;
   tipoIncidencia: string[];
   activo: boolean;
+  nivelSeveridad?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -70,4 +71,11 @@ export type Pagination<T> = {
   page: number;
   limit: number;
   totalPages: number;
+};
+export type NivelSeveridadItem = {
+  label: string;
+  value: string;
+  bgcolor: string;
+  color: string;
+  icon: string;
 };

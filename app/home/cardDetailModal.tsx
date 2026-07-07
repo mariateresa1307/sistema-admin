@@ -133,7 +133,8 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
                         Responsable Asignado
                       </Typography>
                       <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b' }}>
-                        {ticket.responsable}
+                        {console.log(ticket)}
+                        {ticket.operatorResponsable}
                       </Typography>
                     </Box>
                   </Box>
