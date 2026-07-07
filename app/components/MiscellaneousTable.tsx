@@ -381,7 +381,6 @@ export const MiscellaneousTable = ({
         renderCell: (params) => {
           const soluciones = params.row.solucionesAsociadas || [];
           const solucionesArray = Array.isArray(soluciones) ? soluciones : [];
-
           if (solucionesArray.length === 0) {
             return (
               <Typography
@@ -463,7 +462,9 @@ export const MiscellaneousTable = ({
         minWidth: 250,
         renderCell: (params) => {
           const causaRaiz = params.value;
+          const causaRaizArray = Array.isArray(causaRaiz) ? causaRaiz : causaRaiz ? [causaRaiz] : [];
 
+          console.log("Causa raíz IDs:", causaRaiz);
           if (!causaRaiz) {
             return (
               <Typography

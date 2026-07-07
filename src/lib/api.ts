@@ -69,4 +69,7 @@ export const saveTicket = (data: any) => api.post('/tickets', data);
 export const getTickets = (params: any) => api.get('/tickets', { params })
 export const getTicketsStats = () => api.get('/tickets/stats')
 
-export const getMiscellaneous = (params: any) => api.get('/miscellaneous', { params })  
+export const getMiscellaneous = (params: any) => api.get('/miscellaneous', { params });
+export const createMiscellaneous = (data: any) => api.post('/miscellaneous', data);
+export const updateMiscellaneous = (id: string, data: any) => api.put(`/miscellaneous/${id}`, data);
+export const deleteMiscellaneous = (id: string) => api.delete(`/miscellaneous/${id}`);export const getMiscellaneousWithParent = (id: string) => api.get(`/miscellaneous/${id}/with-parent`);
