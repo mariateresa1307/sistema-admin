@@ -15,7 +15,7 @@ export default function HomePage() {
   const [tickets, setTickets] = useState<Pagination<Tickets[]> | null>(null);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [page, setPage] = useState({page: 0, pageSize: 2 })
+  const [page, setPage] = useState({page: 0, pageSize: 5 })
 
   const [selectedTicket, setSelectedTicket] = useState<Tickets | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);

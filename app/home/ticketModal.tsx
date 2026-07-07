@@ -24,10 +24,10 @@ import NavigateBeforeIcon from "@mui/icons-material/NavigateBefore";
 import ConfirmationNumberIcon from "@mui/icons-material/ConfirmationNumber";
 import PersonIcon from "@mui/icons-material/Person";
 import { FormStepper } from "../components/formStepper";
-import { getService, saveTicket, getUsers, getMiscellaneous } from "@/lib/api";
+import { getService, saveTicket, updateTicket, getUsers, getMiscellaneous } from "@/lib/api";
 import ElementoModal from "../components/elementoTicketModal";
 import AddIcon from "@mui/icons-material/Add";
-import { TICKET_STATUS, TIPO_CLIENTE, TIPO_INCIDENCIA, NIVEL_SEVERIDAD } from "app/utils/constants";
+import { TICKET_STATUS, TIPO_CLIENTE, TIPO_INCIDENCIA, NIVEL_SEVERIDAD, IMPUTABLE } from "app/utils/constants";
 import { getNivelSeveridadConfig } from "app/utils/auxiliares";
 import {
   TipoIncidenciaKey,
@@ -404,6 +404,39 @@ export default function TicketModal({
     }
   };
 
+  const handleTipoIncidenciaChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const tipoIncidencia = e.target.value;
+      const ahora = getLocalDateTimeString();
+      const baseForm = {
+        ...initialFormState,
+        tipoIncidencia,
+        operatorResponsable: sessionOperatorId.current,
+        horaDeteccionNoc: ahora,
+        horaInicioAtencion: ahora,
+      };
+
+      setForm({
+        ...baseForm,
+        descripcion: generarDescripcion(baseForm),
+      });
+      setServiciosAfectados([]);
+      setSubcategorias([]);
+      setDetalle([]);
+      setPreSaved(null);
+      setTipoCliente([]);
+      setLocalidadesOptions([]);
+      setActiveStep(0);
+
+      if (tipoIncidencia !== TIPO_INCIDENCIA.FALLA_MASIVA) {
+        getMiscellaneous({ categoria: "TIPO_CLIENTE" }).then((tipoClienteRes) => {
+          setTipoCliente(tipoClienteRes.data);
+        });
+      }
+    },
+    [generarDescripcion],
+  );
+
   const handleCiudadChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const ciudadValue = e.target.value;
@@ -604,37 +637,56 @@ export default function TicketModal({
     );
   };
 
-  const handleFullSave = async () => {
+  const handleFullSave = useCallback(async () => {
+    if (!preSaved) return;
 
-    await saveTicket({
+    const fechaHoraCierreActual = getLocalDateTimeString();
+    let descripcionFinal = form.descripcion;
+    const lineas = descripcionFinal.split("\n");
+    if (
+      lineas.length >= 2 &&
+      lineas[1].trim() === "Fecha y hora de fin de Afectación:"
+    ) {
+      lineas[1] = `Fecha y hora de fin de Afectación: ${formatToHumanDate(fechaHoraCierreActual)}`;
+      descripcionFinal = lineas.join("\n");
+    }
+
+    await updateTicket(preSaved, {
       horaInicioFalla: form.horaInicioFalla,
       horaDeteccionNoc: form.horaDeteccionNoc,
       horaInicioAtencion: form.horaInicioAtencion,
       horaEscalamiento: form.horaEscalamiento,
       horaFinAfectacion: form.horaFinAfectacion,
-      horaCierreFalla: form.horaCierreFalla,
+      horaCierreFalla: fechaHoraCierreActual,
       requiereEscalamiento: form.requiereEscalamiento,
+      escaladoA: form.escaladoA,
       causaRaiz: form.causaRaiz,
       SolucionCaso: form.SolucionCaso,
-      turnoAsignado: form.turnoAsignado,
+      turnoAsignado: tiemposCalculados.turnoAsignado,
       ttZoho: form.ttZoho,
       ttClienteProveedor: form.ttClienteProveedor,
       operatorResponsable: form.operatorResponsable,
       operatorAsignado: form.operatorAsignado,
-      detalle: form.detalle,
-
       operador: form.operador,
       severidad: form.severidad,
-      imputable: form.imputable
-
+      imputable: form.imputable,
+      description: descripcionFinal,
+      status: TICKET_STATUS.EN_GESTION,
+      tDeteccion: tiemposCalculados.tDeteccion,
+      tAtencion: tiemposCalculados.tAtencion,
+      tEscalado: tiemposCalculados.tEscalado,
+      cCierreSoporte: diffMin(form.horaInicioAtencion, fechaHoraCierreActual),
+      mttrTotal: diffMin(form.horaInicioFalla, fechaHoraCierreActual),
     });
 
-
-    alert("ok")
-
-    customClose()
-
-  }
+    onSave({
+      ...form,
+      ...tiemposCalculados,
+      horaCierreFalla: fechaHoraCierreActual,
+      descripcion: descripcionFinal,
+    });
+    customClose();
+  }, [preSaved, form, tiemposCalculados, onSave, customClose]);
 
   return (
     <Modal open={open} onClose={customClose}>
@@ -649,7 +701,7 @@ export default function TicketModal({
             left: 0,
           }}
         />
-        <Box 
+        <Box
           sx={{
             zIndex: 1,
             display: "flex",
@@ -695,7 +747,7 @@ export default function TicketModal({
                 label="Tipo de Incidencia"
                 name="tipoIncidencia"
                 value={form.tipoIncidencia}
-                onChange={handleChange}
+                onChange={handleTipoIncidenciaChange}
                 size="small"
               >
                 {(Object.keys(TIPO_INCIDENCIA) as TipoIncidenciaKey[]).map(
@@ -1007,7 +1059,7 @@ export default function TicketModal({
                 3. Tiempos de Ciclo de Falla
               </Typography>
             </Grid>
-            <Grid size={{ xs: 12, sm: 2 }}>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <TextField
                 fullWidth
                 required
@@ -1022,7 +1074,7 @@ export default function TicketModal({
                 sx={{ "& input": { cursor: "pointer" } }}
               />
             </Grid>
-            <Grid size={{ xs: 12, sm: 2 }}>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <TextField
                 fullWidth
                 disabled
@@ -1035,7 +1087,7 @@ export default function TicketModal({
                 sx={{ bgcolor: "#f0f4f8" }}
               />
             </Grid>
-            <Grid size={{ xs: 12, sm: 2 }}>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <TextField
                 fullWidth
                 required
@@ -1050,7 +1102,7 @@ export default function TicketModal({
                 sx={{ "& input": { cursor: "pointer" } }}
               />
             </Grid>
-            <Grid size={{ xs: 12, sm: 2 }}>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <TextField
                 fullWidth
                 type="datetime-local"
@@ -1066,7 +1118,7 @@ export default function TicketModal({
                 sx={{ "& input": { cursor: "pointer" } }}
               />
             </Grid>
-            <Grid size={{ xs: 12, sm: 2 }}>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <TextField
                 fullWidth
                 type="datetime-local"
@@ -1080,7 +1132,7 @@ export default function TicketModal({
                 sx={{ "& input": { cursor: "pointer" } }}
               />
             </Grid>
-            <Grid size={{ xs: 12, sm: 2 }}>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <TextField
                 fullWidth
                 disabled
@@ -1296,6 +1348,27 @@ export default function TicketModal({
                 ))}
               </TextField>
             </Grid>
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <TextField
+                select
+                fullWidth
+                required
+                label="Imputable a"
+                name="imputable"
+                value={form.imputable}
+                onChange={handleChange}
+                size="small"
+              >
+                <MenuItem value="">
+                  <em>Seleccionar</em>
+                </MenuItem>
+                {Object.values(IMPUTABLE).map((opcion) => (
+                  <MenuItem key={opcion} value={opcion}>
+                    {opcion}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
             <Grid size={{ xs: 12, sm: 12 }}>
               <TextField
                 fullWidth
@@ -1310,20 +1383,7 @@ export default function TicketModal({
               />
 
 
-              <Grid size={{ xs: 12, sm: 12 }}>
-                {/*  ES un select option, solo aparece al momento de editar */}
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={7}
-                  required
-                  label="Imputable a"
-                  name="Imputable"
-                  value={""}
-                  onChange={handleChange}
-                  size="small"
-                />
-              </Grid>
+
             </Grid>
           </Grid>
         )}

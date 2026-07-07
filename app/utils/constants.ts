@@ -71,6 +71,12 @@ export const TIPO_CLIENTE = {
   RESIDENCIAL: "RESIDENCIAL"
 }
 
+export const IMPUTABLE = {
+  CLIENTE: "Cliente",
+  NETUNO: "Netuno",
+  PROVEEDOR: "Proveedor",
+};
+
 
 export const CATEGORIA = {
   TIPO_CLIENTE: 'TIPO_CLIENTE',

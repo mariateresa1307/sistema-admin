@@ -66,6 +66,7 @@ export const updateService = (data: any, id: string, ) => api.put(`/services/${i
 export const deleteService = (id: string) => api.delete(`/services/${id}`);
 
 export const saveTicket = (data: any) => api.post('/tickets', data);
+export const updateTicket = (id: string, data: any) => api.put(`/tickets/${id}`, data);
 export const getTickets = (params: any) => api.get('/tickets', { params })
 export const getTicketsStats = () => api.get('/tickets/stats')
 
