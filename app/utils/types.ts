@@ -17,6 +17,7 @@ export interface ConfiguracionInterface {
   padreNombre: string | null;
   tipoIncidencia: string[];
   activo: boolean;
+  nivelSeveridad?: string;
   createdAt: Date;
   updatedAt: Date;
 }

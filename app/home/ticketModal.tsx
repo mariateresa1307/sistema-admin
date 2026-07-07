@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   Modal,
   Box,
@@ -24,11 +24,10 @@ import NavigateBeforeIcon from "@mui/icons-material/NavigateBefore";
 import ConfirmationNumberIcon from "@mui/icons-material/ConfirmationNumber";
 import PersonIcon from "@mui/icons-material/Person";
 import { FormStepper } from "../components/formStepper";
-import { getService, saveTicket } from "@/lib/api";
+import { getService, saveTicket, getUsers, getMiscellaneous } from "@/lib/api";
 import ElementoModal from "../components/elementoTicketModal";
 import AddIcon from "@mui/icons-material/Add";
-import { getMiscellaneous } from "@/lib/api";
-import { TICKET_STATUS, TIPO_CLIENTE, TIPO_INCIDENCIA } from "app/utils/constants";
+import { TICKET_STATUS, TIPO_CLIENTE, TIPO_INCIDENCIA, NIVEL_SEVERIDAD } from "app/utils/constants";
 import {
   TipoIncidenciaKey,
   SimpleConfigOpt,
@@ -55,6 +54,22 @@ const diffMin = (start: string, end: string): number => {
   return diff > 0 ? Math.round(diff / 1000 / 60) : 0;
 };
 
+const getNivelSeveridadConfig = (nivel: string) => {
+  const nivelUpper = (nivel || "").toUpperCase().trim();
+
+  if (nivelUpper === "ALTO") {
+    return { bgcolor: "#ffcdd2", color: "#c62828" };
+  }
+  if (nivelUpper === "MEDIO") {
+    return { bgcolor: "#fff3e0", color: "#e65100" };
+  }
+  if (nivelUpper === "BAJO") {
+    return { bgcolor: "#c8e6c9", color: "#2e7d32" };
+  }
+
+  return { bgcolor: "#f5f5f5", color: "#616161" };
+};
+
 const modalStyle = {
   position: "absolute" as "absolute",
   top: "50%",
@@ -66,10 +81,10 @@ const modalStyle = {
   boxShadow: 24,
   p: 4.5,
   borderRadius: 3,
+  overflow: "hidden",
   overflowY: "auto",
 };
 
-const USUARIO_LOGUEADO = "NOC_User";
 
 // Ciudades y localidades se cargan dinámicamente desde la API (declaradas dentro del componente)
 
@@ -93,7 +108,8 @@ const initialFormState = {
   nodo: "",
   abonado: "",
   nombreCliente: "",
-  operatorResponsable: USUARIO_LOGUEADO,
+  operatorResponsable: "",
+  operatorAsignado: "",
   ttZoho: "",
   ttClienteProveedor: "",
   horaInicioFalla: "",
@@ -144,9 +160,103 @@ export default function TicketModal({
   const [ciudadesOptions, setCiudadesOptions] = useState<Array<any>>([]);
   const [localidadesOptions, setLocalidadesOptions] = useState<Array<any>>([]);
   const [form, setForm] = useState(initialFormState);
+  const sessionOperatorId = useRef("");
+  const [operatorDisplayName, setOperatorDisplayName] = useState("");
+  const [operadores, setOperadores] = useState<
+    Array<{ _id: string; primerNombre: string; primerApellido: string; username?: string }>
+  >([]);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("userData");
+    if (!stored) return;
+    try {
+      const userData = JSON.parse(stored);
+      if (userData._id) {
+        sessionOperatorId.current = userData._id;
+        setForm((prev) => ({ ...prev, operatorResponsable: userData._id }));
+      }
+      const nombre = [userData.primerNombre, userData.primerApellido]
+        .filter(Boolean)
+        .join(" ")
+        .trim();
+      if (nombre) setOperatorDisplayName(nombre);
+    } catch (err) {
+      console.error("Error parsing userData:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    getUsers()
+      .then((response) => {
+        const data = Array.isArray(response.data) ? response.data : [];
+        setOperadores(
+          data
+            .filter((u: { isActive?: boolean }) => u.isActive !== false)
+            .map((u: {
+              _id: string;
+              primerNombre: string;
+              primerApellido: string;
+              username?: string;
+            }) => ({
+              _id: u._id,
+              primerNombre: u.primerNombre,
+              primerApellido: u.primerApellido,
+              username: u.username,
+            })),
+        );
+      })
+      .catch((err) => {
+        console.error("Error al obtener operadores:", err);
+        setOperadores([]);
+      });
+  }, []);
 
   const showTipoClienteInput =
     form.tipoIncidencia !== TIPO_INCIDENCIA.FALLA_MASIVA;
+
+  const selectedTipoClienteValor = useMemo(
+    () => tipoCliente.find((tc) => tc._id === form.tipoCliente)?.valor,
+    [tipoCliente, form.tipoCliente],
+  );
+
+  const isStep0Complete = useMemo(() => {
+    const hasBaseFields =
+      !!form.tipoIncidencia &&
+      !!form.asunto.trim() &&
+      !!form.categoria &&
+      !!form.subcategoria &&
+      !!form.detalle &&
+      !!form.ciudad &&
+      !!form.localidad;
+
+    if (!hasBaseFields) return false;
+
+    if (showTipoClienteInput && !form.tipoCliente) return false;
+
+    if (selectedTipoClienteValor === TIPO_CLIENTE.RESIDENCIAL) {
+      return !!(
+        form.nodo.trim() &&
+        form.abonado.trim() &&
+        form.nombreCliente.trim()
+      );
+    }
+
+    return true;
+  }, [
+    form.tipoIncidencia,
+    form.asunto,
+    form.categoria,
+    form.subcategoria,
+    form.detalle,
+    form.ciudad,
+    form.localidad,
+    form.tipoCliente,
+    form.nodo,
+    form.abonado,
+    form.nombreCliente,
+    showTipoClienteInput,
+    selectedTipoClienteValor,
+  ]);
 
   const tiemposCalculados = useMemo(() => {
     let turno = "DIURNO";
@@ -208,7 +318,6 @@ export default function TicketModal({
         ...prev,
         horaDeteccionNoc: ahora,
         horaInicioAtencion: ahora,
-        operatorResponsable: USUARIO_LOGUEADO,
         descripcion: nuevaDescripcion,
       }));
       setActiveStep(0);
@@ -357,10 +466,13 @@ export default function TicketModal({
   );
 
   const handleTipoClienteChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const tipoCliente = e.target.value;
-    const updates: any = { tipoCliente };
+    const tipoClienteId = e.target.value;
+    const updates: Record<string, unknown> = { tipoCliente: tipoClienteId };
 
-    if (tipoCliente !== TIPO_CLIENTE.RESIDENCIAL) {
+    const selectedTipoCliente = tipoCliente.find((tc) => tc._id === tipoClienteId);
+    updates.severidad = selectedTipoCliente?.nivelSeveridad?.trim() || "";
+
+    if (selectedTipoCliente?.valor !== TIPO_CLIENTE.RESIDENCIAL) {
       updates.nodo = "";
       updates.abonado = "";
       updates.nombreCliente = "";
@@ -368,11 +480,22 @@ export default function TicketModal({
       updates.serviciosAfectados = [];
     }
 
-    getService({ tipoCliente: tipoCliente }).then((services) => {
+    getService({ tipoCliente: tipoClienteId }).then((services) => {
       setServiciosAfectados(services.data);
     })
     setForm((prev) => ({ ...prev, ...updates }));
   };
+
+  useEffect(() => {
+    if (!form.tipoCliente || form.severidad) return;
+    const selected = tipoCliente.find((tc) => tc._id === form.tipoCliente);
+    if (selected?.nivelSeveridad) {
+      setForm((prev) => ({
+        ...prev,
+        severidad: selected.nivelSeveridad!.trim(),
+      }));
+    }
+  }, [form.tipoCliente, form.severidad, tipoCliente]);
 
   const handleServiciosAfectadosChange = useCallback((newValue: string[]) => {
     const servicios = newValue.length > 0 ? newValue.join(" | ") : "";
@@ -403,7 +526,10 @@ export default function TicketModal({
     setPreSaved(null);
     setCategoriaRed([]);
     setSubcategorias([]);
-    setForm(initialFormState);
+    setForm({
+      ...initialFormState,
+      operatorResponsable: sessionOperatorId.current,
+    });
 
     // close form
     onClose();
@@ -509,6 +635,7 @@ export default function TicketModal({
       ttZoho: form.ttZoho,
       ttClienteProveedor: form.ttClienteProveedor,
       operatorResponsable: form.operatorResponsable,
+      operatorAsignado: form.operatorAsignado,
       detalle: form.detalle,
 
       operador: form.operador,
@@ -517,7 +644,7 @@ export default function TicketModal({
 
     });
 
-    
+
     alert("ok")
 
     customClose()
@@ -529,6 +656,17 @@ export default function TicketModal({
       <Box sx={modalStyle} component="form" onSubmit={handleSubmit}>
         <Box
           sx={{
+            background: getNivelSeveridadConfig(form.severidad).bgcolor,
+            height: 30,
+            width: "100%",
+            position: "absolute",
+            top: 0,
+            left: 0,
+          }}
+        />
+        <Box 
+          sx={{
+            zIndex: 1,
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
@@ -867,9 +1005,9 @@ export default function TicketModal({
             <Grid size={{ xs: 4 }}>
               <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
                 <Switch {...label} name="afectacion" onChange={e => {
-                  
-                  setForm(pv => ({...pv, afectacion: e.target.checked }))
-                }}/>
+
+                  setForm(pv => ({ ...pv, afectacion: e.target.checked }))
+                }} />
                 <Typography>Afectacion</Typography>
               </Stack>
             </Grid>
@@ -1081,7 +1219,7 @@ export default function TicketModal({
                 disabled
                 label="Operador"
                 name="operatorResponsable"
-                value={form.operatorResponsable}
+                value={operatorDisplayName}
                 size="small"
                 InputProps={{
                   startAdornment: (
@@ -1092,6 +1230,54 @@ export default function TicketModal({
                 }}
                 sx={{ bgcolor: "#f0f4f8" }}
               />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <TextField
+                select
+                fullWidth
+                label="Operador asignado"
+                name="operatorAsignado"
+                value={form.operatorAsignado}
+                onChange={handleChange}
+                size="small"
+                InputProps={{
+                  startAdornment: (
+                    <PersonIcon
+                      sx={{ color: "#000027", mr: 1, fontSize: "1.1rem" }}
+                    />
+                  ),
+                }}
+              >
+                <MenuItem value="">
+                  <em>Seleccionar operador</em>
+                </MenuItem>
+                {operadores.map((operador) => (
+                  <MenuItem key={operador._id} value={operador._id}>
+                    {[operador.primerNombre, operador.primerApellido]
+                      .filter(Boolean)
+                      .join(" ")
+                      .trim() || operador.username}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <TextField
+                select
+                fullWidth
+                required
+                label="Severidad"
+                name="severidad"
+                value={form.severidad}
+                onChange={handleChange}
+                size="small"
+              >
+                {NIVEL_SEVERIDAD.map((nivel) => (
+                  <MenuItem key={nivel} value={nivel.trim()}>
+                    {nivel.trim()}
+                  </MenuItem>
+                ))}
+              </TextField>
             </Grid>
             <Grid size={{ xs: 12, sm: 12 }}>
               <TextField
@@ -1105,38 +1291,8 @@ export default function TicketModal({
                 onChange={handleChange}
                 size="small"
               />
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <TextField
-                  fullWidth
-                  disabled
-                  label="Operador"
-                  name="operatorResponsable"
-                  value={form.operatorResponsable}
-                  size="small"
-                  InputProps={{
-                    startAdornment: (
-                      <PersonIcon
-                        sx={{ color: "#000027", mr: 1, fontSize: "1.1rem" }}
-                      />
-                    ),
-                  }}
-                  sx={{ bgcolor: "#f0f4f8" }}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 12 }}>
-                {/* ES un select option, solo aparece al momento de editar */}
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={7}
-                  required
-                  label="Severidad"
-                  name="severidad"
-                  value={""}
-                  onChange={handleChange}
-                  size="small"
-                />
-              </Grid>
+
+
               <Grid size={{ xs: 12, sm: 12 }}>
                 {/*  ES un select option, solo aparece al momento de editar */}
                 <TextField
@@ -1199,6 +1355,7 @@ export default function TicketModal({
               variant="contained"
               endIcon={<NavigateNextIcon />}
               onClick={handleNext}
+              disabled={activeStep === 0 && !isStep0Complete}
               sx={{
                 bgcolor: "#000027",
                 borderRadius: "50px",
@@ -1206,6 +1363,10 @@ export default function TicketModal({
                 fontWeight: 600,
                 textTransform: "none",
                 "&:hover": { bgcolor: "#000045" },
+                "&.Mui-disabled": {
+                  bgcolor: "#ccc",
+                  color: "#666",
+                },
               }}
             >
               Continuar
