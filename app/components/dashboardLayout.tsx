@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { Box, Drawer, Button, AppBar, Toolbar, List, Typography, IconButton, ListItemButton, ListItemIcon, ListItemText, Avatar, Collapse, Menu, MenuItem, Tooltip, Divider, Stack } from "@mui/material";
 import { Dashboard, People, ExpandLess, ExpandMore, Logout, Settings, VerifiedUser, Assessment } from "@mui/icons-material";
 import { ThemeProvider, useTheme, type ThemeMode } from "../context/ThemeContext";
+import { HomeRefreshProvider, useHomeRefresh } from "../context/homeRefreshContext";
 import { useAuth } from "../context/authContext";
 import { filterMenuByRole } from "../utils/permissions";
 import AcUnitIcon from '@mui/icons-material/AcUnit';
@@ -163,8 +164,14 @@ const UserMenu = React.memo<{
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
   const [modalOpen, setModalOpen] = React.useState(false);
+  const { refreshHomeData } = useHomeRefresh();
 
-  const handleSaveTicket = (data?: any) => {
+  const handleCloseModal = () => {
+    setModalOpen(false);
+    refreshHomeData();
+  };
+
+  const handleSaveTicket = () => {
     setModalOpen(false);
   };
 
@@ -195,7 +202,7 @@ const UserMenu = React.memo<{
 
       <TicketModal
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={handleCloseModal}
         onSave={handleSaveTicket}
       />
       
@@ -536,7 +543,9 @@ export default function DashboardLayout({
 }) {
   return (
     <ThemeProvider>
-      <DashboardLayoutContent>{children}</DashboardLayoutContent>
+      <HomeRefreshProvider>
+        <DashboardLayoutContent>{children}</DashboardLayoutContent>
+      </HomeRefreshProvider>
     </ThemeProvider>
   );
 }

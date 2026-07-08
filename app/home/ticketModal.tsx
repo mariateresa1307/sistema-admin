@@ -27,7 +27,7 @@ import { FormStepper } from "../components/formStepper";
 import { getService, saveTicket, updateTicket, getUsers, getMiscellaneous } from "@/lib/api";
 import ElementoModal from "../components/elementoTicketModal";
 import AddIcon from "@mui/icons-material/Add";
-import { TICKET_STATUS, TIPO_CLIENTE, TIPO_INCIDENCIA, NIVEL_SEVERIDAD, IMPUTABLE } from "app/utils/constants";
+import { TICKET_STATUS, TIPO_CLIENTE, TIPO_INCIDENCIA, NIVEL_SEVERIDAD, IMPUTABLE, CATEGORIA } from "app/utils/constants";
 import { getNivelSeveridadConfig } from "app/utils/auxiliares";
 import {
   TipoIncidenciaKey,
@@ -142,6 +142,12 @@ export default function TicketModal({
   const [tipoCliente, setTipoCliente] = useState<Array<ConfiguracionInterface>>(
     [],
   );
+  const [causasRaiz, setCausasRaiz] = useState<Array<ConfiguracionInterface>>(
+    [],
+  );
+  const [solucionesCaso, setSolucionesCaso] = useState<
+    Array<ConfiguracionInterface>
+  >([]);
   const [ciudadesOptions, setCiudadesOptions] = useState<Array<any>>([]);
   const [localidadesOptions, setLocalidadesOptions] = useState<Array<any>>([]);
   const [form, setForm] = useState(initialFormState);
@@ -310,6 +316,27 @@ export default function TicketModal({
     }
   }, [open]);
 
+  useEffect(() => {
+    if (open) {
+      getMiscellaneous({ categoria: CATEGORIA.CAUSA_RAIZ }).then((res) => {
+        setCausasRaiz(res.data || []);
+      });
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (form.causaRaiz) {
+      getMiscellaneous({
+        categoria: CATEGORIA.SOLUCION_CASO,
+        padreId: form.causaRaiz,
+      }).then((res) => {
+        setSolucionesCaso(res.data || []);
+      });
+    } else {
+      setSolucionesCaso([]);
+    }
+  }, [form.causaRaiz]);
+
   // Cargar lista de ciudades al montar
   useEffect(() => {
     getMiscellaneous({ categoria: "CIUDAD" }).then((res) => {
@@ -356,16 +383,21 @@ export default function TicketModal({
   // Actualiza descripción causa o solución
   useEffect(() => {
     if (form.descripcion && (form.causaRaiz || form.SolucionCaso)) {
+      const causaRaizText =
+        causasRaiz.find((c) => c._id === form.causaRaiz)?.valor || form.causaRaiz;
+      const solucionCasoText =
+        solucionesCaso.find((s) => s._id === form.SolucionCaso)?.valor ||
+        form.SolucionCaso;
       const lineas = form.descripcion.split("\n");
-      if (lineas.length > 3) lineas[3] = `Causa: ${form.causaRaiz}`;
-      if (lineas.length > 4) lineas[4] = `Solución: ${form.SolucionCaso}`;
+      if (lineas.length > 3) lineas[3] = `Causa: ${causaRaizText}`;
+      if (lineas.length > 4) lineas[4] = `Solución: ${solucionCasoText}`;
 
       const nuevaDescripcion = lineas.join("\n");
       if (nuevaDescripcion !== form.descripcion) {
         setForm((prev) => ({ ...prev, descripcion: nuevaDescripcion }));
       }
     }
-  }, [form.causaRaiz, form.SolucionCaso]);
+  }, [form.causaRaiz, form.SolucionCaso, causasRaiz, solucionesCaso]);
 
   // Actualiza fechas en la descripción
   useEffect(() => {
@@ -435,6 +467,17 @@ export default function TicketModal({
       }
     },
     [generarDescripcion],
+  );
+
+  const handleCausaRaizChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setForm((prev) => ({
+        ...prev,
+        causaRaiz: e.target.value,
+        SolucionCaso: "",
+      }));
+    },
+    [],
   );
 
   const handleCiudadChange = useCallback(
@@ -549,7 +592,7 @@ export default function TicketModal({
       operatorResponsable: sessionOperatorId.current,
     });
 
-    // close form
+    // close form 
     onClose();
   }, [onClose]);
 
@@ -671,12 +714,12 @@ export default function TicketModal({
       severidad: form.severidad,
       imputable: form.imputable,
       description: descripcionFinal,
-      status: TICKET_STATUS.EN_GESTION,
       tDeteccion: tiemposCalculados.tDeteccion,
       tAtencion: tiemposCalculados.tAtencion,
       tEscalado: tiemposCalculados.tEscalado,
       cCierreSoporte: diffMin(form.horaInicioAtencion, fechaHoraCierreActual),
       mttrTotal: diffMin(form.horaInicioFalla, fechaHoraCierreActual),
+      status: TICKET_STATUS.PENDIENTE
     });
 
     onSave({
@@ -1201,23 +1244,48 @@ export default function TicketModal({
             )}
             <Grid size={{ xs: 12, sm: 4 }}>
               <TextField
+                select
                 fullWidth
                 label="Causa Raíz"
                 name="causaRaiz"
                 value={form.causaRaiz}
-                onChange={handleChange}
+                onChange={handleCausaRaizChange}
                 size="small"
-              />
+              >
+                <MenuItem value="">
+                  <em>Seleccionar...</em>
+                </MenuItem>
+                {causasRaiz.map((causa) => (
+                  <MenuItem key={causa._id} value={causa._id}>
+                    {causa.valor}
+                  </MenuItem>
+                ))}
+              </TextField>
             </Grid>
             <Grid size={{ xs: 12, sm: 4 }}>
               <TextField
+                select
                 fullWidth
                 label="Solucion Caso"
                 name="SolucionCaso"
                 value={form.SolucionCaso}
                 onChange={handleChange}
                 size="small"
-              />
+                disabled={!form.causaRaiz}
+              >
+                <MenuItem value="">
+                  <em>
+                    {form.causaRaiz
+                      ? "Seleccionar..."
+                      : "Seleccione una causa raíz"}
+                  </em>
+                </MenuItem>
+                {solucionesCaso.map((solucion) => (
+                  <MenuItem key={solucion._id} value={solucion._id}>
+                    {solucion.valor}
+                  </MenuItem>
+                ))}
+              </TextField>
             </Grid>
 
             <Grid size={{ xs: 12, sm: 4 }}>

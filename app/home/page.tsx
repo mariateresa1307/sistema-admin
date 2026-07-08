@@ -10,22 +10,30 @@ import TicketModal from "../home/ticketModal";
 import { getTickets } from "@/lib/api";
 import { Pagination, Tickets } from "app/utils/types";
 import { TICKET_STATUS } from "app/utils/constants";
+import { useHomeRefresh } from "../context/homeRefreshContext";
 
 export default function HomePage() {
   const [tickets, setTickets] = useState<Pagination<Tickets[]> | null>(null);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [page, setPage] = useState({page: 0, pageSize: 5 })
+  const { refreshKey, refreshHomeData } = useHomeRefresh();
 
   const [selectedTicket, setSelectedTicket] = useState<Tickets | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   useEffect(() => {
+    setLoading(true);
     getTickets({ page: page.page + 1, limit: page.pageSize }).then((tickets) => {
       setTickets(tickets.data);
       setLoading(false);
     });
-  }, [page.page, page.pageSize, setLoading, setLoading, getTickets]);
+  }, [page.page, page.pageSize, refreshKey]);
+
+  const handleCloseModal = useCallback(() => {
+    setIsDialogOpen(false);
+    refreshHomeData();
+  }, [refreshHomeData]);
 
 
   const handleSaveTicket = (nuevoTicketData: any) => {
@@ -78,12 +86,12 @@ export default function HomePage() {
             bgcolor: "#fff9c4",
             color: "#f57f17",
           },
-          ["ACTIVO"]: {
+          [TICKET_STATUS.PENDIENTE]: {
             labelText: "ACTIVO",
             bgcolor: "#e8f5e9",
             color: "#2e7d32",
           },
-          ["CERRADO"]: {
+          [TICKET_STATUS.CERRADO]: {
             labelText: "CERRADO",
             bgcolor: "#ffebee",
             color: "#c62828",
@@ -154,7 +162,7 @@ export default function HomePage() {
 
       <TicketModal
         open={isDialogOpen}
-        onClose={() => setIsDialogOpen(false)}
+        onClose={handleCloseModal}
         onSave={handleSaveTicket}
       />
 

@@ -7,9 +7,9 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import { getTicketsStats } from '@/lib/api';
+import { useHomeRefresh } from '../context/homeRefreshContext';
 
-interface MetricsCarouselProps {
-
+interface MetricsState {
     totalIncidencias: number;
     enGestion: number;
     casosActivos: number;
@@ -19,7 +19,8 @@ interface MetricsCarouselProps {
 export function MetricsCarousel() {
   const carouselRef = useRef<HTMLDivElement>(null);
   const [dragConstraints, setDragConstraints] = useState({ right: 0, left: 0 });
-  const [ state, setState] = useState<MetricsCarouselProps>({
+  const { refreshKey } = useHomeRefresh();
+  const [ state, setState] = useState<MetricsState>({
     totalIncidencias: 0 , enGestion: 0, casosActivos: 0, casosCerrados: 0
   })
 
@@ -36,7 +37,7 @@ export function MetricsCarousel() {
     getTicketsStats().then(ticketsStats => {
       setState(ticketsStats.data)
     })
-  }, [setState])
+  }, [refreshKey])
 
   const cardsData: { title: string; count: number; color: string; icon: React.ReactElement<{ sx?: any }> }[] = [
     { title: "Total Incidencias", count: state.totalIncidencias, color: "#4f46e5", icon: <AssessmentIcon /> },
