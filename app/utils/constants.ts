@@ -19,7 +19,7 @@ export const CATEGORIA_RED = [
 
 export const TICKET_STATUS = {
   EN_GESTION: 'en_gestion',
-  PENDIENTE: 'pendiente',
+  ACTIVO: 'activo',
   CERRADO: 'cerrado',
 }
 

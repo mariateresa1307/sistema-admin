@@ -169,7 +169,7 @@ const CustomDataGrid = ({
           >
             <MenuItem value="">Todos</MenuItem>
             <MenuItem value={TICKET_STATUS.EN_GESTION}>EN GESTIÓN</MenuItem>
-            <MenuItem value={TICKET_STATUS.PENDIENTE}>ACTIVO</MenuItem>
+            <MenuItem value={TICKET_STATUS.ACTIVO}>ACTIVO</MenuItem>
             <MenuItem value={TICKET_STATUS.CERRADO}>CERRADO</MenuItem>
           </TextField>
         ) : isUserStatusField ? (

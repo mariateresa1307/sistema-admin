@@ -44,11 +44,11 @@ const formatCategoria = (categoria: string): string => {
   return categoria.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
 };
 
-const getColorByTipoIncidencia = (tipoIncidencia: string): string => {
+export const getColorByTipoIncidencia = (tipoIncidencia: string): string => {
   const tipoUpper = (tipoIncidencia || '').toUpperCase();
   
-  if (tipoUpper.includes('PUNTUAL')) return '#e65100';
-  if (tipoUpper.includes('MASIVA')) return '#c62828';
+  if (tipoUpper.includes('PUNTUAL')) return '#67a6d9';
+  if (tipoUpper.includes('MASIVA')) return '#b52323';
   if (tipoUpper.includes('MANTENIMIENTO')) return '#1565c0';
   
   return '#1976d2';

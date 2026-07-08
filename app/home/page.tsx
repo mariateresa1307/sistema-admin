@@ -115,7 +115,7 @@ export default function HomePage() {
             bgcolor: "#fff9c4",
             color: "#f57f17",
           },
-          [TICKET_STATUS.PENDIENTE]: {
+          [TICKET_STATUS.ACTIVO]: {
             labelText: "ACTIVO",
             bgcolor: "#e8f5e9",
             color: "#2e7d32",

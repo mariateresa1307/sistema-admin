@@ -719,7 +719,7 @@ export default function TicketModal({
       tEscalado: tiemposCalculados.tEscalado,
       cCierreSoporte: diffMin(form.horaInicioAtencion, fechaHoraCierreActual),
       mttrTotal: diffMin(form.horaInicioFalla, fechaHoraCierreActual),
-      status: TICKET_STATUS.PENDIENTE
+      status: TICKET_STATUS.ACTIVO,
     });
 
     onSave({
