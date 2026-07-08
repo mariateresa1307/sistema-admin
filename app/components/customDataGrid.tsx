@@ -4,17 +4,32 @@ import {
   GridColDef,
   DataGridProps,
 } from "@mui/x-data-grid";
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import { TextField, Box, InputAdornment, MenuItem } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
+import { TICKET_STATUS } from "app/utils/constants";
+
+export type SearchParams = {
+  field: string;
+  value: string;
+};
 
 interface CustomDataGridProps extends Omit<DataGridProps, 'rows'> {
   rows: Array<any>;
   columns: Array<GridColDef>;
   loading: boolean;
+  onSearch?: (params: SearchParams) => void;
+  debounceMs?: number;
 }
 
-  const CustomDataGrid = ({ rows, columns, loading, ...restProps }: CustomDataGridProps) => {
+const CustomDataGrid = ({
+  rows,
+  columns,
+  loading,
+  onSearch,
+  debounceMs = 400,
+  ...restProps
+}: CustomDataGridProps) => {
   const [isMounted, setIsMounted] = useState(false);
   const [searchField, setSearchField] = useState<string>(
     columns.find(col => col.field === 'name') ? 'name' : (columns[0]?.field || "")
@@ -22,18 +37,22 @@ interface CustomDataGridProps extends Omit<DataGridProps, 'rows'> {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState(rows);
   const [isSearching, setIsSearching] = useState(false);
-  const isStatusField = useMemo(() => searchField === 'isActive', [searchField]);
+  const isApiSearch = Boolean(onSearch);
+  const skipInitialSearch = useRef(true);
+
+  const isUserStatusField = useMemo(() => searchField === 'isActive', [searchField]);
+  const isTicketStatusField = useMemo(() => searchField === 'status', [searchField]);
   const isTipoServicioField = useMemo(() => searchField === 'tipoServicio', [searchField]);
+  const isSelectSearchField = isUserStatusField || isTicketStatusField || isTipoServicioField;
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
   useEffect(() => {
-    if (!searchTerm && !isStatusField && !isTipoServicioField) {
-      setSearchResults(rows);
-    }
-  }, [rows, searchTerm, isStatusField, isTipoServicioField]);
+    if (isApiSearch || (searchTerm || isSelectSearchField)) return;
+    setSearchResults(rows);
+  }, [rows, searchTerm, isApiSearch, isSelectSearchField]);
 
   const mockApiSearch = useCallback(async (field: string, value: string) => {
     return new Promise<any[]>((resolve) => {
@@ -44,19 +63,17 @@ interface CustomDataGridProps extends Omit<DataGridProps, 'rows'> {
         }
 
         const filtered = rows.filter((row: any) => {
-        
           if (field === 'isActive') return String(row[field]) === value;
-         
           if (field === 'tipoServicio') return row[field] === value;
-          
-          
+          if (field === 'status') return row[field] === value;
+
           const cellValue = String(row[field] || "").toLowerCase();
           return cellValue.includes(value.toLowerCase());
         });
         resolve(filtered);
-      }, 300);
+      }, debounceMs);
     });
-  }, [rows]);
+  }, [rows, debounceMs]);
 
   const handleSearch = useCallback(async () => {
     setIsSearching(true);
@@ -72,15 +89,35 @@ interface CustomDataGridProps extends Omit<DataGridProps, 'rows'> {
   }, [searchTerm, searchField, rows, mockApiSearch]);
 
   useEffect(() => {
+    if (isApiSearch) return;
+
     const timer = setTimeout(() => {
       handleSearch();
-    }, 300);
+    }, debounceMs);
+
     return () => clearTimeout(timer);
-  }, [searchTerm, searchField, handleSearch]);
+  }, [searchTerm, searchField, handleSearch, isApiSearch, debounceMs]);
+
+  useEffect(() => {
+    if (!onSearch) return;
+
+    if (skipInitialSearch.current) {
+      skipInitialSearch.current = false;
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      onSearch({ field: searchField, value: searchTerm });
+    }, debounceMs);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm, searchField, onSearch, debounceMs]);
 
   const initialState = useMemo(() => ({
     pagination: { paginationModel: { page: 0, pageSize: 10 } },
   }), []);
+
+  const displayRows = isApiSearch ? rows : searchResults;
 
   if (!isMounted) return null;
 
@@ -121,7 +158,21 @@ interface CustomDataGridProps extends Omit<DataGridProps, 'rows'> {
             <MenuItem value="IU">IU</MenuItem>
             <MenuItem value="DOG">DOG</MenuItem>
           </TextField>
-        ) : isStatusField ? (
+        ) : isTicketStatusField ? (
+          <TextField
+            select
+            size="small"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            sx={{ minWidth: 200, maxWidth: 500, flex: 1 }}
+            label="Filtrar por estado"
+          >
+            <MenuItem value="">Todos</MenuItem>
+            <MenuItem value={TICKET_STATUS.EN_GESTION}>EN GESTIÓN</MenuItem>
+            <MenuItem value={TICKET_STATUS.PENDIENTE}>ACTIVO</MenuItem>
+            <MenuItem value={TICKET_STATUS.CERRADO}>CERRADO</MenuItem>
+          </TextField>
+        ) : isUserStatusField ? (
           <TextField
             select
             size="small"
@@ -152,7 +203,7 @@ interface CustomDataGridProps extends Omit<DataGridProps, 'rows'> {
 
       <DataGrid
         getRowId={(row) => row._id || row.id}
-        rows={searchResults}
+        rows={displayRows}
         columns={columns}
         loading={loading || isSearching}
         initialState={initialState}

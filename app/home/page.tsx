@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
 import { ContainerBox } from "../components/containerBox";
-import { CustomDataGrid } from "../components/customDataGrid";
+import { CustomDataGrid, SearchParams } from "../components/customDataGrid";
 import { MetricsCarousel } from "./metricsCarousel";
 import { TicketDetailModal } from "./cardDetailModal";
 import { GridColDef, GridCellParams } from "@mui/x-data-grid";
@@ -17,18 +17,47 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [page, setPage] = useState({page: 0, pageSize: 5 })
+  const [searchParams, setSearchParams] = useState<SearchParams>({
+    field: "caseNumber",
+    value: "",
+  });
   const { refreshKey, refreshHomeData } = useHomeRefresh();
 
   const [selectedTicket, setSelectedTicket] = useState<Tickets | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
-  useEffect(() => {
+  const fetchTickets = useCallback(async () => {
     setLoading(true);
-    getTickets({ page: page.page + 1, limit: page.pageSize }).then((tickets) => {
-      setTickets(tickets.data);
+    try {
+      const params: Record<string, string | number> = {
+        page: page.page + 1,
+        limit: page.pageSize,
+      };
+
+      if (searchParams.value) {
+        params[searchParams.field] = searchParams.value;
+      }
+
+      const response = await getTickets(params);
+      setTickets(response.data);
+    } finally {
       setLoading(false);
+    }
+  }, [page.page, page.pageSize, searchParams, refreshKey]);
+
+  useEffect(() => {
+    fetchTickets();
+  }, [fetchTickets]);
+
+  const handleSearch = useCallback((params: SearchParams) => {
+    setSearchParams((prev) => {
+      if (prev.field === params.field && prev.value === params.value) {
+        return prev;
+      }
+      setPage((currentPage) => ({ ...currentPage, page: 0 }));
+      return params;
     });
-  }, [page.page, page.pageSize, refreshKey]);
+  }, []);
 
   const handleCloseModal = useCallback(() => {
     setIsDialogOpen(false);
@@ -148,15 +177,13 @@ export default function HomePage() {
           columns={columns}
           loading={loading}
           onCellClick={handleCellClick}
-          paginationModel={{
-            page: tickets?.page - 1 || 0,
-            pageSize: tickets?.data.length || page.pageSize,
-          }}
+          paginationModel={page}
           onPaginationModelChange={handlePagination}
           pageSizeOptions={[2, 5, 10]}
           paginationMode="server"
           rowCount={tickets?.total || 0}
-
+          onSearch={handleSearch}
+          debounceMs={400}
         />
       </Box>
 
