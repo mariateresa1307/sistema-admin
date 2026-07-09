@@ -177,12 +177,11 @@ export default function TicketModal({
   }, []);
 
   useEffect(() => {
-    getUsers()
+    getUsers(undefined, {isActive: true})
       .then((response) => {
         const data = Array.isArray(response.data) ? response.data : [];
         setOperadores(
           data
-            .filter((u: { isActive?: boolean }) => u.isActive !== false)
             .map((u: {
               _id: string;
               primerNombre: string;

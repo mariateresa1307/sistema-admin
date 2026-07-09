@@ -139,6 +139,8 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
       });
   }, [open]);
 
+
+
   if (!ticket) return null;
 
   const theme = getTheme(ticket.status);
@@ -158,49 +160,22 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
     };
   })();
 
-  
   const incidentTypes = Array.isArray(ticket.incidentType)
     ? ticket.incidentType
     : ticket.incidentType
       ? [ticket.incidentType]
       : [];
 
-  // RESOLVER NOMBRES DE OPERADORES
-  const operatorAsignadoName = useMemo(() => {
-    if (!ticket.operatorAsignado) return '-';
-    
-    // Si ya es un nombre (no es ObjectId), devolverlo tal cual
-    if (!/^[0-9a-fA-F]{24}$/.test(ticket.operatorAsignado)) {
-      return ticket.operatorAsignado;
-    }
-    
-    // Buscar en el array de operadores
-    const operador = operadores.find(op => op._id === ticket.operatorAsignado);
-    return formatOperatorName(operador);
-  }, [ticket.operatorAsignado, operadores]);
-
-  const operatorResponsableName = useMemo(() => {
-    if (!ticket.operatorResponsable) return '-';
-    
-    if (!/^[0-9a-fA-F]{24}$/.test(ticket.operatorResponsable)) {
-      return ticket.operatorResponsable;
-    }
-    
-    const operador = operadores.find(op => op._id === ticket.operatorResponsable);
-    return formatOperatorName(operador);
-  }, [ticket.operatorResponsable, operadores]);
-
   return (
     <AnimatePresence>
       {open && (
-        console.log("Ticket Detail:", ticket),
         <Modal open={open} onClose={onClose} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2 }}>
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: 'spring', duration: 0.35 }}
-            style={{ width: '100%', maxWidth: '650px', outline: 'none' }}
+            style={{ width: '100%', maxWidth: '650px', maxHeight: 'calc(100vh - 32px)', outline: 'none', display: 'flex' }}
           >
             <Paper
               elevation={0}
@@ -212,11 +187,15 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
                 bgcolor: '#ffffff',
                 position: 'relative',
                 overflow: 'hidden',
+                maxHeight: '100%',
+                width: '100%',
+                display: 'flex',
+                flexDirection: 'column',
               }}
             >
               <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '6px', bgcolor: theme.primary }} />
 
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, mt: 1 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, mt: 1, flexShrink: 0 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                   <Box sx={{ bgcolor: theme.light, p: 1, borderRadius: '10px', border: `1px solid ${theme.border}` }}>
                     <ConfirmationNumberIcon sx={{ color: theme.dark, fontSize: '1.3rem' }} />
@@ -238,8 +217,9 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
                 </Box>
               </Box>
 
-              <Divider sx={{ mb: 3.5, borderColor: theme.border }} />
+              <Divider sx={{ mb: 3.5, borderColor: theme.border, flexShrink: 0 }} />
 
+              <Box sx={{ overflowY: 'auto', flex: 1, minHeight: 0, pr: 0.5 }}>
               <Grid container spacing={3}>
                 <Grid size={12}>
                   <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>
@@ -440,7 +420,7 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
                         Operador Asignado
                       </Typography>
                       <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b' }}>
-                        {operatorAsignadoName}
+                        {ticket?.operatorAsignado.primerNombre} { ticket?.operatorAsignado.primerApellido }
                       </Typography>
                     </Box>
                   </Box>
@@ -456,13 +436,14 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
                           Operador Responsable
                         </Typography>
                         <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b' }}>
-                          {operatorResponsableName}
+                          {ticket.operatorResponsable.primerNombre} {ticket.operatorResponsable.primerApellido}
                         </Typography>
                       </Box>
                     </Box>
                   </Grid>
                 )}
               </Grid>
+              </Box>
             </Paper>
           </motion.div>
         </Modal>
