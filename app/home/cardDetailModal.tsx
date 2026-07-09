@@ -1,6 +1,6 @@
 'use client';
-import React, { useState, useEffect, useMemo } from "react";
-import { Modal, Paper, Box, Typography, IconButton, Divider, Chip, Tooltip, MenuItem, TextField } from '@mui/material';
+import React, { useState, useEffect } from "react";
+import { Modal, Paper, Box, Typography, IconButton, Divider, Chip, Tooltip } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import { motion, AnimatePresence } from 'framer-motion';
 import CloseIcon from '@mui/icons-material/Close';
@@ -12,6 +12,17 @@ import PersonIcon from '@mui/icons-material/Person';
 import { getNivelSeveridadConfig } from "app/utils/auxiliares";
 import { getUsers } from "@/lib/api";
 
+// ✅ Tipo flexible: puede venir como objeto o como string (ID)
+type OperatorInfo = {
+  _id?: string;
+  primerNombre?: string;
+  primerApellido?: string;
+  username?: string;
+  email?: string;
+};
+
+type OperatorField = OperatorInfo | string | null | undefined;
+
 interface TicketDetailModalProps {
   open: boolean;
   onClose: () => void;
@@ -20,8 +31,8 @@ interface TicketDetailModalProps {
     subject: string;
     email: string;
     status: string;
-    operatorAsignado: string;
-    operatorResponsable?: string;
+    operatorAsignado: OperatorField;
+    operatorResponsable?: OperatorField;
     afectacion?: boolean;
     bitacora?: string;
     ttZoho?: string;
@@ -99,22 +110,27 @@ const getSeveridadValue = (ticket: NonNullable<TicketDetailModalProps['ticket']>
   return ticket.nivelSeveridad || ticket.severidad || '';
 };
 
-const formatOperatorName = (operador: any): string => {
+// ✅ Helper para formatear nombre de operador (maneja objeto o string)
+const formatOperatorName = (operador: OperatorField): string => {
   if (!operador) return '-';
+  
+  // Si es string, devolver tal cual
+  if (typeof operador === 'string') {
+    return operador || '-';
+  }
+  
+  // Si es objeto, formatear nombre
   const nombre = [operador.primerNombre, operador.primerApellido]
     .filter(Boolean)
     .join(' ')
     .trim();
-  return nombre || operador.username || '-';
+  
+  return nombre || operador.username || operador.email || '-';
 };
 
 export function TicketDetailModal({ open, onClose, ticket, onEditClick }: TicketDetailModalProps) {
-  const [operadores, setOperadores] = useState<Array<{
-    _id: string;
-    primerNombre: string;
-    primerApellido: string;
-    username?: string;
-  }>>([]);
+  // ✅ TODOS los hooks van ANTES de cualquier return condicional
+  const [operadores, setOperadores] = useState<Array<OperatorInfo & { _id: string }>>([]);
 
   useEffect(() => {
     if (!open) return;
@@ -130,6 +146,7 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
               primerNombre: u.primerNombre,
               primerApellido: u.primerApellido,
               username: u.username,
+              email: u.email,
             }))
         );
       })
@@ -139,12 +156,12 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
       });
   }, [open]);
 
-
-
+  // ✅ AHORA SÍ el return condicional (después de todos los hooks)
   if (!ticket) return null;
 
   const theme = getTheme(ticket.status);
   const severidadValue = getSeveridadValue(ticket);
+  
   const nivelSeveridadConfig = (() => {
     try {
       const config = getNivelSeveridadConfig(severidadValue);
@@ -166,9 +183,14 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
       ? [ticket.incidentType]
       : [];
 
+  // ✅ Resolver nombres de operadores
+  const operatorAsignadoName = formatOperatorName(ticket.operatorAsignado);
+  const operatorResponsableName = formatOperatorName(ticket.operatorResponsable);
+
   return (
     <AnimatePresence>
       {open && (
+        console.log('Renderizando TicketDetailModal con ticket:', ticket),
         <Modal open={open} onClose={onClose} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2 }}>
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -220,229 +242,232 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
               <Divider sx={{ mb: 3.5, borderColor: theme.border, flexShrink: 0 }} />
 
               <Box sx={{ overflowY: 'auto', flex: 1, minHeight: 0, pr: 0.5 }}>
-              <Grid container spacing={3}>
-                <Grid size={12}>
-                  <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>
-                    Asunto de Caso
-                  </Typography>
-                  <Typography variant="body1" sx={{ fontWeight: 600, color: '#0f172a', mt: 0.5, lineHeight: 1.4 }}>
-                    {ticket.subject}
-                  </Typography>
-                </Grid>
+                <Grid container spacing={3}>
+                  <Grid size={12}>
+                    <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>
+                      Asunto de Caso
+                    </Typography>
+                    <Typography variant="body1" sx={{ fontWeight: 600, color: '#0f172a', mt: 0.5, lineHeight: 1.4 }}>
+                      {ticket.subject}
+                    </Typography>
+                  </Grid>
 
-                <Grid size={{ xs: 6, sm: 4 }}>
-                  <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>
-                    Número de Caso
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      mt: 0.5, fontWeight: 700, color: theme.dark, bgcolor: theme.light,
-                      px: 1, py: 0.4, borderRadius: '6px', display: 'inline-block',
-                      border: `1px solid ${theme.border}`,
-                    }}
-                  >
-                    {ticket.caseNumber}
-                  </Typography>
-                </Grid>
-
-                <Grid size={{ xs: 6, sm: 4 }}>
-                  <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>
-                    Posee Afectación
-                  </Typography>
-                  <Box sx={{ mt: 0.5 }}>
-                    <Chip
-                      label={ticket.afectacion === true ? 'Sí' : 'No'}
-                      size="small"
+                  <Grid size={{ xs: 6, sm: 4 }}>
+                    <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>
+                      Número de Caso
+                    </Typography>
+                    <Typography
+                      variant="body2"
                       sx={{
-                        fontWeight: 700,
-                        borderRadius: '6px',
-                        fontSize: '0.72rem',
-                        bgcolor: ticket.afectacion === true ? '#e8f5e9' : '#ffebee',
-                        color: ticket.afectacion === true ? '#2e7d32' : '#c62828',
-                        border: `1px solid ${ticket.afectacion === true ? '#22c55e' : '#ef4444'}`,
+                        mt: 0.5, fontWeight: 700, color: theme.dark, bgcolor: theme.light,
+                        px: 1, py: 0.4, borderRadius: '6px', display: 'inline-block',
+                        border: `1px solid ${theme.border}`,
                       }}
-                    />
-                  </Box>
-                </Grid>
+                    >
+                      {ticket.caseNumber}
+                    </Typography>
+                  </Grid>
 
-                <Grid size={{ xs: 12, sm: 4 }}>
-                  <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>
-                    Estado
-                  </Typography>
-                  <Box sx={{ mt: 0.5 }}>
-                    <Chip
-                      icon={theme.icon}
-                      label={theme.label}
-                      size="small"
-                      sx={{
-                        mt: 0.5, fontWeight: 700, borderRadius: '6px', fontSize: '0.72rem',
-                        bgcolor: theme.light, color: theme.dark, border: `1px solid ${theme.primary}`,
-                        '& .MuiChip-icon': { color: theme.dark },
-                      }}
-                    />
-                  </Box>
-                </Grid>
+                  <Grid size={{ xs: 6, sm: 4 }}>
+                    <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>
+                      Posee Afectación
+                    </Typography>
+                    <Box sx={{ mt: 0.5 }}>
+                      <Chip
+                        label={ticket.afectacion === true ? 'Sí' : 'No'}
+                        size="small"
+                        sx={{
+                          fontWeight: 700,
+                          borderRadius: '6px',
+                          fontSize: '0.72rem',
+                          bgcolor: ticket.afectacion === true ? '#e8f5e9' : '#ffebee',
+                          color: ticket.afectacion === true ? '#2e7d32' : '#c62828',
+                          border: `1px solid ${ticket.afectacion === true ? '#22c55e' : '#ef4444'}`,
+                        }}
+                      />
+                    </Box>
+                  </Grid>
 
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>
-                    Localidad
-                  </Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#334155', mt: 0.8 }}>
-                    {ticket.localidad || '-'}
-                  </Typography>
-                </Grid>
+                  <Grid size={{ xs: 12, sm: 4 }}>
+                    <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>
+                      Estado
+                    </Typography>
+                    <Box sx={{ mt: 0.5 }}>
+                      <Chip
+                        icon={theme.icon}
+                        label={theme.label}
+                        size="small"
+                        sx={{
+                          mt: 0.5, fontWeight: 700, borderRadius: '6px', fontSize: '0.72rem',
+                          bgcolor: theme.light, color: theme.dark, border: `1px solid ${theme.primary}`,
+                          '& .MuiChip-icon': { color: theme.dark },
+                        }}
+                      />
+                    </Box>
+                  </Grid>
 
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>
-                    Nodo
-                  </Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#334155', mt: 0.8 }}>
-                    {ticket.nodo || '-'}
-                  </Typography>
-                </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>
+                      Localidad
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#334155', mt: 0.8 }}>
+                      {ticket.localidad || '-'}
+                    </Typography>
+                  </Grid>
 
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>
-                    Nivel de Severidad
-                  </Typography>
-                  <Box sx={{ mt: 0.5 }}>
-                    <Chip
-                      label={`${nivelSeveridadConfig.icon ? nivelSeveridadConfig.icon + ' ' : ''}${nivelSeveridadConfig.label}`}
-                      size="small"
-                      sx={{
-                        fontWeight: 700,
-                        borderRadius: '6px',
-                        fontSize: '0.72rem',
-                        px: 1,
-                        bgcolor: nivelSeveridadConfig.bgcolor,
-                        color: nivelSeveridadConfig.color,
-                      }}
-                    />
-                  </Box>
-                </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>
+                      Nodo
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#334155', mt: 0.8 }}>
+                      {ticket.nodo || '-'}
+                    </Typography>
+                  </Grid>
 
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>
-                    Tipo de Incidencia
-                  </Typography>
-                  <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                    {incidentTypes.length > 0 ? (
-                      incidentTypes.map((tipo) => (
-                        <Chip
-                          key={tipo}
-                          label={tipo}
-                          size="small"
-                          sx={{
-                            bgcolor: getColorByTipoIncidencia(tipo),
-                            color: 'white',
-                            fontWeight: 600,
-                            borderRadius: '6px',
-                            fontSize: '0.72rem',
-                            px: 1,
-                          }}
-                        />
-                      ))
-                    ) : (
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>
+                      Nivel de Severidad
+                    </Typography>
+                    <Box sx={{ mt: 0.5 }}>
+                      <Chip
+                        label={`${nivelSeveridadConfig.icon ? nivelSeveridadConfig.icon + ' ' : ''}${nivelSeveridadConfig.label}`}
+                        size="small"
+                        sx={{
+                          fontWeight: 700,
+                          borderRadius: '6px',
+                          fontSize: '0.72rem',
+                          px: 1,
+                          bgcolor: nivelSeveridadConfig.bgcolor,
+                          color: nivelSeveridadConfig.color,
+                        }}
+                      />
+                    </Box>
+                  </Grid>
+
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>
+                      Tipo de Incidencia
+                    </Typography>
+                    <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                      {incidentTypes.length > 0 ? (
+                        incidentTypes.map((tipo) => (
+                          <Chip
+                            key={tipo}
+                            label={tipo}
+                            size="small"
+                            sx={{
+                              bgcolor: getColorByTipoIncidencia(tipo),
+                              color: 'white',
+                              fontWeight: 600,
+                              borderRadius: '6px',
+                              fontSize: '0.72rem',
+                              px: 1,
+                            }}
+                          />
+                        ))
+                      ) : (
+                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#334155', mt: 0.8 }}>
+                          -
+                        </Typography>
+                      )}
+                    </Box>
+                  </Grid>
+
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>
+                      Hora de Inicio de Falla
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#334155', mt: 0.8 }}>
+                      {formatDateTime(ticket.horaInicioFalla)}
+                    </Typography>
+                  </Grid>
+
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>
+                      Hora de Inicio de Atención
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#334155', mt: 0.8 }}>
+                      {formatDateTime(ticket.horaInicioAtencion)}
+                    </Typography>
+                  </Grid>
+
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>
+                      Hora de Fin de Afectación
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#334155', mt: 0.8 }}>
+                      {formatDateTime(ticket.horaFinAfectacion)}
+                    </Typography>
+                  </Grid>
+
+                  {ticket.status === 'CERRADO' && (
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>
+                        Hora de Cierre
+                      </Typography>
                       <Typography variant="body2" sx={{ fontWeight: 600, color: '#334155', mt: 0.8 }}>
-                        -
+                        {formatDateTime(ticket.horaCierre)}
                       </Typography>
-                    )}
-                  </Box>
-                </Grid>
+                    </Grid>
+                  )}
 
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>
-                    Hora de Inicio de Falla
-                  </Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#334155', mt: 0.8 }}>
-                    {formatDateTime(ticket.horaInicioFalla)}
-                  </Typography>
-                </Grid>
-
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>
-                    Hora de Inicio de Atención
-                  </Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#334155', mt: 0.8 }}>
-                    {formatDateTime(ticket.horaInicioAtencion)}
-                  </Typography>
-                </Grid>
-
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>
-                    Hora de Fin de Afectación
-                  </Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#334155', mt: 0.8 }}>
-                    {formatDateTime(ticket.horaFinAfectacion)}
-                  </Typography>
-                </Grid>
-
-                {ticket.status === 'CERRADO' && (
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>
-                      Hora de Cierre
-                    </Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#334155', mt: 0.8 }}>
-                      {formatDateTime(ticket.horaCierre)}
-                    </Typography>
-                  </Grid>
-                )}
-
-                {ticket.ttZoho && (
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>
-                      TT Zoho
-                    </Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#334155', mt: 0.8 }}>
-                      {ticket.ttZoho}
-                    </Typography>
-                  </Grid>
-                )}
-
-                <Grid size={12}>
-                  <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>
-                    Bitácora
-                  </Typography>
-                  <Box sx={{ mt: 0.5, p: 2, bgcolor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', maxHeight: '150px', overflowY: 'auto' }}>
-                    <Typography variant="body2" sx={{ color: '#334155', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-                      {ticket.bitacora || '-'}
-                    </Typography>
-                  </Box>
-                </Grid>
-
-              
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <Box sx={{ bgcolor: '#f8fafc', p: 2.5, borderRadius: '12px', border: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <PersonIcon sx={{ color: '#4f46e5', fontSize: '2rem', bgcolor: '#ffffff', p: 0.8, borderRadius: '50%', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }} />
-                    <Box>
-                      <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#94a3b8', fontWeight: 700, fontSize: '0.62rem', letterSpacing: '0.5px' }}>
-                        Operador Asignado
+                  {ticket.ttZoho && (
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>
+                        TT Zoho
                       </Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b' }}>
-                        {ticket?.operatorAsignado.primerNombre} { ticket?.operatorAsignado.primerApellido }
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: '#334155', mt: 0.8 }}>
+                        {ticket.ttZoho}
+                      </Typography>
+                    </Grid>
+                  )}
+
+                  <Grid size={12}>
+                    <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>
+                      Bitácora
+                    </Typography>
+                    <Box sx={{ mt: 0.5, p: 2, bgcolor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', maxHeight: '150px', overflowY: 'auto' }}>
+                      <Typography variant="body2" sx={{ color: '#334155', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                        {ticket.bitacora || '-'}
                       </Typography>
                     </Box>
-                  </Box>
-                </Grid>
+                  </Grid>
 
-             
-                {ticket.operatorResponsable && (
-                  <Grid size={{ xs: 12, sm: 6 }}>
+                
+              
+                
+                  {ticket.operatorResponsable && (
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <Box sx={{ bgcolor: '#f8fafc', p: 2.5, borderRadius: '12px', border: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <PersonIcon sx={{ color: '#059669', fontSize: '2rem', bgcolor: '#ffffff', p: 0.8, borderRadius: '50%', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }} />
+                        <Box>
+                          <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#94a3b8', fontWeight: 700, fontSize: '0.62rem', letterSpacing: '0.5px' }}>
+                            Operador Responsable
+                          </Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b' }}>
+                            {operatorResponsableName}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Grid>
+                  )}
+
+
+                      <Grid size={{ xs: 12, sm: 6 }}>
                     <Box sx={{ bgcolor: '#f8fafc', p: 2.5, borderRadius: '12px', border: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <PersonIcon sx={{ color: '#059669', fontSize: '2rem', bgcolor: '#ffffff', p: 0.8, borderRadius: '50%', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }} />
+                      <PersonIcon sx={{ color: '#4f46e5', fontSize: '2rem', bgcolor: '#ffffff', p: 0.8, borderRadius: '50%', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }} />
                       <Box>
                         <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#94a3b8', fontWeight: 700, fontSize: '0.62rem', letterSpacing: '0.5px' }}>
-                          Operador Responsable
+                          Operador Asignado
                         </Typography>
                         <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b' }}>
-                          {ticket.operatorResponsable.primerNombre} {ticket.operatorResponsable.primerApellido}
+                          {operatorAsignadoName}
                         </Typography>
                       </Box>
                     </Box>
                   </Grid>
-                )}
-              </Grid>
+
+                </Grid>
               </Box>
             </Paper>
           </motion.div>

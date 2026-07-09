@@ -272,9 +272,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
                     onChange={(e) => setTipoClienteSeleccionado(e.target.value)}
                     size="small"
                   >
-                    <MenuItem value="">
-                      <em>Ninguno</em>
-                    </MenuItem>
+            
                     {tipoCliente.map((c) => (
                       <MenuItem key={c._id} value={c._id}>
                         {c.valor}

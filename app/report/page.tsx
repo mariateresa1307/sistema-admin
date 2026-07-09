@@ -6,7 +6,7 @@ import Grid from "@mui/material/Grid";
 import { Download, BarChart as ChartIcon } from "@mui/icons-material";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import Divider from '@mui/material/Divider';
-import ProtectedRoute from "../components/protectedRoute"; // ✅ NUEVO
+import ProtectedRoute from "../components/protectedRoute"; 
 
 const data = [{ name: 'CORE', fallas: 40 }, { name: 'IT', fallas: 30 }, { name: 'Acceso', fallas: 20 }];
 

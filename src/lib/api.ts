@@ -14,44 +14,53 @@ function format(message: Array<string>|string) {
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
+  console.log('🔑 Token enviado:', token ? '✅ SÍ' : '❌ NO');
+  
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  
   return config;
 });
 
-
-api.interceptors.response.use((response) => response, // Pass successful responses through
+api.interceptors.response.use(
+  (response) => response,
   (error) => {
-    // Customize the alert message based on the error
     let message = 'Ocurrió un error inesperado. Por favor, intenta de nuevo.';
     
     if (error.response) {
-      // The request was made and the server responded with a status code
-      // other than 2xx
+      // ✅ Detectar token expirado
       if (error.response.status === 401) {
         message = 'Sesión expirada. Por favor, inicia sesión nuevamente.';
+        
+        // Limpiar datos de sesión
+        localStorage.removeItem('token');
+        localStorage.removeItem('userData');
+        
+        // Redirigir al login (si no estás ya ahí)
+        if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+          window.location.href = '/login';
+        }
+      } else if (error.response.status === 403) {
+        message = 'No tienes permisos para realizar esta acción.';
       } else if (error.response.status === 404) {
         message = 'El recurso solicitado no fue encontrado.';
-      } else if (error.response.data && error.response.data.message) {
-        message = error.response.data.message; // Use API provided error
+      } else if (error.response.data?.message) {
+        message = error.response.data.message;
       }
     } else if (error.request) {
-      // The request was made but no response was received (Network/CORS error)
       message = 'Error de red. Revisa tu conexión a internet.';
     }
 
-    // Trigger a global notification handled by the app's NotificationProvider
     if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('app-notification', { detail: { message: format(message), severity: 'error' } }));
+      window.dispatchEvent(new CustomEvent('app-notification', { 
+        detail: { message, severity: 'error' } 
+      }));
     }
 
-    // Reject the promise so the specific API call knows it failed
     return Promise.reject(error);
-  })
-
-
-
+  }
+);
 
 export default api;
 export const getUsers = (search?: string, params?: any) => api.get(`/user${search ? `?search=${search}` : ''}`, { params });
@@ -74,3 +83,7 @@ export const getMiscellaneous = (params: any) => api.get('/miscellaneous', { par
 export const createMiscellaneous = (data: any) => api.post('/miscellaneous', data);
 export const updateMiscellaneous = (id: string, data: any) => api.put(`/miscellaneous/${id}`, data);
 export const deleteMiscellaneous = (id: string) => api.delete(`/miscellaneous/${id}`);export const getMiscellaneousWithParent = (id: string) => api.get(`/miscellaneous/${id}/with-parent`);
+
+export const getAuditLogs = (params?: any) => api.get('/audit', { params });
+export const getAuditStats = (params?: any) => api.get('/audit/stats', { params });
+export const createAuditLog = (data: any) => api.post('/audit/log', data);

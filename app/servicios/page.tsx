@@ -8,6 +8,7 @@ import { CardSeeServiceModal } from "./cardSeeServiceModal";
 import { GridCellParams, GridColDef } from "@mui/x-data-grid";
 import { Chip, Tabs, Tab, Box } from "@mui/material";
 import { Service } from "app/utils/types";
+import { getService } from "@/lib/api"; 
 
 export default function RBSPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -23,11 +24,16 @@ export default function RBSPage() {
   const fetchServices = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:4000/services');
-      const data = await res.json();
+      const response = await getService();
+ const data = Array.isArray(response.data) 
+        ? response.data 
+        : response.data?.data || [];
+
+         console.log('✅ [RBSPage] Servicios obtenidos:', data.length);
       setRows(data);
     } catch (error) {
-      console.error("Error al obtener servicios:", error);
+      console.error("❌ [RBSPage] Error al obtener servicios:", error);
+      setRows([]); // ✅ Fallback a array vacío
     } finally {
       setLoading(false);
     }
@@ -42,12 +48,13 @@ export default function RBSPage() {
       isFirstRun.current = false;
       return;
     }
-    console.log("Datos actuales en la tabla:", rows);
+        console.log("📊 [RBSPage] Datos actuales en la tabla:", rows.length, "registros");
+
   }, [rows]);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
-    setFiltroTipo("Todos"); // Resetear filtro al cambiar de tab
+    setFiltroTipo("Todos");
   };
 
   const renderDetalles = (row: Service) => {
@@ -105,6 +112,10 @@ export default function RBSPage() {
 
   // Filtrar filas según el tab y el filtro de tipo
   const filteredRows = useMemo(() => {
+    if (!Array.isArray(rows)) {
+      console.warn('⚠️ [RBSPage] rows no es un array:', rows);
+      return [];
+    }
     let filtered = rows;
     
     // Primero filtrar por tab
@@ -123,8 +134,8 @@ export default function RBSPage() {
   }, [rows, tabValue, filtroTipo]);
 
   // Contadores para los tabs
-  const serviciosCount = rows.filter(r => r.tipoServicio !== "IU").length;
-  const enlacesCount = rows.filter(r => r.tipoServicio === "IU").length;
+  const serviciosCount = Array.isArray(rows) ? rows.filter(r => r.tipoServicio !== "IU").length : 0;
+  const enlacesCount = Array.isArray(rows) ? rows.filter(r => r.tipoServicio === "IU").length : 0;
 
   return (
     <>
