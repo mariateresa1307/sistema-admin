@@ -1,18 +1,20 @@
+// app/servicios/cardSeeServiceModal.tsx
 'use client';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Modal, Paper, Box, Typography, IconButton, Divider, Chip, Tooltip } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import { motion, AnimatePresence } from 'framer-motion';
 import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
 import SettingsEthernetIcon from '@mui/icons-material/SettingsEthernet';
+import { getMiscellaneous } from '@/lib/api';
 
 interface ServiceData {
   _id?: string;
   tipoServicio: string;
   name: string;
   city: string;
-  tipoCliente?: string; // ✅ Corregido: era tipoClienteSeleccionado
+  tipoCliente?: string;
   ipNetuno?: string;
   id_netuno?: string;
   idRBS?: string;
@@ -37,29 +39,47 @@ interface CardSeeServiceModalProps {
 }
 
 export const CardSeeServiceModal = ({ open, onClose, service, onEditClick }: CardSeeServiceModalProps) => {
-  // ✅ Estados dentro del componente
-  const [tipoClienteNombre, setTipoClienteNombre] = React.useState<string>('');
-  const [loadingTipoCliente, setLoadingTipoCliente] = React.useState(false);
+  const [tipoClienteNombre, setTipoClienteNombre] = useState<string>('');
+  const [loadingTipoCliente, setLoadingTipoCliente] = useState(false);
 
-  React.useEffect(() => {
+  // ✅ CORREGIDO: Obtener nombre del tipo de cliente con logs y comparación correcta
+  useEffect(() => {
     if (!service?.tipoCliente) {
+      console.log('⚠️ [SeeModal] No hay tipoCliente en el servicio');
       setTipoClienteNombre('');
       return;
     }
 
+    console.log('🔄 [SeeModal] Buscando tipoCliente con ID:', service.tipoCliente);
+
     const obtenerNombreTipoCliente = async () => {
       setLoadingTipoCliente(true);
       try {
-        const res = await fetch(`http://localhost:4000/miscellaneous/${service.tipoCliente}`);
-        if (res.ok) {
-          const data = await res.json();
-          setTipoClienteNombre(data.valor || service.tipoCliente || '');
+        const response = await getMiscellaneous({ categoria: 'TIPO_CLIENTE' });
+        const tipoClientes = response.data || [];
+        
+        console.log('📋 [SeeModal] Tipos de cliente cargados:', tipoClientes.length);
+        console.log('🆔 [SeeModal] IDs disponibles:', tipoClientes.map((tc: any) => tc._id));
+        
+        // ✅ CRÍTICO: Convertir ambos a string para comparar
+        const serviceTipoClienteId = String(service.tipoCliente);
+        
+        const tipoEncontrado = tipoClientes.find((tc: any) => {
+          const tcId = String(tc._id);
+          console.log(`🔍 [SeeModal] Comparando: ${tcId} === ${serviceTipoClienteId} → ${tcId === serviceTipoClienteId}`);
+          return tcId === serviceTipoClienteId;
+        });
+        
+        if (tipoEncontrado) {
+          console.log('✅ [SeeModal] Tipo cliente encontrado:', tipoEncontrado.valor);
+          setTipoClienteNombre(tipoEncontrado.valor);
         } else {
-          setTipoClienteNombre(service.tipoCliente || '');
+          console.warn('⚠️ [SeeModal] Tipo cliente NO encontrado, mostrando ID');
+          setTipoClienteNombre(service.tipoCliente ?? '');
         }
       } catch (error) {
-        console.error('Error al obtener tipo de cliente:', error);
-        setTipoClienteNombre(service.tipoCliente || '');
+        console.error('❌ [SeeModal] Error al obtener tipo de cliente:', error);
+        setTipoClienteNombre(service.tipoCliente ?? '');
       } finally {
         setLoadingTipoCliente(false);
       }
@@ -87,6 +107,7 @@ export const CardSeeServiceModal = ({ open, onClose, service, onEditClick }: Car
           { label: "ID NETUNO", value: s.id_netuno },
           { 
             label: "TIPO CLIENTE", 
+            // ✅ CORREGIDO: Quitar .valueOf()
             value: loadingTipoCliente ? 'Cargando...' : (tipoClienteNombre || '—')
           },
           { label: "ID RBS", value: s.idRBS },

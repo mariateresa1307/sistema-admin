@@ -1,4 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
+// ✅ AGREGAR: Importar todas las funciones necesarias del API client
+import { getMiscellaneous, createMiscellaneous, updateMiscellaneous, deleteMiscellaneous } from "@/lib/api";
 
 export type MiscellaneousItem = {
   _id?: string;
@@ -18,8 +20,6 @@ export type NotificationType = {
   message: string;
   severity: 'success' | 'error';
 };
-
-const API_URL = 'http://localhost:4000/miscellaneous';
 
 export const useMiscellaneous = (currentCategoria: string) => {
   const [rows, setRows] = useState<MiscellaneousItem[]>([]);
@@ -45,14 +45,13 @@ export const useMiscellaneous = (currentCategoria: string) => {
     setNotification(prev => ({ ...prev, open: false }));
   }, []);
 
-  // Cargar items de la categoría actual
+  // ✅ CORREGIDO: Usar getMiscellaneous en lugar de fetch
   const fetchItems = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}?categoria=${currentCategoria}`);
-      const data = await res.json();
-      const items = Array.isArray(data) ? data : (data.data || data.items || []);
-      setRows(items);
+      const response = await getMiscellaneous({ categoria: currentCategoria });
+      const data = Array.isArray(response.data) ? response.data : [];
+      setRows(data);
     } catch (error) {
       console.error("Error al obtener items:", error);
       showNotification("Error al cargar los datos", "error");
@@ -62,12 +61,11 @@ export const useMiscellaneous = (currentCategoria: string) => {
     }
   }, [currentCategoria, showNotification]);
 
-  // Función genérica para cargar datos por categoría
   const fetchByCategoria = useCallback(async (categoria: string) => {
     try {
-      const res = await fetch(`${API_URL}?categoria=${categoria}`);
-      const data = await res.json();
-      return Array.isArray(data) ? data : [];
+      const response = await getMiscellaneous({ categoria });
+      const data = Array.isArray(response.data) ? response.data : [];
+      return data;
     } catch (error) {
       console.error(`Error al obtener ${categoria}:`, error);
       return [];
@@ -116,51 +114,40 @@ export const useMiscellaneous = (currentCategoria: string) => {
     fetchRelatedData();
   }, [fetchItems, fetchRelatedData]);
 
-  // ✅ CORREGIDO: Eliminado el window.confirm
+  // ✅ CORREGIDO: Usar deleteMiscellaneous en lugar de fetch
   const deleteItem = useCallback(async (item: MiscellaneousItem): Promise<boolean> => {
     try {
-      const res = await fetch(`${API_URL}/${item._id || item.id}`, {
-        method: 'DELETE',
-      });
-
-      if (res.ok) {
-        showNotification("Elemento eliminado correctamente", "success");
-        await fetchItems();
-        await fetchRelatedData();
-        return true;
-      } else {
-        const err = await res.json();
-        showNotification(err.message || "Error al eliminar el elemento", "error");
+      const itemId = item._id || item.id;
+      if (!itemId) {
+        showNotification("ID del elemento no válido", "error");
         return false;
       }
-    } catch (error) {
+
+      await deleteMiscellaneous(itemId);
+      showNotification("Elemento eliminado correctamente", "success");
+      await fetchItems();
+      await fetchRelatedData();
+      return true;
+    } catch (error: any) {
       console.error("Error al eliminar:", error);
-      showNotification("Error de conexión", "error");
+      const message = error?.response?.data?.message || "Error de conexión";
+      showNotification(message, "error");
       return false;
     }
   }, [fetchItems, fetchRelatedData, showNotification]);
 
+  // ✅ CORREGIDO: Usar createMiscellaneous en lugar de fetch
   const addItem = useCallback(async (payload: any): Promise<boolean> => {
     try {
-      const res = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (res.ok) {
-        showNotification("Elemento agregado correctamente", "success");
-        await fetchItems();
-        await fetchRelatedData();
-        return true;
-      } else {
-        const err = await res.json();
-        showNotification(`Error: ${err.message || 'No se pudo agregar'}`, "error");
-        return false;
-      }
-    } catch (error) {
+      await createMiscellaneous(payload);
+      showNotification("Elemento agregado correctamente", "success");
+      await fetchItems();
+      await fetchRelatedData();
+      return true;
+    } catch (error: any) {
       console.error("Error:", error);
-      showNotification("Error de conexión", "error");
+      const message = error?.response?.data?.message || 'No se pudo agregar';
+      showNotification(`Error: ${message}`, "error");
       return false;
     }
   }, [fetchItems, fetchRelatedData, showNotification]);

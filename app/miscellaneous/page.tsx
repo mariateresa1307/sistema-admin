@@ -27,6 +27,8 @@ import FmdGoodIcon from '@mui/icons-material/FmdGood';
 import WarningIcon from '@mui/icons-material/Warning';
 import ProtectedRoute from "../components/protectedRoute";
 import DashboardLayout from "../components/dashboardLayout";
+// ✅ AGREGAR: Importar getMiscellaneous del API client
+import { getMiscellaneous } from "@/lib/api";
 
 type TabConfig = {
   label: string;
@@ -86,14 +88,14 @@ export default function MiscellaneousPage() {
     ciudades, 
   } = useMiscellaneous(currentCategoria);
 
-  // ✅ Cargar soluciones y causas raíz cuando sea necesario
+  // ✅ Cargar soluciones y causas raíz cuando sea necesario (CORREGIDO)
   useEffect(() => {
     // Cargar soluciones del caso
     const loadSoluciones = async () => {
       try {
-        const res = await fetch('http://localhost:4000/miscellaneous?categoria=SOLUCION_CASO');
-        const data = await res.json();
-        const solucionesData = Array.isArray(data) ? data : [];
+        // ✅ USAR getMiscellaneous en lugar de fetch directo
+        const response = await getMiscellaneous({ categoria: 'SOLUCION_CASO' });
+        const solucionesData = Array.isArray(response.data) ? response.data : [];
         setSoluciones(solucionesData.filter((s: MiscellaneousItem) => s.activo !== false));
       } catch (error) {
         console.error("Error al cargar soluciones:", error);
@@ -103,9 +105,9 @@ export default function MiscellaneousPage() {
     // Cargar causas raíz
     const loadCausasRaiz = async () => {
       try {
-        const res = await fetch('http://localhost:4000/miscellaneous?categoria=CAUSA_RAIZ');
-        const data = await res.json();
-        const causasData = Array.isArray(data) ? data : [];
+        // ✅ USAR getMiscellaneous en lugar de fetch directo
+        const response = await getMiscellaneous({ categoria: 'CAUSA_RAIZ' });
+        const causasData = Array.isArray(response.data) ? response.data : [];
         setCausasRaiz(causasData.filter((c: MiscellaneousItem) => c.activo !== false));
       } catch (error) {
         console.error("Error al cargar causas raíz:", error);
@@ -386,8 +388,8 @@ export default function MiscellaneousPage() {
         onDelete={handleDelete}
         localidades={localidadesParaDetalle}
         {...({ subcategorias: subcategoriasParaDetalle } as any)}
-        soluciones={soluciones} // ✅ AHORA DEFINIDO
-        causasRaiz={causasRaiz} // ✅ AHORA DEFINIDO
+        soluciones={soluciones}
+        causasRaiz={causasRaiz}
       />
 
       {/* Modal Estados */}

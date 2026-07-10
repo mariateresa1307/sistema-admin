@@ -176,10 +176,6 @@ export const MiscellaneousModal = ({
       delete payload._id;
       delete payload.id;
 
-   
-    console.log('🔍 [handleSave] Payload final:', JSON.stringify(payload, null, 2));
-    console.log('🔍 [handleSave] Categoría:', categoria);
-
     const isEditMode = Boolean(initialData?._id || initialData?.id);
     const id = initialData?._id || initialData?.id;
     

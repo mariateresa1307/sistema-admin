@@ -1,3 +1,4 @@
+// app/servicios/serviceModal.tsx
 "use client";
 import * as React from "react";
 import {
@@ -19,7 +20,7 @@ const PROVEEDORES_UM = ["Inter", "Digitel", "Vnet", "Movistar", "Otro"];
 
 export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servicio", initialData }: any) => {
   const [tipoServicio, setTipoServicio] = React.useState("RBS");
-  const [proveedorCompartido, setProveedorCompartido] = React.useState(""); // ✅ NUEVO: Estado controlado
+  const [proveedorCompartido, setProveedorCompartido] = React.useState("");
   const [imagePreview, setImagePreview] = React.useState<string | null>(null);
   const [showImageSection, setShowImageSection] = React.useState(false);
   const [tipoCliente, setTipoCliente] = React.useState<Array<ConfiguracionInterface>>([]);
@@ -32,29 +33,11 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
   const triggerNotification = (message: string, severity: 'success' | 'error') => {
     setNotification({ open: true, message, severity });
   };
+
+  // ✅ useEffect 1: Cargar tipos de cliente cuando se abre el modal
   React.useEffect(() => {
     if (!isOpen) return;
-    setTipoServicio(initialData?.tipoServicio || "RBS");
-    setProveedorCompartido(initialData?.proveedorDelServicioCompartido || "");
-    setHasUltimaMilla(!!initialData?.ultimaMilla);
-    setProveedorUM(initialData?.proveedorUM || "");
-    setImagePreview(initialData?.diagramaRed || null);
-    setShowImageSection(!!initialData?.diagramaRed);
 
-    if (initialData?.tipoCliente) {
-      let tipoClienteId = '';
-      
-      if (typeof initialData.tipoCliente === 'object' && initialData.tipoCliente._id) {
-        tipoClienteId = initialData.tipoCliente._id;
-      } else if (typeof initialData.tipoCliente === 'string') {
-        tipoClienteId = initialData.tipoCliente;
-      }
-      
-      setTipoClienteSeleccionado(tipoClienteId);
-      console.log("✅ [Modal] tipoCliente ID:", tipoClienteId);
-    } else {
-      setTipoClienteSeleccionado('');
-    }
     const cargarTiposCliente = async () => {
       setLoadingTiposCliente(true);
       try {
@@ -69,7 +52,54 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
     };
 
     cargarTiposCliente();
+  }, [isOpen]);
+
+  // ✅ useEffect 2: Sincronizar datos del formulario cuando initialData cambia
+  React.useEffect(() => {
+    if (!isOpen) return;
+
+    console.log("🔄 [Modal] Sincronizando initialData:", initialData);
+
+    setTipoServicio(initialData?.tipoServicio || "RBS");
+    setProveedorCompartido(initialData?.proveedorDelServicioCompartido || "");
+    setHasUltimaMilla(!!initialData?.ultimaMilla);
+    setProveedorUM(initialData?.proveedorUM || "");
+    setImagePreview(initialData?.diagramaRed || null);
+    setShowImageSection(!!initialData?.diagramaRed);
+
+    // ✅ CRÍTICO: Extraer el ID del tipoCliente correctamente
+    if (initialData?.tipoCliente) {
+      let tipoClienteId = '';
+      
+      // Si es un objeto con _id
+      if (typeof initialData.tipoCliente === 'object' && initialData.tipoCliente._id) {
+        tipoClienteId = initialData.tipoCliente._id;
+      } 
+      // Si es un string (ID directo)
+      else if (typeof initialData.tipoCliente === 'string') {
+        tipoClienteId = initialData.tipoCliente;
+      }
+      
+      console.log("✅ [Modal] tipoCliente ID extraído:", tipoClienteId);
+      setTipoClienteSeleccionado(tipoClienteId);
+    } else {
+      console.log("⚠️ [Modal] No hay tipoCliente en initialData");
+      setTipoClienteSeleccionado('');
+    }
   }, [isOpen, initialData]);
+
+  // ✅ useEffect 3: Verificar que el tipoCliente existe en la lista cargada
+  React.useEffect(() => {
+    if (tipoClienteSeleccionado && tipoCliente.length > 0) {
+      const existe = tipoCliente.some(tc => tc._id === tipoClienteSeleccionado);
+      if (!existe) {
+        console.warn("⚠️ [Modal] tipoClienteSeleccionado no existe en la lista:", tipoClienteSeleccionado);
+        console.log("📋 [Modal] Lista disponible:", tipoCliente.map(tc => tc._id));
+      } else {
+        console.log("✅ [Modal] tipoClienteSeleccionado validado:", tipoClienteSeleccionado);
+      }
+    }
+  }, [tipoClienteSeleccionado, tipoCliente]);
 
   const formRef = React.useRef<HTMLFormElement>(null);
   const labelStyle = { fontWeight: 700, fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', mb: 0.5 };
@@ -91,70 +121,70 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
   };
 
   const handleSave = async () => {
-  if (!formRef.current) return;
-  const formData = new FormData(formRef.current);
-  const data = Object.fromEntries(formData.entries()) as any;
-  const serviceId = initialData?._id || initialData?.id;
-  
-  if (isEditMode && !serviceId) {
-    console.error("❌ [Modal] No se encontró el ID del servicio");
-    triggerNotification("Error: No se encontró el ID del servicio", "error");
-    return;
-  }
+    if (!formRef.current) return;
+    const formData = new FormData(formRef.current);
+    const data = Object.fromEntries(formData.entries()) as any;
+    const serviceId = initialData?._id || initialData?.id;
+    
+    if (isEditMode && !serviceId) {
+      console.error("❌ [Modal] No se encontró el ID del servicio");
+      triggerNotification("Error: No se encontró el ID del servicio", "error");
+      return;
+    }
 
-  const payload = {
-    tipoServicio,
-    name: data.name || "",
-    city: data.city || "",
-    tipoCliente: tipoClienteSeleccionado || "",
-    proveedorDelServicioCompartido: data.proveedorDelServicioCompartido || "",
-    diagramaRed: imagePreview || "",
-    ipNetuno: data.ipNetuno || null,
-    id_circuito: data.id_circuito || null,
-    id_netuno: data.id_netuno || null,
-    idRBS: data.idRBS || null,
-    idDOG: data.idDOG || null,
-    nodoA: data.nodoA || null,
-    nodoB: data.nodoB || null,
-    nodoOLT: data.oltnode || null,
-    vlan: data.vlan ? Number(data.vlan) : null,
-    contrato: data.contrato ? Number(data.contrato) : null,
-    serialONT: data.serialONT || null,
-    ultimaMilla: data.hasUltimaMilla,
-    proveedorUM: data.hasUltimaMilla ? data.proveedorUM : null,
-    proveedor: data.proveedor || null,
-    status: "Activo"
+    const payload = {
+      tipoServicio,
+      name: data.name || "",
+      city: data.city || "",
+      tipoCliente: tipoClienteSeleccionado || "",
+      proveedorDelServicioCompartido: data.proveedorDelServicioCompartido || "",
+      diagramaRed: imagePreview || "",
+      ipNetuno: data.ipNetuno || null,
+      id_circuito: data.id_circuito || null,
+      id_netuno: data.id_netuno || null,
+      idRBS: data.idRBS || null,
+      idDOG: data.idDOG || null,
+      nodoA: data.nodoA || null,
+      nodoB: data.nodoB || null,
+      nodoOLT: data.oltnode || null,
+      vlan: data.vlan ? Number(data.vlan) : null,
+      contrato: data.contrato ? Number(data.contrato) : null,
+      serialONT: data.serialONT || null,
+      ultimaMilla: data.hasUltimaMilla,
+      proveedorUM: data.hasUltimaMilla ? data.proveedorUM : null,
+      proveedor: data.proveedor || null,
+      status: "Activo"
+    };
+
+    console.log("📤 [Modal] Payload a enviar:", payload);
+
+    try {
+      if (isEditMode && serviceId) {
+        console.log(`🔄 [Modal] Actualizando servicio ${serviceId}...`);
+        const response = await updateService(payload, String(serviceId));
+        
+        if (response.status === 200 || response.status === 201) {
+          triggerNotification("Servicio actualizado correctamente", "success");
+          setTimeout(onClose, 1000);
+        }
+      } else {
+        console.log("➕ [Modal] Creando nuevo servicio...");
+        const response = await createService(payload);
+        
+        if (response.status === 201) {
+          triggerNotification("Servicio creado correctamente", "success");
+          setTimeout(onClose, 1000);
+        }
+      }
+    } catch (error: any) {
+      console.error("❌ [Modal] Error completo:", error);
+      console.error("❌ [Modal] Response:", error.response);
+      
+      const errorMessage = error.response?.data?.message || error.message || "Error al guardar";
+      triggerNotification(errorMessage, "error");
+    }
   };
 
-  try {
-    if (isEditMode && serviceId) {
-
-      console.log(`🔄 [Modal] Actualizando servicio ${serviceId}...`);
-
-      const response = await updateService(payload, String(serviceId));
-      
-      if (response.status === 200 || response.status === 201) {
-        triggerNotification("Servicio actualizado correctamente", "success");
-        setTimeout(onClose, 1000);
-      }
-    } else {
-      // ✅ Crear nuevo servicio
-      console.log("➕ [Modal] Creando nuevo servicio...");
-      const response = await createService(payload);
-      
-      if (response.status === 201) {
-        triggerNotification("Servicio creado correctamente", "success");
-        setTimeout(onClose, 1000);
-      }
-    }
-  } catch (error: any) {
-    console.error("❌ [Modal] Error completo:", error);
-    console.error("❌ [Modal] Response:", error.response);
-    
-    const errorMessage = error.response?.data?.message || error.message || "Error al guardar";
-    triggerNotification(errorMessage, "error");
-  }
-};
   return (
     <>
       <Snackbar
@@ -211,7 +241,6 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
                   value={tipoServicio} 
                   onChange={(e) => {
                     setTipoServicio(e.target.value);
-                  
                     if (e.target.value !== "METROLAN" && e.target.value !== "IU") {
                       setProveedorCompartido("");
                     }
@@ -232,7 +261,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
                 </TextField>
               </Grid>
               
-              {/*  CORREGIDO: Proveedor del servicio compartido con estado controlado */}
+              {/* Proveedor del servicio compartido */}
               <Grid size={6}>
                 <Typography sx={labelStyle}>{"Proveedor del servicio compartido"}</Typography>
                 <TextField 
@@ -255,7 +284,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
                 </TextField>
               </Grid>
               
-              {/* Tipo de cliente */}
+              {/* ✅ Tipo de cliente con validación */}
               <Grid size={6}>
                 <Typography sx={labelStyle}>Tipo de cliente</Typography>
                 {loadingTiposCliente ? (
@@ -269,10 +298,16 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
                     fullWidth 
                     name="tipoCliente" 
                     value={tipoClienteSeleccionado}
-                    onChange={(e) => setTipoClienteSeleccionado(e.target.value)}
+                    onChange={(e) => {
+                      console.log("🔄 [Modal] Cambiando tipoCliente a:", e.target.value);
+                      setTipoClienteSeleccionado(e.target.value);
+                    }}
                     size="small"
+                   // helperText={tipoClienteSeleccionado ? `ID: ${tipoClienteSeleccionado}` : 'Selecciona un tipo de cliente'}
                   >
-            
+                    <MenuItem value="">
+                     <em>Ninguno</em>
+                    </MenuItem>
                     {tipoCliente.map((c) => (
                       <MenuItem key={c._id} value={c._id}>
                         {c.valor}
@@ -284,7 +319,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
 
               <Grid size={12}><Divider sx={{ my: 1 }} /></Grid>
 
-              {/* Resto de campos según tipoServicio... */}
+              {/* Resto de campos según tipoServicio */}
               {tipoServicio === "METROLAN" && (
                 <>
                   <Grid size={6}><TextField name="id_circuito" label="ID Circuito" fullWidth defaultValue={initialData?.id_circuito || ""} size="small" /></Grid>

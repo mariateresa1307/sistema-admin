@@ -5,6 +5,8 @@ import {
 } from "@mui/material";
 import { Category as CategoryIcon } from "@mui/icons-material";
 import { MiscellaneousItem } from "../baseMiscellaneousModal";
+// ✅ AGREGAR: Importar getMiscellaneous
+import { getMiscellaneous } from "@/lib/api";
 
 interface SubcategoriaFieldsProps {
   isOpen: boolean;
@@ -13,7 +15,6 @@ interface SubcategoriaFieldsProps {
   onValidate: (validateFn: () => boolean) => void;
 }
 
-// ✅ EXPORTAR SubcategoriaFields
 export const SubcategoriaFields = ({
   isOpen,
   initialData,
@@ -24,15 +25,16 @@ export const SubcategoriaFields = ({
   const [categorias, setCategorias] = React.useState<MiscellaneousItem[]>([]);
   const [loadingCategorias, setLoadingCategorias] = React.useState(false);
 
-  // Cargar categorías cuando se abre el modal
+  // ✅ Cargar categorías usando getMiscellaneous (CORREGIDO)
   React.useEffect(() => {
     const cargarCategorias = async () => {
       if (isOpen) {
         setLoadingCategorias(true);
         try {
-          const res = await fetch("http://localhost:4000/miscellaneous?categoria=CATEGORIA_RED");
-          const data = await res.json();
-          const categoriasData = Array.isArray(data) ? data : [];
+          // ✅ USAR getMiscellaneous en lugar de fetch
+          const response = await getMiscellaneous({ categoria: "CATEGORIA_RED" });
+          // ✅ response.data contiene el array
+          const categoriasData = Array.isArray(response.data) ? response.data : [];
           const categoriasActivas = categoriasData.filter((c: MiscellaneousItem) => c.activo !== false);
           setCategorias(categoriasActivas);
         } catch (error) {

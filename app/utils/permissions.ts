@@ -20,32 +20,27 @@ export const MODULE_PERMISSIONS: Record<string, string[]> = {
 
 export const hasPermission = (userRole: string | undefined, module: string): boolean => {
   if (!userRole) {
-    console.log(`⚠️ [hasPermission] userRole es undefined para módulo: ${module}`);
+
     return false;
   }
   
   const allowedRoles = MODULE_PERMISSIONS[module];
   if (!allowedRoles) {
-    console.log(`⚠️ [hasPermission] Módulo ${module} no está definido`);
     return false;
   }
   
   const hasAccess = allowedRoles.includes(userRole);
-  console.log(`🔍 [hasPermission] ${module} - role: ${userRole} - allowedRoles: ${allowedRoles.join(', ')} - acceso: ${hasAccess}`);
   return hasAccess;
 };
 
 export const filterMenuByRole = <T extends { label: string; module?: string; children?: T[] }>(
   menuItems: T[],
   userRole: string | undefined,
-): T[] => {
-  console.log("🔍 [filterMenuByRole] userRole:", userRole);
-  
+): T[] => {  
   const filtered = menuItems
     .filter((item) => {
       if (item.module) {
         const allowed = hasPermission(userRole, item.module);
-        console.log(`🔍 [filterMenuByRole] ${item.label} (${item.module}): ${allowed}`);
         return allowed;
       }
       return true;
@@ -66,6 +61,5 @@ export const filterMenuByRole = <T extends { label: string; module?: string; chi
       return true;
     });
   
-  console.log("✅ [filterMenuByRole] filtered:", filtered.length, "items");
   return filtered;
 };

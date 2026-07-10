@@ -340,7 +340,6 @@ const SidebarItem = React.memo<{
 });
 SidebarItem.displayName = "SidebarItem";
 
-// ✅ SIDEBAR CON FALLBACK - CORREGIDO
 const Sidebar = React.memo<{
   pathname: string;
   onNavigate: (path: string) => void;
@@ -349,18 +348,10 @@ const Sidebar = React.memo<{
   const [open] = React.useState(true);
   const { user, isLoading } = useAuth();
 
-  // ✅ MOVER useMemo ANTES del return condicional (reglas de hooks)
   const filteredMenuItems = React.useMemo(() => {
-    console.log("🔍 [Sidebar] Filtrando menú con role:", user?.role);
     return filterMenuByRole(MENU_ITEMS, user?.role);
   }, [user?.role]);
 
-  console.log("🔍 [Sidebar] isLoading:", isLoading);
-  console.log("🔍 [Sidebar] user:", user);
-  console.log("🔍 [Sidebar] user.role:", user?.role);
-  console.log("✅ [Sidebar] Menu filtrado:", filteredMenuItems.length, "items");
-
-  // ✅ Solo mostrar spinner si isLoading es true Y no tenemos user
   if (isLoading && !user) {
     console.log("⏳ [Sidebar] Esperando carga del usuario...");
     return (

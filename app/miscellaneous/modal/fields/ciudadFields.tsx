@@ -5,6 +5,7 @@ import {
 } from "@mui/material";
 import { Map as MapIcon } from "@mui/icons-material";
 import { MiscellaneousItem } from "../baseMiscellaneousModal";
+import { getMiscellaneous } from "@/lib/api";
 
 interface CiudadFieldsProps {
   isOpen: boolean;
@@ -13,7 +14,6 @@ interface CiudadFieldsProps {
   onValidate: (validateFn: () => boolean) => void;
 }
 
-// ✅ EXPORTAR CiudadFields
 export const CiudadFields = ({
   isOpen,
   initialData,
@@ -24,15 +24,16 @@ export const CiudadFields = ({
   const [estados, setEstados] = React.useState<MiscellaneousItem[]>([]);
   const [loadingEstados, setLoadingEstados] = React.useState(false);
 
-  // Cargar estados cuando se abre el modal
+  // ✅ Cargar estados usando getMiscellaneous (CORREGIDO)
   React.useEffect(() => {
     const cargarEstados = async () => {
       if (isOpen) {
         setLoadingEstados(true);
         try {
-          const res = await fetch("http://localhost:4000/miscellaneous?categoria=ESTADO");
-          const data = await res.json();
-          const estadosData = Array.isArray(data) ? data : [];
+          // ✅ USAR getMiscellaneous en lugar de fetch
+          const response = await getMiscellaneous({ categoria: "ESTADO" });
+          // ✅ response.data contiene el array (axios envuelve la respuesta)
+          const estadosData = Array.isArray(response.data) ? response.data : [];
           const estadosActivos = estadosData.filter((e: MiscellaneousItem) => e.activo !== false);
           setEstados(estadosActivos);
         } catch (error) {
@@ -56,7 +57,6 @@ export const CiudadFields = ({
     }
   }, [initialData, isOpen]);
 
-  // Notificar al padre cuando cambia el estado
   React.useEffect(() => {
     onEstadoChange(estadoSeleccionado);
   }, [estadoSeleccionado, onEstadoChange]);

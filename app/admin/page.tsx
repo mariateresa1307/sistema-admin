@@ -8,8 +8,7 @@ import {
   Edit as EditIcon, Delete as DeleteIcon, Person as PersonIcon,
   ReportProblem as WarningIcon, History as HistoryIcon,
 } from '@mui/icons-material';
-import AuditFilters from '../admin/auditFilters';
-import AuditDetailModal from './auditDetailModal';
+import AuditFilters from './auditFilters';
 import { ContainerBox } from '../components/containerBox';
 import { getAuditStats } from '@/lib/api';
 import { AuditStats } from '@/lib/types/audit';
@@ -21,14 +20,55 @@ interface CardConfig {
   icon: React.ElementType;
   gradient: string;
   statKey: keyof AuditStats;
+  actionFilter?: string; // ✅ Acción para filtrar al hacer clic
 }
 
 const cardsConfig: CardConfig[] = [
-  { id: 'ediciones', title: 'Ediciones', description: 'Registros actualizados', icon: EditIcon, gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', statKey: 'ediciones' },
-  { id: 'eliminados', title: 'Eliminados', description: 'Registros borrados', icon: DeleteIcon, gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', statKey: 'eliminados' },
-  { id: 'usuarios', title: 'Usuarios', description: 'Actividad de usuarios', icon: PersonIcon, gradient: 'linear-gradient(135deg, #fccb90 0%, #d57eeb 100%)', statKey: 'usuarios' },
-  { id: 'incidentes', title: 'Incidentes', description: 'Alertas críticas', icon: WarningIcon, gradient: 'linear-gradient(135deg, #f6d365 0%, #fda085 100%)', statKey: 'incidentes' },
-  { id: 'historial', title: 'Historial', description: 'Logs generales', icon: HistoryIcon, gradient: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)', statKey: 'historial' },
+  { 
+    id: 'ediciones', 
+    title: 'Ediciones', 
+    description: 'Registros actualizados', 
+    icon: EditIcon, 
+    gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', 
+    statKey: 'ediciones',
+    actionFilter: 'UPDATE'
+  },
+  { 
+    id: 'eliminados', 
+    title: 'Eliminados', 
+    description: 'Registros borrados', 
+    icon: DeleteIcon, 
+    gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', 
+    statKey: 'eliminados',
+    actionFilter: 'DELETE'
+  },
+  { 
+    id: 'usuarios', 
+    title: 'Usuarios', 
+    description: 'Actividad de usuarios', 
+    icon: PersonIcon, 
+    gradient: 'linear-gradient(135deg, #fccb90 0%, #d57eeb 100%)', 
+    statKey: 'usuarios',
+    actionFilter: 'LOGIN'
+  },
+  { 
+    id: 'incidentes', 
+    title: 'Incidentes', 
+    description: 'Alertas críticas', 
+    icon: WarningIcon, 
+    gradient: 'linear-gradient(135deg, #f6d365 0%, #fda085 100%)', 
+    statKey: 'incidentes',
+    actionFilter: 'LOGIN_FAILED'
+  },
+  { 
+    id: 'historial', 
+    title: 'Historial', 
+    description: 'Logs generales', 
+    icon: HistoryIcon, 
+    gradient: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)', 
+    statKey: 'historial',
+    actionFilter: 'CREATE'
+  },
 ];
 
 export default function AdminPage() {
@@ -52,16 +92,22 @@ export default function AdminPage() {
     loadStats();
   }, [loadStats]);
 
+  // ✅ Al hacer clic en una card, se pasa el filtro a AuditFilters
   const handleCardClick = useCallback((id: string) => {
-    setSelectedCard(id);
-  }, []);
-
-  const handleCloseModal = useCallback(() => {
-    setSelectedCard(null);
+    setSelectedCard((prev) => (prev === id ? null : id));
+    
+    // ✅ Disparar evento personalizado para que AuditFilters lo capture
+    const card = cardsConfig.find((c) => c.id === id);
+    if (card?.actionFilter) {
+      window.dispatchEvent(new CustomEvent('audit-filter-action', {
+        detail: { action: card.actionFilter }
+      }));
+    }
   }, []);
 
   return (
     <ContainerBox title="AdminPage" subtitle="Auditoría de Registros">
+      {/* Cards de estadísticas */}
       <Grid container spacing={2} sx={{ mb: 4 }}>
         {cardsConfig.map((card) => {
           const IconComponent = card.icon;
@@ -73,11 +119,17 @@ export default function AdminPage() {
               <Card
                 sx={{
                   borderRadius: '16px',
-                  boxShadow: isSelected ? '0 8px 20px rgba(0,0,0,0.15)' : '0 4px 12px rgba(0,0,0,0.05)',
+                  boxShadow: isSelected 
+                    ? '0 8px 20px rgba(0,0,0,0.25), 0 0 0 3px rgba(8,7,105,0.3)' 
+                    : '0 4px 12px rgba(0,0,0,0.05)',
                   background: card.gradient,
                   transition: 'all 0.3s ease',
-                  transform: isSelected ? 'scale(1.02)' : 'scale(1)',
+                  transform: isSelected ? 'scale(1.03)' : 'scale(1)',
                   cursor: 'pointer',
+                  '&:hover': {
+                    transform: 'scale(1.02)',
+                    boxShadow: '0 8px 20px rgba(0,0,0,0.15)',
+                  },
                 }}
               >
                 <CardActionArea onClick={() => handleCardClick(card.id)} sx={{ height: '100%' }}>
@@ -87,25 +139,52 @@ export default function AdminPage() {
                         {loading ? (
                           <CircularProgress size={32} sx={{ color: 'white' }} />
                         ) : (
-                          <Typography variant="h4" sx={{ fontWeight: 800, color: 'white', lineHeight: 1 }}>
+                          <Typography 
+                            variant="h4" 
+                            sx={{ 
+                              fontWeight: 800, 
+                              color: 'white', 
+                              lineHeight: 1,
+                              textShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                            }}
+                          >
                             {count}
                           </Typography>
                         )}
                         <Typography
                           variant="subtitle2"
                           sx={{
-                            fontWeight: 700, color: 'white',
-                            textTransform: 'uppercase', fontSize: '0.7rem', mt: 1,
+                            fontWeight: 700, 
+                            color: 'white',
+                            textTransform: 'uppercase', 
+                            fontSize: '0.7rem', 
+                            mt: 1,
+                            textShadow: '0 1px 2px rgba(0,0,0,0.2)',
                           }}
                         >
                           {card.title}
                         </Typography>
                       </Box>
-                      <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }}>
+                      <Avatar 
+                        sx={{ 
+                          bgcolor: 'rgba(255,255,255,0.25)', 
+                          color: 'white',
+                          backdropFilter: 'blur(10px)',
+                        }}
+                      >
                         <IconComponent fontSize="small" />
                       </Avatar>
                     </Stack>
-                    <Typography variant="caption" sx={{ display: 'block', mt: 1, color: 'rgba(255,255,255,0.85)', fontStyle: 'italic' }}>
+                    <Typography 
+                      variant="caption" 
+                      sx={{ 
+                        display: 'block', 
+                        mt: 1, 
+                        color: 'rgba(255,255,255,0.9)', 
+                        fontStyle: 'italic',
+                        fontSize: '0.7rem',
+                      }}
+                    >
                       {card.description}
                     </Typography>
                   </CardContent>
@@ -116,13 +195,8 @@ export default function AdminPage() {
         })}
       </Grid>
 
+      {/* Filtros y Tabla (el modal ahora está dentro de AuditTable) */}
       <AuditFilters />
-
-      <AuditDetailModal
-        open={!!selectedCard}
-        onClose={handleCloseModal}
-        actionFilter={selectedCard || undefined}
-      />
     </ContainerBox>
   );
 }

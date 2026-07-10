@@ -22,13 +22,13 @@ export default function ProtectedRoute({ children, module }: ProtectedRouteProps
       
       // Verificar autenticación y permisos
       if (!isAuthenticated) {
-        console.log(`⚠️ [ProtectedRoute] No autenticado, redirigiendo...`);
+       
         router.push("/");
         return;
       }
       
       if (!hasPermission(module)) {
-        console.log(`⚠️ [ProtectedRoute] Sin permisos para ${module}, redirigiendo...`);
+        
         router.push("/home");
         return;
       }

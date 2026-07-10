@@ -5,8 +5,10 @@ import {
 } from "@mui/material";
 import { Map as MapIcon } from "@mui/icons-material";
 import { MiscellaneousItem } from "./baseMiscellaneousModal";
+// ✅ AGREGAR: Importar getMiscellaneous
+import { getMiscellaneous } from "@/lib/api";
 
-interface CiudadFieldsProps {
+interface CiudadModalProps {
   isOpen: boolean;
   initialData?: MiscellaneousItem | null;
   onEstadoChange: (estadoId: string) => void;
@@ -18,21 +20,21 @@ export const CiudadFields = ({
   initialData,
   onEstadoChange,
   onValidate,
-}: CiudadFieldsProps) => {
+}: CiudadModalProps) => {
   const [estadoSeleccionado, setEstadoSeleccionado] = React.useState("");
   const [estados, setEstados] = React.useState<MiscellaneousItem[]>([]);
   const [loadingEstados, setLoadingEstados] = React.useState(false);
 
-  // Cargar estados cuando se abre el modal
+  // ✅ Cargar estados usando getMiscellaneous (CORREGIDO)
   React.useEffect(() => {
     const cargarEstados = async () => {
       if (isOpen) {
         setLoadingEstados(true);
         try {
-          const res = await fetch("http://localhost:4000/miscellaneous?categoria=ESTADO");
-          const data = await res.json();
-          const estadosData = Array.isArray(data) ? data : [];
-          const estadosActivos = estadosData.filter((e: MiscellaneousItem) => e.activo !== false);
+          // ✅ USAR getMiscellaneous en lugar de fetch
+          const response = await getMiscellaneous({ categoria: "ESTADO" });
+          const data = Array.isArray(response.data) ? response.data : [];
+          const estadosActivos = data.filter((e: MiscellaneousItem) => e.activo !== false);
           setEstados(estadosActivos);
         } catch (error) {
           console.error("Error al cargar estados:", error);
