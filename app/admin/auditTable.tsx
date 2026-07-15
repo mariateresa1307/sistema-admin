@@ -30,7 +30,7 @@ interface Props {
   onPageChange: (page: number) => void;
 }
 
-// ✅ Configuración visual por acción
+
 const ACTION_CONFIG: Record<string, { label: string; color: 'success' | 'error' | 'warning' | 'info' | 'default'; icon: React.ElementType }> = {
   LOGIN: { label: 'Login', color: 'success', icon: LoginIcon },
   LOGOUT: { label: 'Logout', color: 'default', icon: LogoutIcon },
@@ -76,7 +76,7 @@ export default function AuditTable({ data, loading, total, page, limit, onPageCh
     setSelectedLog(null);
   };
 
-  // Skeleton loading
+
   if (loading && data.length === 0) {
     return (
       <Box sx={{ mt: 3 }}>
@@ -131,12 +131,8 @@ export default function AuditTable({ data, loading, total, page, limit, onPageCh
                 icon: HistoryIcon,
               };
               const IconComponent = config.icon;
-              
-           
               const dateValue = (log as any).eventDate || (log as any).createdAt || (log as any).timestamp;
               const eventDate = dateValue ? dayjs(dateValue) : null;
-              
-            
               const moduleId = (log as any).moduleId || (log as any).module;
               const moduleName = formatModuleName(moduleId);
 

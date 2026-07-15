@@ -380,7 +380,6 @@ const Sidebar = React.memo<{
     );
   }
 
-  // ✅ Si no hay user después de cargar, mostrar menú vacío
   if (!user) {
     console.warn("⚠️ [Sidebar] No hay usuario, mostrando menú mínimo");
     return (

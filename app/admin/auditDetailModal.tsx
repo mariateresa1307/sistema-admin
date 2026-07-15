@@ -99,7 +99,6 @@ const DEFAULT_CONFIG = {
   borderColor: '#080769',
 };
 
-// ✅ Función para formatear el nombre del módulo (CON VALIDACIÓN)
 const formatModuleName = (moduleId: string | undefined | null): string => {
   if (!moduleId) return '—';
   
@@ -117,7 +116,6 @@ const formatModuleName = (moduleId: string | undefined | null): string => {
   return modules[moduleId.toUpperCase()] || moduleId;
 };
 
-// ✅ Función auxiliar para parsear JSON de forma segura
 const parseJsonSafely = (value: string | undefined | null): any => {
   if (!value) return null;
   try {
@@ -127,7 +125,6 @@ const parseJsonSafely = (value: string | undefined | null): any => {
   }
 };
 
-// ✅ Función para extraer la fecha del log (maneja múltiples nombres de campo)
 const extractDateFromLog = (log: AuditLog): Date | null => {
   const possibleDateFields = [
     (log as any).eventDate,
@@ -150,7 +147,6 @@ const extractDateFromLog = (log: AuditLog): Date | null => {
   return null;
 };
 
-// ✅ Función para extraer la IP del log (maneja múltiples nombres de campo)
 const extractIpFromLog = (log: AuditLog): string | null => {
   const possibleIpFields = [
     (log as any).ipAddress,
@@ -160,7 +156,6 @@ const extractIpFromLog = (log: AuditLog): string | null => {
     (log as any).remoteAddress,
     (log as any).ipAddressClient,
   ];
-console.log(log.ipAddress);
 
   for (const ipValue of possibleIpFields) {
     if (ipValue && typeof ipValue === 'string' && ipValue.trim() !== '') {
@@ -170,8 +165,6 @@ console.log(log.ipAddress);
 
   return null;
 };
-
-// ✅ Componente para mostrar datos JSON formateados
 const JsonViewer = ({ data, title, showLabel = true }: { data: any; title: string; showLabel?: boolean }) => {
   if (!data) {
     return (
@@ -239,8 +232,6 @@ export const AuditDetailModal = ({ open, onClose, log }: AuditDetailModalProps) 
 
   const oldValueParsed = useMemo(() => parseJsonSafely(log?.oldValue), [log?.oldValue]);
   const newValueParsed = useMemo(() => parseJsonSafely(log?.newValue), [log?.newValue]);
-
-  // ✅ Extraer fecha de forma robusta
   const eventDate = useMemo(() => {
     if (!log) return null;
     const date = extractDateFromLog(log);
@@ -250,14 +241,11 @@ export const AuditDetailModal = ({ open, onClose, log }: AuditDetailModalProps) 
   if (!log) return null;
 
   const IconComponent = config.icon;
-
-  // ✅ Renderizar sección de cambios según el tipo de acción
   const renderChangesSection = () => {
     if (!log.action) return null;
 
     const action = log.action.toUpperCase();
 
-    // CREATE: Solo muestra valor actual
     if (action === 'CREATE') {
       return (
         <Grid size={12}>
@@ -279,7 +267,6 @@ export const AuditDetailModal = ({ open, onClose, log }: AuditDetailModalProps) 
       );
     }
 
-    // UPDATE: Muestra valor anterior y valor actual
     if (action === 'UPDATE') {
       return (
         <>
@@ -319,7 +306,6 @@ export const AuditDetailModal = ({ open, onClose, log }: AuditDetailModalProps) 
       );
     }
 
-    // DELETE: Solo muestra el registro eliminado
     if (action === 'DELETE') {
       return (
         <Grid size={12}>
@@ -464,7 +450,6 @@ export const AuditDetailModal = ({ open, onClose, log }: AuditDetailModalProps) 
                   </Typography>
                 </Grid>
 
-                {/* ✅ Dirección IP (MEJORADO) */}
                 <Grid size={{ xs: 12, sm: 6 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                     <LocationOnIcon sx={{ fontSize: 16, color: '#64748b' }} />
@@ -575,7 +560,6 @@ export const AuditDetailModal = ({ open, onClose, log }: AuditDetailModalProps) 
                       </Box>
                 )}
 
-                {/* ✅ SECCIÓN DE CAMBIOS (diferente según acción) */}
                 {(oldValueParsed || newValueParsed) && (
                   <>
                     <Grid size={12}>

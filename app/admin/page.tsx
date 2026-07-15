@@ -1,13 +1,9 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  Box, Typography, Card, CardContent, CardActionArea, Stack, Avatar, Grid,
-  CircularProgress,
-} from '@mui/material';
-import {
-  Edit as EditIcon, Delete as DeleteIcon, Person as PersonIcon,
-  ReportProblem as WarningIcon, History as HistoryIcon,
-} from '@mui/icons-material';
+import {  Box, Typography, Card, CardContent, CardActionArea, Stack, Avatar, Grid,
+  CircularProgress,} from '@mui/material';
+import {  Edit as EditIcon, Delete as DeleteIcon, Person as PersonIcon,  
+  ReportProblem as WarningIcon, History as HistoryIcon,} from '@mui/icons-material';
 import AuditFilters from './auditFilters';
 import { ContainerBox } from '../components/containerBox';
 import { getAuditStats } from '@/lib/api';
@@ -20,7 +16,7 @@ interface CardConfig {
   icon: React.ElementType;
   gradient: string;
   statKey: keyof AuditStats;
-  actionFilter?: string; // ✅ Acción para filtrar al hacer clic
+  actionFilter?: string; 
 }
 
 const cardsConfig: CardConfig[] = [
@@ -92,11 +88,9 @@ export default function AdminPage() {
     loadStats();
   }, [loadStats]);
 
-  // ✅ Al hacer clic en una card, se pasa el filtro a AuditFilters
   const handleCardClick = useCallback((id: string) => {
     setSelectedCard((prev) => (prev === id ? null : id));
     
-    // ✅ Disparar evento personalizado para que AuditFilters lo capture
     const card = cardsConfig.find((c) => c.id === id);
     if (card?.actionFilter) {
       window.dispatchEvent(new CustomEvent('audit-filter-action', {
@@ -195,7 +189,6 @@ export default function AdminPage() {
         })}
       </Grid>
 
-      {/* Filtros y Tabla (el modal ahora está dentro de AuditTable) */}
       <AuditFilters />
     </ContainerBox>
   );
