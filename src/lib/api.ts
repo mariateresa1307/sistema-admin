@@ -42,7 +42,7 @@ api.interceptors.response.use(
         
         // Redirigir al login (si no estás ya ahí)
         if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
-          window.location.href = '/login';
+          window.location.href = '/';
         }
       } else if (error.response.status === 403) {
         message = 'No tienes permisos para realizar esta acción.';

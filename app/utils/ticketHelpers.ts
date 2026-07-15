@@ -3,6 +3,55 @@ import dayjs from 'dayjs';
 
 export type ServicioAfectado = { _id: string; name: string };
 
+export type OperatorField =
+  | { _id?: string; primerNombre?: string; primerApellido?: string; username?: string; email?: string }
+  | string
+  | null
+  | undefined;
+
+export interface TicketRecord {
+  _id?: string;
+  caseNumber?: string;
+  incidentType?: string | string[];
+  subject?: string;
+  networkCategory?: string;
+  subcategoria?: string;
+  detalle?: string;
+  tipoCliente?: string;
+  serviciosAfectados?: string[] | ServicioAfectado[];
+  ciudad?: string;
+  estado?: string;
+  localidad?: string;
+  bitacora?: string;
+  nodo?: string;
+  abonado?: string;
+  nombreCliente?: string;
+  afectacion?: boolean;
+  horaInicioFalla?: string;
+  horaDeteccionNoc?: string;
+  horaInicioAtencion?: string;
+  horaEscalamiento?: string;
+  horaFinAfectacion?: string;
+  horaCierreFalla?: string;
+  horaCierre?: string;
+  requiereEscalamiento?: string;
+  escaladoA?: string;
+  causaRaiz?: string;
+  SolucionCaso?: string;
+  turnoAsignado?: string;
+  ttZoho?: string;
+  ttClienteProveedor?: string;
+  operatorResponsable?: OperatorField;
+  operatorAsignado?: OperatorField;
+  operador?: string;
+  severidad?: string;
+  nivelSeveridad?: string;
+  imputable?: string;
+  description?: string;
+  status?: string;
+  email?: string;
+}
+
 export interface TicketFormData {
   numeroTicket: string;
   tipoIncidencia: string;
@@ -128,6 +177,138 @@ export const calcularTurno = (horaDeteccionNoc: string): 'DIURNO' | 'NOCTURNO' =
   const hora = new Date(horaDeteccionNoc).getHours();
   return hora >= 19 || hora < 7 ? 'NOCTURNO' : 'DIURNO';
 };
+
+export const isEditTicket = (
+  ticket?: TicketRecord | null
+): ticket is TicketRecord & { _id: string } => Boolean(ticket?._id);
+
+const extractOperatorId = (field: OperatorField): string => {
+  if (!field) return '';
+  if (typeof field === 'string') return field;
+  return field._id || '';
+};
+
+const toDateTimeLocal = (value?: string): string => {
+  if (!value) return '';
+  try {
+    const date = new Date(value);
+    if (!isNaN(date.getTime())) {
+      return getLocalDateTimeString(date);
+    }
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(value)) {
+      return value.slice(0, 16);
+    }
+  } catch {
+    return value;
+  }
+  return value;
+};
+
+const normalizeIncidentType = (value?: string | string[]): string => {
+  if (Array.isArray(value)) return value[0] || '';
+  return value || '';
+};
+
+const normalizeServiciosAfectados = (
+  value?: string[] | ServicioAfectado[]
+): ServicioAfectado[] => {
+  if (!value?.length) return [];
+  if (typeof value[0] === 'string') {
+    return (value as string[]).map((id) => ({ _id: id, name: id }));
+  }
+  return value as ServicioAfectado[];
+};
+
+export const mapTicketToFormData = (
+  ticket: TicketRecord,
+  sessionOperatorId = ''
+): TicketFormData => {
+  const tipoIncidencia = normalizeIncidentType(ticket.incidentType);
+  const horaCierre = ticket.horaCierreFalla || ticket.horaCierre;
+
+  return {
+    ...initialFormState,
+    numeroTicket: ticket.caseNumber || '',
+    tipoIncidencia,
+    asunto: ticket.subject || '',
+    categoria: ticket.networkCategory || '',
+    subcategoria: ticket.subcategoria || '',
+    detalle: ticket.detalle || '',
+    tipoCliente: ticket.tipoCliente || '',
+    ciudad: ticket.ciudad || '',
+    estado: ticket.estado || '',
+    localidad: ticket.localidad || '',
+    nodo: ticket.nodo || '',
+    abonado: ticket.abonado || '',
+    nombreCliente: ticket.nombreCliente || '',
+    bitacora: ticket.bitacora || '',
+    afectacion: ticket.afectacion ?? false,
+    serviciosAfectados: normalizeServiciosAfectados(ticket.serviciosAfectados),
+    operatorResponsable: extractOperatorId(ticket.operatorResponsable) || sessionOperatorId,
+    operatorAsignado: extractOperatorId(ticket.operatorAsignado),
+    ttZoho: ticket.ttZoho || '',
+    ttClienteProveedor: ticket.ttClienteProveedor || '',
+    horaInicioFalla: toDateTimeLocal(ticket.horaInicioFalla),
+    horaDeteccionNoc: toDateTimeLocal(ticket.horaDeteccionNoc),
+    horaInicioAtencion: toDateTimeLocal(ticket.horaInicioAtencion),
+    horaEscalamiento: toDateTimeLocal(ticket.horaEscalamiento),
+    horaFinAfectacion: toDateTimeLocal(ticket.horaFinAfectacion),
+    horaCierreFalla: toDateTimeLocal(horaCierre),
+    requiereEscalamiento: ticket.requiereEscalamiento === 'SI' ? 'SI' : 'NO',
+    escaladoA: ticket.escaladoA || '',
+    causaRaiz: ticket.causaRaiz || '',
+    SolucionCaso: ticket.SolucionCaso || '',
+    severidad: ticket.severidad || ticket.nivelSeveridad || '',
+    imputable: ticket.imputable || '',
+    descripcion: ticket.description || '',
+    estatus: ticket.status || '',
+    turnoAsignado: ticket.turnoAsignado === 'NOCTURNO' ? 'NOCTURNO' : 'DIURNO',
+    operador: ticket.operador || '',
+  };
+};
+
+export const mapFormToUpdatePayload = (form: TicketFormData & Record<string, unknown>) => ({
+  caseNumber: form.numeroTicket,
+  incidentType: form.tipoIncidencia,
+  subject: form.asunto,
+  networkCategory: form.categoria,
+  description: form.descripcion,
+  subcategoria: form.subcategoria,
+  detalle: form.detalle,
+  tipoCliente: form.tipoCliente,
+  serviciosAfectados: (form.serviciosAfectados || []).map((sa) => sa._id),
+  ciudad: form.ciudad,
+  estado: form.estado,
+  localidad: form.localidad,
+  bitacora: form.bitacora,
+  nodo: form.nodo,
+  abonado: form.abonado,
+  nombreCliente: form.nombreCliente,
+  afectacion: form.afectacion,
+  horaInicioFalla: form.horaInicioFalla,
+  horaDeteccionNoc: form.horaDeteccionNoc,
+  horaInicioAtencion: form.horaInicioAtencion,
+  horaEscalamiento: form.horaEscalamiento,
+  horaFinAfectacion: form.horaFinAfectacion,
+  horaCierreFalla: form.horaCierreFalla,
+  requiereEscalamiento: form.requiereEscalamiento,
+  escaladoA: form.escaladoA,
+  causaRaiz: form.causaRaiz,
+  SolucionCaso: form.SolucionCaso,
+  turnoAsignado: form.turnoAsignado,
+  ttZoho: form.ttZoho,
+  ttClienteProveedor: form.ttClienteProveedor,
+  operatorResponsable: form.operatorResponsable,
+  operatorAsignado: form.operatorAsignado,
+  operador: form.operador,
+  severidad: form.severidad,
+  imputable: form.imputable,
+  tDeteccion: form.tDeteccion as number | undefined,
+  tAtencion: form.tAtencion as number | undefined,
+  tEscalado: form.tEscalado as number | undefined,
+  cCierreSoporte: form.cCierreSoporte as number | undefined,
+  mttrTotal: form.mttrTotal as number | undefined,
+});
 
 export const calcularTiempos = (form: TicketFormData) => {
   const ahora = getLocalDateTimeString();

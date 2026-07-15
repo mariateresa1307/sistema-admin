@@ -11,6 +11,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import PersonIcon from '@mui/icons-material/Person';
 import { getNivelSeveridadConfig } from "app/utils/auxiliares";
 import { getUsers } from "@/lib/api";
+import { TicketRecord } from "app/utils/ticketHelpers";
 
 // ✅ Tipo flexible: puede venir como objeto o como string (ID)
 type OperatorInfo = {
@@ -26,29 +27,8 @@ type OperatorField = OperatorInfo | string | null | undefined;
 interface TicketDetailModalProps {
   open: boolean;
   onClose: () => void;
-  ticket: {
-    caseNumber: string;
-    subject: string;
-    email: string;
-    status: string;
-    operatorAsignado: OperatorField;
-    operatorResponsable?: OperatorField;
-    afectacion?: boolean;
-    bitacora?: string;
-    ttZoho?: string;
-    nodo?: string;
-    localidad?: string;
-    nivelSeveridad?: string;
-    severidad?: string;
-    requiereEscalamiento?: string;
-    incidentType?: string | string[];
-    horaInicioAtencion?: string;
-    horaInicioFalla?: string;
-    horaFinAfectacion?: string;
-    horadeescalamiento?: string;
-    horaCierre?: string;
-  } | null;
-  onEditClick?: () => void;
+  ticket: TicketRecord | null;
+  onEditClick?: (ticket: TicketRecord) => void;
 }
 
 const TICKET_THEMES = {
@@ -159,7 +139,7 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
   // ✅ AHORA SÍ el return condicional (después de todos los hooks)
   if (!ticket) return null;
 
-  const theme = getTheme(ticket.status);
+  const theme = getTheme(ticket.status || '');
   const severidadValue = getSeveridadValue(ticket);
   
   const nivelSeveridadConfig = (() => {
@@ -229,7 +209,11 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
 
                 <Box sx={{ display: 'flex', gap: 1 }}>
                   <Tooltip title="Editar Registro">
-                    <IconButton onClick={onEditClick} size="small" sx={{ color: theme.dark, '&:hover': { bgcolor: `${theme.primary}15` } }}>
+                    <IconButton
+                      onClick={() => onEditClick?.(ticket)}
+                      size="small"
+                      sx={{ color: theme.dark, '&:hover': { bgcolor: `${theme.primary}15` } }}
+                    >
                       <EditIcon fontSize="small" />
                     </IconButton>
                   </Tooltip>

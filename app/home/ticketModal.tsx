@@ -8,6 +8,7 @@ import { saveTicket, updateTicket } from '@/lib/api';
 import { TICKET_STATUS, TIPO_INCIDENCIA } from 'app/utils/constants';
 import { getNivelSeveridadConfig } from 'app/utils/auxiliares';
 import { TicketModalProps, ConfiguracionInterface } from '../utils/types';
+import { isEditTicket, mapTicketToFormData, mapFormToUpdatePayload } from '../utils/ticketHelpers';
 
 import { useTicketData } from './hooks/useTicketData';
 import { useTicketForm } from './hooks/useTicketForm';
@@ -33,7 +34,7 @@ const modalStyle = {
 
 const PASOS = ['Clasificación e Infraestructura', 'Tiempos y Cierre Operativo'];
 
-export default function TicketModal({ open, onClose, onSave }: TicketModalProps) {
+export default function TicketModal({ open, onClose, onSave, ticketToEdit }: TicketModalProps) {
   const sessionOperatorId = useRef('');
   const [operatorDisplayName, setOperatorDisplayName] = useState('');
 
@@ -58,12 +59,50 @@ export default function TicketModal({ open, onClose, onSave }: TicketModalProps)
   const ticketData = useTicketData(open);
   const ticketForm = useTicketForm({ sessionOperatorId: sessionOperatorId.current });
 
-  // ✅ Cargar datos iniciales cuando se abre el modal
+  // ✅ Cargar datos iniciales cuando se abre el modal (solo modo creación)
   useEffect(() => {
-    if (open) {
+    if (open && !isEditTicket(ticketToEdit)) {
       ticketData.loadInitialData();
     }
-  }, [open]);
+  }, [open, ticketToEdit?._id]);
+
+  // ✅ Cargar formulario y dependencias en modo edición
+  useEffect(() => {
+    if (!open || !isEditTicket(ticketToEdit)) return;
+
+    const initEditMode = async () => {
+      await ticketData.loadInitialData();
+
+      const formData = mapTicketToFormData(ticketToEdit, sessionOperatorId.current);
+      ticketForm.loadFromTicket(formData, ticketToEdit._id);
+
+      const { tipoIncidencia, categoria, subcategoria, ciudad, tipoCliente, causaRaiz } = formData;
+
+      if (tipoIncidencia) {
+        await ticketData.loadCategoriasRed(tipoIncidencia);
+        if (tipoIncidencia !== TIPO_INCIDENCIA.FALLA_MASIVA) {
+          await ticketData.loadTipoCliente();
+        }
+      }
+      if (categoria) {
+        await ticketData.loadSubcategorias(categoria);
+      }
+      if (subcategoria) {
+        await ticketData.loadDetalle(subcategoria);
+      }
+      if (ciudad) {
+        await ticketData.loadLocalidades(ciudad);
+      }
+      if (tipoCliente) {
+        await ticketData.loadServiciosAfectados(tipoCliente);
+      }
+      if (causaRaiz) {
+        await ticketData.loadSolucionesCaso(causaRaiz);
+      }
+    };
+
+    initEditMode();
+  }, [open, ticketToEdit?._id]);
 
   // ✅ CRÍTICO: Cargar categorías cuando cambia tipoIncidencia
   useEffect(() => {
@@ -103,6 +142,9 @@ useEffect(() => {
   // ✅ CRÍTICO: PRE-SAVE - Crear ticket con status "EN GESTIÓN" al pasar al paso 2
   useEffect(() => {
     const preSaveTicket = async () => {
+      // No crear ticket nuevo si estamos editando uno existente
+      if (ticketForm.isEditMode) return;
+
       // Solo ejecutar cuando pasamos al paso 2 y aún no hay preSaved
       if (ticketForm.activeStep > 0 && !ticketForm.preSaved) {
         console.log('🔄 [Modal] Intentando pre-save del ticket...');
@@ -260,12 +302,11 @@ useEffect(() => {
 
     try {
       const finalData = ticketForm.prepareFinalData();
-      const { estatus, ...updateData } = finalData;
 
       console.log('📤 [Modal] Actualizando ticket:', ticketForm.preSaved);
 
       await updateTicket(ticketForm.preSaved, {
-        ...updateData,
+        ...mapFormToUpdatePayload(finalData),
         status: TICKET_STATUS.ACTIVO,
       });
 
@@ -324,6 +365,7 @@ useEffect(() => {
       <Box sx={modalStyle}>
         <TicketHeader
           severidad={ticketForm.form.severidad}
+          isEditMode={ticketForm.isEditMode}
           onClose={handleClose}
         />
 

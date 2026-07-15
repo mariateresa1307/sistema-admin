@@ -9,6 +9,7 @@ import { Chip, Box } from "@mui/material";
 import TicketModal from "../home/ticketModal";
 import { getTickets } from "@/lib/api";
 import { Pagination, Tickets } from "app/utils/types";
+import { TicketRecord } from "app/utils/ticketHelpers";
 import { TICKET_STATUS } from "app/utils/constants";
 import { useHomeRefresh } from "../context/homeRefreshContext";
 
@@ -23,8 +24,9 @@ export default function HomePage() {
   });
   const { refreshKey, refreshHomeData } = useHomeRefresh();
 
-  const [selectedTicket, setSelectedTicket] = useState<Tickets | null>(null);
+  const [selectedTicket, setSelectedTicket] = useState<TicketRecord | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [ticketToEdit, setTicketToEdit] = useState<TicketRecord | null>(null);
 
   const fetchTickets = useCallback(async () => {
     setLoading(true);
@@ -61,29 +63,24 @@ export default function HomePage() {
 
   const handleCloseModal = useCallback(() => {
     setIsDialogOpen(false);
+    setTicketToEdit(null);
     refreshHomeData();
   }, [refreshHomeData]);
 
+  const handleTransitionToEdit = useCallback((ticket: TicketRecord) => {
+    setIsDetailOpen(false);
+    setTicketToEdit(ticket);
+    setIsDialogOpen(true);
+  }, []);
 
-  const handleSaveTicket = (nuevoTicketData: any) => {
-    const nuevoRegistro: Tickets = {
-      id: String(tickets.length + 1),
-      _id: Math.random().toString(36).substring(2, 11),
-      username: "op_zero",
-      email: nuevoTicketData.numeroTicket || "S/N",
-      asuntoCaso: nuevoTicketData.asunto.toUpperCase(),
-      ticketCodigo: `INC-${Math.floor(1000000 + Math.random() * 9000000)}`,
-      primerNombre: "Zero",
-      primerApellido: "Soporte",
-      responsable: "Zero Soporte",
-      estado: nuevoTicketData.estatus,
-    };
-    setTickets((prev) => [nuevoRegistro, ...prev]);
-  };
+
+  const handleSaveTicket = useCallback(() => {
+    refreshHomeData();
+  }, [refreshHomeData]);
 
   const handleCellClick = (params: GridCellParams) => {
     if (params.row) {
-      setSelectedTicket(params.row as Tickets);
+      setSelectedTicket(params.row as TicketRecord);
       setIsDetailOpen(true);
     }
   };
@@ -151,7 +148,7 @@ export default function HomePage() {
     },
   ];
 
-  const handlePagination = (model) => {
+  const handlePagination = (model: { page: number; pageSize: number }) => {
       setPage(model);
   };
 
@@ -191,12 +188,14 @@ export default function HomePage() {
         open={isDialogOpen}
         onClose={handleCloseModal}
         onSave={handleSaveTicket}
+        ticketToEdit={ticketToEdit}
       />
 
       <TicketDetailModal
         open={isDetailOpen}
         onClose={() => setIsDetailOpen(false)}
         ticket={selectedTicket}
+        onEditClick={handleTransitionToEdit}
       />
     </ContainerBox>
   );
