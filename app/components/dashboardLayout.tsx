@@ -14,6 +14,7 @@ import { motion } from "motion/react";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
 import TuneIcon from '@mui/icons-material/Tune';
 import SettingsSuggestIcon from "@mui/icons-material/SettingsSuggest";
+import { logout } from '@/lib/api'; 
 
 const DRAWER_WIDTH = 260;
 const APP_BAR_HEIGHT = 64;
@@ -467,10 +468,18 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
     [router],
   );
 
-  const handleLogout = React.useCallback(() => {
+ const handleLogout = React.useCallback(async () => {
+  try {
+  
+    await logout();
+  } catch (error) {
+    console.error('Error durante el logout:', error);
+  } finally {
+   
     localStorage.clear();
-    router.push("/");
-  }, [router]);
+    window.location.href = '/';
+  }
+}, []);
 
   return (
     <Box

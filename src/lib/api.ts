@@ -66,7 +66,7 @@ api.interceptors.response.use(
 );
 
 export default api;
-// ✅ AGREGAR: Función para obtener miscellaneous por ID
+
 export const getMiscellaneousById = (id: string) => api.get(`/miscellaneous/${id}`);
 
 // ENDPOINTS DE USUARIOS
@@ -77,6 +77,9 @@ export const updateUser = (id: string, data: any) => api.put(`/user/${id}`, data
 export const deleteUser = (id: string) => api.delete(`/user/${id}`);
 export const toggleStatus = (id: string, status: boolean) => 
   api.patch(`/user/${id}/status`, { isActive: status });
+
+// ENDPOINTS DE AUTENTICACIÓN
+export const logout = () => api.post('/auth/logout');
 
 // ENDPOINTS DE SERVICIOS
 export const getService = (params?: any) => api.get(`/services`, { params });

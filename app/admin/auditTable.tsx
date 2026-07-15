@@ -1,6 +1,6 @@
 // app/admin/auditTable.tsx
 'use client';
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Paper, Chip, Typography, Box, TablePagination, Skeleton, Tooltip,
@@ -41,10 +41,34 @@ const ACTION_CONFIG: Record<string, { label: string; color: 'success' | 'error' 
   EXPORT: { label: 'Exportar', color: 'info', icon: HistoryIcon },
 };
 
+// ✅ Función para formatear módulo
+const formatModuleName = (moduleId: string | undefined | null): string => {
+  if (!moduleId) return '—';
+  
+  const modules: Record<string, string> = {
+    TICKET: 'Tickets',
+    TICKETS: 'Tickets',
+    MISCELLANEOUS: 'Miscellaneous',
+    SERVICE: 'Servicios',
+    SERVICES: 'Servicios',
+    USER: 'Usuarios',
+    USERS: 'Usuarios',
+    AUDIT: 'Auditoría',
+    AUTH: 'Autenticación',
+  };
+  
+  return modules[moduleId.toUpperCase()] || moduleId;
+};
+
 export default function AuditTable({ data, loading, total, page, limit, onPageChange }: Props) {
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
 
   const handleRowClick = (log: AuditLog) => {
+    console.log('🔍 [AuditTable] Log seleccionado completo:', log);
+    console.log('🔍 [AuditTable] eventDate:', (log as any).eventDate);
+    console.log('🔍 [AuditTable] createdAt:', (log as any).createdAt);
+    console.log('🔍 [AuditTable] moduleId:', (log as any).moduleId);
+    console.log('🔍 [AuditTable] module:', (log as any).module);
     setSelectedLog(log);
   };
 
@@ -108,7 +132,14 @@ export default function AuditTable({ data, loading, total, page, limit, onPageCh
                 icon: HistoryIcon,
               };
               const IconComponent = config.icon;
-              const eventDate = log.eventDate ? dayjs(log.eventDate) : null;
+              
+              // ✅ Extraer fecha de forma robusta (intenta múltiples campos)
+              const dateValue = (log as any).eventDate || (log as any).createdAt || (log as any).timestamp;
+              const eventDate = dateValue ? dayjs(dateValue) : null;
+              
+              // ✅ Extraer módulo de forma robusta
+              const moduleId = (log as any).moduleId || (log as any).module;
+              const moduleName = formatModuleName(moduleId);
 
               return (
                 <TableRow
@@ -123,14 +154,20 @@ export default function AuditTable({ data, loading, total, page, limit, onPageCh
                 >
                   {/* Fecha y Hora */}
                   <TableCell>
-                    <Box>
-                      <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.85rem' }}>
-                        {eventDate ? eventDate.format('DD/MM/YYYY') : '—'}
+                    {eventDate ? (
+                      <Box>
+                        <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.85rem' }}>
+                          {eventDate.format('DD/MM/YYYY')}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: '#64748b', fontSize: '0.75rem' }}>
+                          {eventDate.format('HH:mm:ss')}
+                        </Typography>
+                      </Box>
+                    ) : (
+                      <Typography variant="body2" sx={{ color: '#94a3b8' }}>
+                        —
                       </Typography>
-                      <Typography variant="caption" sx={{ color: '#64748b', fontSize: '0.75rem' }}>
-                        {eventDate ? eventDate.format('HH:mm:ss') : ''}
-                      </Typography>
-                    </Box>
+                    )}
                   </TableCell>
 
                   {/* Usuario */}
@@ -153,16 +190,22 @@ export default function AuditTable({ data, loading, total, page, limit, onPageCh
 
                   {/* Módulo */}
                   <TableCell>
-                    <Chip
-                      label={log.module || '—'}
-                      size="small"
-                      variant="outlined"
-                      sx={{
-                        fontWeight: 600,
-                        fontSize: '0.72rem',
-                        borderColor: '#e2e8f0',
-                      }}
-                    />
+                    {moduleName !== '—' ? (
+                      <Chip
+                        label={moduleName}
+                        size="small"
+                        variant="outlined"
+                        sx={{
+                          fontWeight: 600,
+                          fontSize: '0.72rem',
+                          borderColor: '#e2e8f0',
+                        }}
+                      />
+                    ) : (
+                      <Typography variant="body2" sx={{ color: '#94a3b8' }}>
+                        —
+                      </Typography>
+                    )}
                   </TableCell>
 
                   {/* IP */}
