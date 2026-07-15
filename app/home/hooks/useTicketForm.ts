@@ -25,6 +25,7 @@ export const useTicketForm = ({ sessionOperatorId }: UseTicketFormProps) => {
   });
   const [activeStep, setActiveStep] = useState(0);
   const [preSaved, setPreSaved] = useState<string | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
 
   // ✅ Memoizaciones
   const showTipoClienteInput = useMemo(
@@ -73,6 +74,7 @@ export const useTicketForm = ({ sessionOperatorId }: UseTicketFormProps) => {
       });
       setActiveStep(0);
       setPreSaved(null);
+      setIsEditMode(false);
     },
     [sessionOperatorId]
   );
@@ -127,10 +129,18 @@ export const useTicketForm = ({ sessionOperatorId }: UseTicketFormProps) => {
     setForm((prev) => ({ ...prev, serviciosAfectados: servicios }));
   }, []);
 
+  const loadFromTicket = useCallback((formData: TicketFormData, ticketId: string) => {
+    setForm(formData);
+    setActiveStep(0);
+    setPreSaved(ticketId);
+    setIsEditMode(true);
+  }, []);
+
   const resetForm = useCallback(() => {
     setForm({ ...initialFormState, operatorResponsable: sessionOperatorId });
     setActiveStep(0);
     setPreSaved(null);
+    setIsEditMode(false);
   }, [sessionOperatorId]);
 
   const prepareFinalData = useCallback(() => {
@@ -164,6 +174,8 @@ export const useTicketForm = ({ sessionOperatorId }: UseTicketFormProps) => {
     setActiveStep,
     preSaved,
     setPreSaved,
+    isEditMode,
+    loadFromTicket,
     showTipoClienteInput,
     tiemposCalculados,
     isStep0Complete,

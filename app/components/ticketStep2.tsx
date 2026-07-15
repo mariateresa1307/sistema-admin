@@ -62,6 +62,13 @@ export const TicketStep2 = React.memo(
       } catch (err) {}
     };
 
+
+    const formatUserName = (_id: string, userList: Array<Operador>) => {
+      const result = userList.find(user => user._id === form.operatorResponsable);
+      return `${result?.primerNombre} ${result?.primerApellido}`;
+    } 
+
+
     return (
       <Grid container spacing={2.5}>
         {/* Título */}
@@ -314,7 +321,7 @@ export const TicketStep2 = React.memo(
             disabled
             label="Operador"
             name="operatorResponsable"
-            value={form.operatorResponsable}
+            value={formatUserName(form.operatorResponsable, operadores)}
             size="small"
             InputProps={{
               startAdornment: (

@@ -6,10 +6,11 @@ import { getNivelSeveridadConfig } from 'app/utils/auxiliares';
 
 interface TicketHeaderProps {
   severidad: string;
+  isEditMode?: boolean;
   onClose: () => void;
 }
 
-export const TicketHeader = React.memo(({ severidad, onClose }: TicketHeaderProps) => (
+export const TicketHeader = React.memo(({ severidad, isEditMode = false, onClose }: TicketHeaderProps) => (
   <>
     <Box
       sx={{
@@ -31,7 +32,7 @@ export const TicketHeader = React.memo(({ severidad, onClose }: TicketHeaderProp
       }}
     >
       <Typography variant="h5" sx={{ color: '#000027', fontWeight: 600 }}>
-        Apertura y Tipificación - NOC
+        {isEditMode ? 'Editar Ticket - NOC' : 'Apertura y Tipificación - NOC'}
       </Typography>
       <IconButton onClick={onClose} edge="end">
         <CloseIcon />

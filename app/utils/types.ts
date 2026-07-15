@@ -23,10 +23,13 @@ export interface ConfiguracionInterface {
 }
 
 
+import { TicketRecord } from './ticketHelpers';
+
 export interface TicketModalProps {
   open: boolean;
   onClose: () => void;
   onSave: (ticketData: any) => void;
+  ticketToEdit?: TicketRecord | null;
 }
 
 
