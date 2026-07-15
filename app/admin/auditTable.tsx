@@ -41,7 +41,7 @@ const ACTION_CONFIG: Record<string, { label: string; color: 'success' | 'error' 
   EXPORT: { label: 'Exportar', color: 'info', icon: HistoryIcon },
 };
 
-// ✅ Función para formatear módulo
+
 const formatModuleName = (moduleId: string | undefined | null): string => {
   if (!moduleId) return '—';
   
@@ -85,7 +85,6 @@ export default function AuditTable({ data, loading, total, page, limit, onPageCh
     );
   }
 
-  // Estado vacío
   if (data.length === 0) {
     return (
       <Box sx={{ mt: 4, textAlign: 'center', py: 5 }}>
@@ -133,11 +132,11 @@ export default function AuditTable({ data, loading, total, page, limit, onPageCh
               };
               const IconComponent = config.icon;
               
-              // ✅ Extraer fecha de forma robusta (intenta múltiples campos)
+           
               const dateValue = (log as any).eventDate || (log as any).createdAt || (log as any).timestamp;
               const eventDate = dateValue ? dayjs(dateValue) : null;
               
-              // ✅ Extraer módulo de forma robusta
+            
               const moduleId = (log as any).moduleId || (log as any).module;
               const moduleName = formatModuleName(moduleId);
 
