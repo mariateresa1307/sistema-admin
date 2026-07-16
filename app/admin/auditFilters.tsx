@@ -1,9 +1,13 @@
 'use client';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import {  Box, Typography, Card, CardContent, Grid, TextField, MenuItem, Button,
-  Stack, CircularProgress, Alert, Chip,} from '@mui/material';
-import {  FilterList as FilterIcon, RestartAlt as ResetIcon, Download as DownloadIcon,
-  Search as SearchIcon,} from '@mui/icons-material';
+import {
+  Box, Typography, Card, CardContent, Grid, TextField, MenuItem, Button,
+  Stack, CircularProgress, Alert, Chip,
+} from '@mui/material';
+import {
+  FilterList as FilterIcon, RestartAlt as ResetIcon, Download as DownloadIcon,
+  Search as SearchIcon,
+} from '@mui/icons-material';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs, { Dayjs } from 'dayjs';
@@ -12,12 +16,12 @@ import { AuditLog } from '@/lib/types/audit';
 import AuditTable from './auditTable';
 
 const ACTIONS = [
-  { value: 'LOGIN', label: 'Login', color: 'success' },
-  { value: 'LOGOUT', label: 'Logout', color: 'default' },
-  { value: 'LOGIN_FAILED', label: 'Login fallido', color: 'error' },
-  { value: 'CREATE', label: 'Crear', color: 'info' },
-  { value: 'UPDATE', label: 'Actualizar', color: 'warning' },
-  { value: 'DELETE', label: 'Eliminar', color: 'error' },
+  { value: 'LOGIN', label: 'Login' },
+  { value: 'LOGOUT', label: 'Logout' },
+  { value: 'LOGIN_FAILED', label: 'Login fallido' },
+  { value: 'CREATE', label: 'Crear' },
+  { value: 'UPDATE', label: 'Actualizar' },
+  { value: 'DELETE', label: 'Eliminar' },
 ];
 
 export default function AuditFilters() {
@@ -28,7 +32,7 @@ export default function AuditFilters() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0 });
+  const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0 });
 
   const loadUsers = useCallback(async () => {
     try {
@@ -44,15 +48,31 @@ export default function AuditFilters() {
     setError(null);
     try {
       const params: any = { page: pagination.page, limit: pagination.limit };
+      
       if (filters.userId) params.userId = filters.userId;
       if (filters.action) params.action = filters.action;
-      if (filters.startDate) params.startDate = filters.startDate.toISOString();
-      if (filters.endDate) params.endDate = filters.endDate.toISOString();
+      
+      if (filters.startDate) {
+        params.startDate = dayjs(filters.startDate).startOf('day').toISOString();
+      }
+      if (filters.endDate) {
+        params.endDate = dayjs(filters.endDate).endOf('day').toISOString();
+      }
+
+      console.log('📡 [Frontend] Enviando params:', params);
 
       const response = await getAuditLogs(params);
+      
+      console.log('📥 [Frontend] Respuesta:', response.data);
+      
       setLogs(response.data.data || []);
-      setPagination((prev) => ({ ...prev, total: response.data.total, totalPages: response.data.totalPages }));
+      setPagination((prev) => ({ 
+        ...prev, 
+        total: response.data.total || 0, 
+        totalPages: response.data.totalPages || 0 
+      }));
     } catch (err) {
+      console.error('❌ [Frontend] Error:', err);
       setError('Error al cargar los registros de auditoría');
     } finally {
       setLoading(false);
@@ -72,14 +92,27 @@ export default function AuditFilters() {
     setPagination((prev) => ({ ...prev, page: 1 }));
   }, []);
 
+  // ✅ NUEVO: Manejar cambio de registros por página
+  const handleRowsPerPageChange = useCallback((newLimit: number) => {
+    setPagination((prev) => ({ 
+      ...prev, 
+      limit: newLimit,
+      page: 1 // Resetear a página 1 al cambiar el límite
+    }));
+  }, []);
+
+  const handlePageChange = useCallback((newPage: number) => {
+    setPagination((prev) => ({ ...prev, page: newPage }));
+  }, []);
+
   const handleExport = useCallback(() => {
     const params = new URLSearchParams();
     if (filters.userId) params.append('userId', filters.userId);
     if (filters.action) params.append('action', filters.action);
-    if (filters.startDate) params.append('startDate', filters.startDate.toISOString());
-    if (filters.endDate) params.append('endDate', filters.endDate.toISOString());
+    if (filters.startDate) params.append('startDate', dayjs(filters.startDate).startOf('day').toISOString());
+    if (filters.endDate) params.append('endDate', dayjs(filters.endDate).endOf('day').toISOString());
 
-    const token = localStorage.getItem('token');
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
     const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/audit/export?${params.toString()}`;
 
     fetch(url, { headers: { Authorization: `Bearer ${token}` } })
@@ -93,10 +126,6 @@ export default function AuditFilters() {
       })
       .catch(() => setError('Error al exportar'));
   }, [filters]);
-
-  const handlePageChange = useCallback((newPage: number) => {
-    setPagination((prev) => ({ ...prev, page: newPage }));
-  }, []);
 
   const hasActiveFilters = useMemo(
     () => filters.userId || filters.action || filters.startDate || filters.endDate,
@@ -198,6 +227,7 @@ export default function AuditFilters() {
             page={pagination.page}
             limit={pagination.limit}
             onPageChange={handlePageChange}
+            onRowsPerPageChange={handleRowsPerPageChange} 
           />
         </CardContent>
       </Card>

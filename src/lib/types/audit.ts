@@ -34,6 +34,5 @@ export interface AuditStats {
   ediciones: number;
   eliminados: number;
   usuarios: number;
-  incidentes: number;
   historial: number;
 }
