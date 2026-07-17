@@ -18,12 +18,12 @@ export interface ConfiguracionInterface {
   tipoIncidencia: string[];
   activo: boolean;
   nivelSeveridad?: string;
+  grupoDestino?: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
 
-import { TicketRecord } from './ticketHelpers';
 
 export interface TicketModalProps {
   open: boolean;
@@ -67,6 +67,7 @@ export type Tickets = {
   estado: 'PRELIMINAR' | 'ACTIVO' | 'CERRADO';
 };
 
+export type TicketRecord = Tickets;
 
 export type Pagination<T> = {
   data: T[];

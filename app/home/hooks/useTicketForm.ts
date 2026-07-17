@@ -1,4 +1,3 @@
-// app/home/hooks/useTicketForm.ts
 import { useState, useCallback, useMemo } from 'react';
 import { TIPO_CLIENTE, TIPO_INCIDENCIA, TICKET_STATUS } from 'app/utils/constants';
 import {
@@ -79,19 +78,43 @@ export const useTicketForm = ({ sessionOperatorId }: UseTicketFormProps) => {
     [sessionOperatorId]
   );
 
+  // ✅ CORREGIDO: Lógica diferenciada para modo creación y modo edición
   const handleCategoriaChange = useCallback(
     (categoria: ConfiguracionInterface, numeroTicketActual: string) => {
-      const prefijo = categoria.valor.substring(0, 4).toUpperCase();
-      const numeroTicket = generarNumeroTicket(prefijo, numeroTicketActual);
-
-      setForm((prev) => ({
-        ...prev,
-        categoria: categoria._id,
-        subcategoria: '',
-        numeroTicket,
-      }));
+      setForm((prev) => {
+        const nuevoPrefijo = categoria.valor.substring(0, 4).toUpperCase();
+        
+        if (isEditMode) {
+          // MODO EDICIÓN: Mantener el número correlativo existente, solo actualizar el prefijo
+          const numeroCorrelativo = numeroTicketActual.includes('-') 
+            ? numeroTicketActual.split('-')[1] 
+            : numeroTicketActual;
+          const nuevoNumeroTicket = `${nuevoPrefijo}-${numeroCorrelativo}`;
+          
+          return {
+            ...prev,
+            categoria: categoria._id,
+            subcategoria: '',
+            numeroTicket: nuevoNumeroTicket,
+          };
+        } else {
+          // MODO CREACIÓN: Generar un nuevo número si no existe o si el prefijo es diferente
+          let numeroGenerado = numeroTicketActual;
+          
+          if (!numeroGenerado || !numeroGenerado.startsWith(nuevoPrefijo)) {
+            numeroGenerado = generarNumeroTicket(nuevoPrefijo, numeroTicketActual);
+          }
+          
+          return {
+            ...prev,
+            categoria: categoria._id,
+            subcategoria: '',
+            numeroTicket: numeroGenerado,
+          };
+        }
+      });
     },
-    []
+    [isEditMode] // ✅ isEditMode debe estar en las dependencias
   );
 
   const handleTipoClienteChange = useCallback(
@@ -129,6 +152,25 @@ export const useTicketForm = ({ sessionOperatorId }: UseTicketFormProps) => {
     setForm((prev) => ({ ...prev, serviciosAfectados: servicios }));
   }, []);
 
+  // ✅ Función para avanzar de paso con auto-captura de horaDeteccionNoc
+  const advanceStep = useCallback(() => {
+    setActiveStep((prevStep) => {
+      const newStep = prevStep + 1;
+      
+      // Si vamos al Step 2 (índice 1) y horaDeteccionNoc está vacía, capturar hora actual
+      if (newStep === 1 && (!form.horaDeteccionNoc || form.horaDeteccionNoc.trim() === '')) {
+        const ahora = getLocalDateTimeString();
+        setForm((prev) => ({
+          ...prev,
+          horaDeteccionNoc: ahora,
+        }));
+        console.log('✅ [useTicketForm] Hora de apertura NOC capturada automáticamente:', ahora);
+      }
+      
+      return newStep;
+    });
+  }, [form.horaDeteccionNoc]);
+
   const loadFromTicket = useCallback((formData: TicketFormData, ticketId: string) => {
     setForm(formData);
     setActiveStep(0);
@@ -149,10 +191,32 @@ export const useTicketForm = ({ sessionOperatorId }: UseTicketFormProps) => {
 
     let descripcionFinal = form.descripcion;
     const lineas = descripcionFinal.split('\n');
-    if (lineas.length >= 2 && lineas[1].trim() === 'Fecha y hora de fin de Afectación:') {
-      lineas[1] = `Fecha y hora de fin de Afectación: ${cierreFormateado}`;
-      descripcionFinal = lineas.join('\n');
+
+   lineas.forEach((linea, index) => {
+    if (linea.startsWith('Fecha y Hora apertura Ticket:')) {
+      const fechaNoc = form.horaDeteccionNoc ? formatToHumanDate(form.horaDeteccionNoc) : '';
+      lineas[index] = `Fecha y Hora apertura Ticket: ${fechaNoc}`;
     }
+    if (linea.startsWith('Fecha y Hora Inicio Afectación:')) {
+      const fechaInicio = form.horaInicioFalla ? formatToHumanDate(form.horaInicioFalla) : '';
+      lineas[index] = `Fecha y Hora Inicio Afectación: ${fechaInicio}`;
+    }
+    if (linea.startsWith('Fecha y hora de fin de Afectación:')) {
+      const fechaFin = form.horaFinAfectacion ? formatToHumanDate(form.horaFinAfectacion) : '';
+      lineas[index] = `Fecha y hora de fin de Afectación: ${fechaFin}`;
+    }
+    if (linea.startsWith('Fecha y hora de cierre ticket:')) {
+      lineas[index] = `Fecha y hora de cierre ticket: ${cierreFormateado}`;
+    }
+    if (linea.startsWith('Causa:')) {
+      lineas[index] = `Causa: ${form.causaRaiz || ''}`;
+    }
+    if (linea.startsWith('Solución:')) {
+      lineas[index] = `Solución: ${form.SolucionCaso || ''}`;
+    }
+  });
+  descripcionFinal = lineas.join('\n');
+
 
     const tiempos = calcularTiempos({ ...form, horaCierreFalla: fechaHoraCierreActual });
 
@@ -172,6 +236,7 @@ export const useTicketForm = ({ sessionOperatorId }: UseTicketFormProps) => {
     setForm,
     activeStep,
     setActiveStep,
+    advanceStep,
     preSaved,
     setPreSaved,
     isEditMode,

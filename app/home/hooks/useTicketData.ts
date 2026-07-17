@@ -1,5 +1,4 @@
-// app/home/hooks/useTicketData.ts
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { getMiscellaneous, getUsers, getService } from '@/lib/api';
 import { CATEGORIA } from 'app/utils/constants';
 import { ConfiguracionInterface } from '../../utils/types';
@@ -22,17 +21,20 @@ export interface UseTicketDataReturn {
   ciudadesOptions: any[];
   localidadesOptions: any[];
   serviciosAfectados: any[];
+  grupoDestino: ConfiguracionInterface[];
   loading: boolean;
   error: Error | null;
   
   loadInitialData: () => Promise<void>;
-  loadLocalidades: (ciudad: string) => Promise<void>;
   loadCategoriasRed: (tipoIncidencia: string) => Promise<ConfiguracionInterface[]>;
   loadSubcategorias: (categoriaId: string) => Promise<void>;
   loadDetalle: (subcategoriaId: string) => Promise<void>;
   loadTipoCliente: () => Promise<void>;
+  loadLocalidades: (ciudad: string) => Promise<void>;
   loadSolucionesCaso: (causaRaizId: string) => Promise<void>;
   loadServiciosAfectados: (tipoClienteId: string) => Promise<void>;
+  loadCausasRaiz: () => Promise<void>;
+  loadGrupoDestino: () => Promise<void>;
   
   clearSubcategorias: () => void;
   clearDetalle: () => void;
@@ -53,6 +55,7 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
   const [ciudadesOptions, setCiudadesOptions] = useState<any[]>([]);
   const [localidadesOptions, setLocalidadesOptions] = useState<any[]>([]);
   const [serviciosAfectados, setServiciosAfectados] = useState<any[]>([]);
+  const [grupoDestino, setGrupoDestino] = useState<ConfiguracionInterface[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -65,10 +68,11 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
     try {
       console.log('🔄 [useTicketData] Cargando datos iniciales...');
       
-      const [operadoresRes, ciudadesRes, causasRes] = await Promise.all([
+      const [operadoresRes, ciudadesRes, causasRes, grupoDestinoRes] = await Promise.all([
         getUsers(undefined, { isActive: true }),
         getMiscellaneous({ categoria: 'CIUDAD' }),
         getMiscellaneous({ categoria: CATEGORIA.CAUSA_RAIZ }),
+        getMiscellaneous({ categoria: 'GRUPO_DESTINO' }),
       ]);
 
       setOperadores(
@@ -81,6 +85,7 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
       );
       setCiudadesOptions(ciudadesRes.data || []);
       setCausasRaiz(causasRes.data || []);
+      setGrupoDestino(grupoDestinoRes.data || []);
       
       console.log('✅ [useTicketData] Datos iniciales cargados');
     } catch (err) {
@@ -92,12 +97,9 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
     }
   }, [open]);
 
-  // ✅ CARGAR CATEGORÍAS DE RED - FUNCIÓN CRÍTICA
+  // ✅ CARGAR CATEGORÍAS DE RED
   const loadCategoriasRed = useCallback(async (tipoIncidencia: string) => {
-    console.log(' [useTicketData] loadCategoriasRed llamado con:', tipoIncidencia);
-    
     if (!tipoIncidencia) {
-      console.log('⚠️ [useTicketData] tipoIncidencia vacío, limpiando categorías');
       setCategoriaRed([]);
       return [];
     }
@@ -110,7 +112,6 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
       });
       
       const data = res.data || [];
-      console.log('✅ [useTicketData] Categorías cargadas:', data.length, data);
       setCategoriaRed(data);
       return data;
     } catch (err) {
@@ -195,6 +196,27 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
     }
   }, []);
 
+  // ✅ Cargar Causas Raíz (útil para recargar o forzar carga)
+  const loadCausasRaiz = useCallback(async () => {
+    try {
+      const response = await getMiscellaneous({ categoria: CATEGORIA.CAUSA_RAIZ });
+      setCausasRaiz(response.data || []);
+    } catch (error) {
+      console.error('Error cargando causas raíz:', error);
+    }
+  }, []);
+
+  // ✅ Cargar Grupo Destino (útil para recargar o forzar carga)
+  const loadGrupoDestino = useCallback(async () => {
+    try {
+      const response = await getMiscellaneous({ categoria: 'GRUPO_DESTINO' });
+      setGrupoDestino(response.data || []);
+    } catch (error) {
+      console.error('Error cargando grupo destino:', error);
+    }
+  }, []);
+
+  // ✅ Funciones de limpieza
   const clearSubcategorias = useCallback(() => setSubcategorias([]), []);
   const clearDetalle = useCallback(() => setDetalle([]), []);
   const clearTipoCliente = useCallback(() => setTipoCliente([]), []);
@@ -213,16 +235,19 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
     ciudadesOptions,
     localidadesOptions,
     serviciosAfectados,
+    grupoDestino,
     loading,
     error,
     loadInitialData,
-    loadLocalidades,
     loadCategoriasRed,
     loadSubcategorias,
     loadDetalle,
     loadTipoCliente,
+    loadLocalidades,
     loadSolucionesCaso,
     loadServiciosAfectados,
+    loadCausasRaiz,
+    loadGrupoDestino,
     clearSubcategorias,
     clearDetalle,
     clearTipoCliente,

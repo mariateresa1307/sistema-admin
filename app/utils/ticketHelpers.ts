@@ -155,18 +155,21 @@ export const diffMin = (start: string, end: string): number => {
 
 export const generarNumeroTicket = (prefijo: string, actual?: string): string => {
   if (actual && actual.startsWith(prefijo)) return actual;
-  return `${prefijo}-${Math.floor(100000 + Math.random() * 900000)}`;
+    const numeroAleatorio = Math.floor(100000 + Math.random() * 900000);
+  return `${prefijo}-${numeroAleatorio}`;
 };
 
 export const generarDescripcion = (formData: Partial<TicketFormData>): string => {
-  const fechaNoc = formatToHumanDate(formData.horaDeteccionNoc || '');
+  const fechaNoc = formData.horaDeteccionNoc ? formatToHumanDate(formData.horaDeteccionNoc) : '';
   const fechaInicio = formData.horaInicioFalla ? formatToHumanDate(formData.horaInicioFalla) : '';
   const fechaFin = formData.horaFinAfectacion ? formatToHumanDate(formData.horaFinAfectacion) : '';
+  const fechaCierre = formData.horaCierreFalla ? formatToHumanDate(formData.horaCierreFalla) : '';
 
   return [
     `Fecha y Hora apertura Ticket: ${fechaNoc}`,
     `Fecha y Hora Inicio Afectación: ${fechaInicio}`,
     `Fecha y hora de fin de Afectación: ${fechaFin}`,
+    `Fecha y hora de cierre ticket: ${fechaCierre}`,
     `Causa: ${formData.causaRaiz || ''}`,
     `Solución: ${formData.SolucionCaso || ''}`,
   ].join('\n');
@@ -221,7 +224,8 @@ const normalizeServiciosAfectados = (
 
 export const mapTicketToFormData = (
   ticket: TicketRecord,
-  sessionOperatorId = ''
+  sessionOperatorId = '',
+  currentUserId: string
 ): TicketFormData => {
   const tipoIncidencia = normalizeIncidentType(ticket.incidentType);
   const horaCierre = ticket.horaCierreFalla || ticket.horaCierre;
@@ -243,7 +247,10 @@ export const mapTicketToFormData = (
     nombreCliente: ticket.nombreCliente || '',
     bitacora: ticket.bitacora || '',
     afectacion: ticket.afectacion ?? false,
-    serviciosAfectados: normalizeServiciosAfectados(ticket.serviciosAfectados),
+      serviciosAfectados: ticket.serviciosAfectados?.map((sa: any) => ({
+      _id: sa._id || sa,
+      name: sa.name || sa.valor || '',
+    })) || [],
     operatorResponsable: extractOperatorId(ticket.operatorResponsable) || sessionOperatorId,
     operatorAsignado: extractOperatorId(ticket.operatorAsignado),
     ttZoho: ticket.ttZoho || '',

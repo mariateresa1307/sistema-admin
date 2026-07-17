@@ -1,6 +1,5 @@
-// app/home/components/TicketStep1.tsx
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Grid,
   TextField,
@@ -17,6 +16,9 @@ import { TipoIncidenciaKey, SimpleConfigOpt } from '../utils/types';
 import { TicketFormData, ServicioAfectado } from '../utils/ticketHelpers';
 import { useTicketData } from '../home/hooks/useTicketData';
 import ElementoModal from '../components/elementoTicketModal';
+
+// ✅ Tipografía Corporativa NetUno
+const corporateFont = 'Calibri, Arial, sans-serif';
 
 interface TicketStep1Props {
   form: TicketFormData;
@@ -55,22 +57,30 @@ export const TicketStep1 = React.memo(
       onFieldChange(name as keyof TicketFormData, finalValue);
     };
 
+    // ✅ Debug temporal para verificar la carga de servicios
+    useEffect(() => {
+      console.log('🔍 [TicketStep1] Servicios:', {
+        formServicios: form.serviciosAfectados,
+        dataServicios: data.serviciosAfectados,
+      });
+    }, [form.serviciosAfectados, data.serviciosAfectados]);
+
     return (
-      <Grid container spacing={2.5}>
+      <Grid container spacing={2.5} >
         {/* Número de Caso */}
         <Grid size={{ xs: 12, sm: 3 }}>
           <TextField
             fullWidth
             disabled
             label="Número de Caso (Auto)"
-            value={form.numeroTicket}
+            value={form.numeroTicket ?? ""}
             size="small"
             InputProps={{
               startAdornment: (
-                <ConfirmationNumberIcon sx={{ color: '#000027', mr: 1, fontSize: '1.1rem' }} />
+                <ConfirmationNumberIcon sx={{ color: '#121227', mr: 1, fontSize: '1.1rem' }} /> // ✅ Azul Marino NetUno
               ),
             }}
-            sx={{ bgcolor: '#f0f4f8' }}
+            sx={{ bgcolor: '#f0f4f8'}}
           />
         </Grid>
 
@@ -81,12 +91,13 @@ export const TicketStep1 = React.memo(
             fullWidth
             required
             label="Tipo de Incidencia"
-            value={form.tipoIncidencia}
+            value={form.tipoIncidencia ?? ""}
             onChange={(e) => onTipoIncidenciaChange(e.target.value)}
             size="small"
+            
           >
             {(Object.keys(TIPO_INCIDENCIA) as TipoIncidenciaKey[]).map((key) => (
-              <MenuItem key={key} value={TIPO_INCIDENCIA[key]}>
+              <MenuItem key={key} value={TIPO_INCIDENCIA[key]} >
                 {TIPO_INCIDENCIA[key]}
               </MenuItem>
             ))}
@@ -100,10 +111,11 @@ export const TicketStep1 = React.memo(
             required
             label="Asunto del Caso"
             name="asunto"
-            value={form.asunto}
+            value={form.asunto ?? ""}
             onChange={handleChange}
             placeholder="CCS || SERVICIO || VLAN CLIENTE || FALLA"
             size="small"
+            
           />
         </Grid>
 
@@ -114,12 +126,14 @@ export const TicketStep1 = React.memo(
             fullWidth
             required
             label="Categoría de Red"
-            value={form.categoria}
+            name="categoria"
+            value={form.categoria ?? ""}
             onChange={(e) => onCategoriaChange(e.target.value)}
             size="small"
+          
           >
             {data.categoriaRed.map((cat: SimpleConfigOpt) => (
-              <MenuItem key={cat._id} value={cat._id}>
+              <MenuItem key={cat._id} value={cat._id} >
                 {cat.valor}
               </MenuItem>
             ))}
@@ -133,13 +147,14 @@ export const TicketStep1 = React.memo(
             fullWidth
             required
             label="Subcategoría"
-            value={form.subcategoria}
+            value={form.subcategoria ?? ""}
             onChange={(e) => onSubcategoriaChange(e.target.value)}
             size="small"
             disabled={!form.categoria}
+            
           >
             {data.subcategorias.map((p: SimpleConfigOpt) => (
-              <MenuItem key={p._id} value={p._id}>
+              <MenuItem key={p._id} value={p._id} >
                 {p.valor}
               </MenuItem>
             ))}
@@ -154,13 +169,14 @@ export const TicketStep1 = React.memo(
             required
             label="Detalle"
             name="detalle"
-            value={form.detalle}
+            value={form.detalle ?? ""}
             onChange={handleChange}
             size="small"
             disabled={!form.categoria}
+            
           >
             {data.detalle.map((v: SimpleConfigOpt) => (
-              <MenuItem key={v._id} value={v._id}>
+              <MenuItem key={v._id} value={v._id} >
                 {v.valor}
               </MenuItem>
             ))}
@@ -175,12 +191,13 @@ export const TicketStep1 = React.memo(
               fullWidth
               required
               label="Tipo de cliente"
-              value={form.tipoCliente}
+              value={form.tipoCliente ?? ""}
               onChange={(e) => onTipoClienteChange(e.target.value)}
               size="small"
+             
             >
               {data.tipoCliente.map((tc) => (
-                <MenuItem key={tc._id} value={tc._id}>
+                <MenuItem key={tc._id} value={tc._id} >
                   {tc.valor}
                 </MenuItem>
               ))}
@@ -188,29 +205,48 @@ export const TicketStep1 = React.memo(
           </Grid>
         )}
 
-        {/* Servicios Afectados */}
+        {/* ✅ Servicios Afectados (Lógica Inteligente de Mapeo) */}
         {showTipoClienteInput && !isResidencial && (
           <Grid size={{ xs: 12, sm: 4 }}>
             <Autocomplete
               multiple
               size="small"
-              options={data.serviciosAfectados}
-              value={form.serviciosAfectados}
+              options={data.serviciosAfectados || []}
+              value={(() => {
+                if (!Array.isArray(form.serviciosAfectados)) return [];
+                return form.serviciosAfectados.map((sa: any) => {
+                  if (typeof sa === 'object' && sa.name) return sa;
+                  const idToFind = typeof sa === 'string' ? sa : sa._id;
+                  const servicioEncontrado = (data.serviciosAfectados || []).find(
+                    (s) => s._id === idToFind
+                  );
+                  if (servicioEncontrado) return servicioEncontrado;
+                  return { _id: idToFind, name: idToFind }; // Fallback temporal
+                });
+              })()}
               onChange={(_, newValue) => onServiciosAfectadosChange(newValue)}
-              getOptionKey={(option) => option._id}
-              getOptionLabel={(option) => option.name}
-              ChipProps={{ size: 'small', sx: { height: 24, m: 0.25 } }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  padding: '2px 8px !important',
-                  minHeight: '40px',
-                },
+              getOptionKey={(option) => (typeof option === 'string' ? option : option._id)}
+              getOptionLabel={(option) => {
+                if (typeof option === 'string') return option;
+                return option.name || option.valor || 'Sin nombre';
               }}
+              ChipProps={{ 
+                size: 'small', 
+                sx: { 
+                  height: 24, 
+                  m: 0.25,
+                 
+                  bgcolor: '#7f88ba', // ✅ Azul Celeste NetUno
+                  color: '#FFFFFF'
+                } 
+              }}
+             
               renderInput={(params) => (
                 <TextField
                   {...params}
                   label="Servicios afectados"
                   size="small"
+            
                   InputProps={{
                     ...params.InputProps,
                     endAdornment: (
@@ -219,7 +255,7 @@ export const TicketStep1 = React.memo(
                         <IconButton
                           onClick={() => setOpenServicioModal(true)}
                           size="small"
-                          sx={{ p: 0.5 }}
+                          sx={{ p: 0.5, color: '#121227' }}
                         />
                       </>
                     ),
@@ -232,7 +268,7 @@ export const TicketStep1 = React.memo(
               onClose={() => setOpenServicioModal(false)}
               onAdd={(nuevo) => {
                 if (typeof nuevo === 'string') return;
-                onServiciosAfectadosChange([...form.serviciosAfectados, nuevo]);
+                onServiciosAfectadosChange([...(form.serviciosAfectados || []), nuevo]);
               }}
             />
           </Grid>
@@ -245,12 +281,13 @@ export const TicketStep1 = React.memo(
             fullWidth
             required
             label="Ciudad"
-            value={form.ciudad}
+            value={form.ciudad ?? ""}
             onChange={(e) => onCiudadChange(e.target.value)}
             size="small"
+          
           >
             {data.ciudadesOptions.map((c: any) => (
-              <MenuItem key={c._id || c.valor} value={c.valor}>
+              <MenuItem key={c._id || c.valor} value={c.valor} >
                 {c.valor}
               </MenuItem>
             ))}
@@ -266,8 +303,9 @@ export const TicketStep1 = React.memo(
                 disabled
                 label="Estado"
                 name="estado"
-                value={form.estado}
+                value={form.estado ?? ""}
                 size="small"
+                sx={{ bgcolor: '#f0f4f8'}}
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 4 }}>
@@ -277,12 +315,13 @@ export const TicketStep1 = React.memo(
                 required
                 label="Localidad"
                 name="localidad"
-                value={form.localidad}
+                value={form.localidad ?? ""}
                 onChange={handleChange}
                 size="small"
+      
               >
                 {data.localidadesOptions.map((loc: any) => (
-                  <MenuItem key={loc._id || loc.valor} value={loc.valor}>
+                  <MenuItem key={loc._id || loc.valor} value={loc.valor} >
                     {loc.valor}
                   </MenuItem>
                 ))}
@@ -300,9 +339,10 @@ export const TicketStep1 = React.memo(
                 required
                 label="Nodo Afectado"
                 name="nodo"
-                value={form.nodo}
+                value={form.nodo ?? ""}
                 onChange={handleChange}
                 size="small"
+               
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 4 }}>
@@ -311,9 +351,10 @@ export const TicketStep1 = React.memo(
                 required
                 label="Abonado"
                 name="abonado"
-                value={form.abonado}
+                value={form.abonado ?? ""}
                 onChange={handleChange}
                 size="small"
+               
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 4 }}>
@@ -322,9 +363,10 @@ export const TicketStep1 = React.memo(
                 required
                 label="Nombre del Cliente"
                 name="nombreCliente"
-                value={form.nombreCliente}
+                value={form.nombreCliente ?? ""}
                 onChange={handleChange}
                 size="small"
+              
               />
             </Grid>
           </>
@@ -338,9 +380,10 @@ export const TicketStep1 = React.memo(
             name="bitacora"
             multiline
             maxRows={4}
-            value={form.bitacora}
+            value={form.bitacora ?? ""}
             onChange={handleChange}
             size="small"
+           
           />
         </Grid>
 
@@ -349,11 +392,21 @@ export const TicketStep1 = React.memo(
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
             <Switch
               name="afectacion"
-              checked={form.afectacion}
+              checked={!!form.afectacion}
               onChange={handleChange}
               inputProps={{ 'aria-label': 'Afectación' }}
+              sx={{
+                '& .MuiSwitch-switchBase.Mui-checked': {
+                  color: '#6BB1E2', // ✅ Azul Celeste NetUno
+                },
+                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                  backgroundColor: '#6BB1E2',
+                },
+              }}
             />
-            <Typography>Afectación</Typography>
+            <Typography sx={{  fontWeight: 500, color: '#121227' }}>
+              Afectación
+            </Typography>
           </Stack>
         </Grid>
       </Grid>
