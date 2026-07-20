@@ -52,7 +52,6 @@ const cardsConfig: CardConfig[] = [
     icon: CalendarIcon,
     gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', 
     statKey: 'historial',
-    // ✅ SIN actionFilter para mostrar todo el historial del día
   },
 ];
 

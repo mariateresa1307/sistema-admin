@@ -27,7 +27,7 @@ interface Props {
   page: number;
   limit: number;
   onPageChange: (page: number) => void;
-  onRowsPerPageChange?: (limit: number) => void; // ✅ Nueva prop
+  onRowsPerPageChange?: (limit: number) => void; 
 }
 
 const ACTION_CONFIG: Record<string, { label: string; color: 'success' | 'error' | 'warning' | 'info' | 'default'; icon: React.ElementType }> = {
@@ -143,7 +143,7 @@ export default function AuditTable({ data, loading, total, page, limit, onPageCh
             onRowsPerPageChange(parseInt(event.target.value, 10));
           }
         }}
-        rowsPerPageOptions={[5, 10, 50]} // ✅ Opciones de registros por página
+        rowsPerPageOptions={[10, 50, 100]} // ✅ Opciones de registros por página
         labelRowsPerPage="Registros por página"
         labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
         sx={{ '& .MuiTablePagination-toolbar': { fontSize: '0.85rem' } }}

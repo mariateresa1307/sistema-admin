@@ -4,20 +4,19 @@ import { Box, Typography, IconButton, Chip } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { getNivelSeveridadConfig } from 'app/utils/auxiliares';
 
-// ✅ Exportación nombrada de la interfaz para que coincida con la importación
 export interface TicketHeaderProps {
   severidad: string;
   isEditMode?: boolean;
+  numeroTicket?: string; 
   onClose: () => void;
 }
 
-// ✅ Exportación nombrada del componente
-export const TicketHeader = React.memo(({ severidad, isEditMode = false, onClose }: TicketHeaderProps) => {
+export const TicketHeader = React.memo(({ severidad, isEditMode = false, numeroTicket, onClose }: TicketHeaderProps) => {
   const config = getNivelSeveridadConfig(severidad);
 
   return (
     <>
-      {/* Barra superior de color según severidad (más sutil y elegante) */}
+      {/* Barra superior de color según severidad */}
       <Box
         sx={{
           background: config.bgcolor,
@@ -42,18 +41,40 @@ export const TicketHeader = React.memo(({ severidad, isEditMode = false, onClose
         }}
       >
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-          {/* ✅ TIPOGRAFÍA: Calibri Bold para titulación (Manual de Identidad) */}
           <Typography 
             variant="h5" 
             sx={{ 
-              color: '#121227', // Azul Marino NetUno (RGB: 18, 18, 39)
-              fontWeight: 700, // Calibri Bold
+              color: '#121227',
+              fontWeight: 700,
               fontFamily: 'Calibri, Arial, sans-serif',
               letterSpacing: '-0.01em',
-              lineHeight: 1.2
+              lineHeight: 1.2,
+              display: 'flex',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: 1
             }}
           >
             {isEditMode ? 'Editar Ticket - NOC' : 'Apertura y Tipificación - NOC'}
+            
+            {/* ✅ Mostrar número de ticket solo en modo edición */}
+            {isEditMode  && numeroTicket && (
+              <Typography 
+                component="span" 
+                sx={{ 
+                  color:  '#BE2915',
+                  fontSize: '1.1rem',
+                  fontWeight: 700,
+                  fontFamily: 'Calibri, Arial, sans-serif',
+                  bgcolor: config.bgcolor,
+                  px: 1.5,
+                  py: 0.2,
+                  borderRadius: '6px'
+                }}
+              >
+               {numeroTicket}
+              </Typography>
+            )}
           </Typography>
           
           {/* Chip de severidad integrado */}

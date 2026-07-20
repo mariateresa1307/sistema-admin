@@ -1,13 +1,12 @@
 'use client';
-import React from 'react';
-import { Modal, Paper, Box, Typography, IconButton, Divider, Chip, Tooltip } from '@mui/material';
+import React, { useMemo } from 'react';
+import { Modal, Paper, Box, Typography, IconButton, Divider, Chip, Tooltip, Button, Alert } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import { motion, AnimatePresence } from 'framer-motion';
 import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
-import SecurityIcon from '@mui/icons-material/Security';
-
 
 interface UsuarioData {
   _id?: string;
@@ -19,6 +18,7 @@ interface UsuarioData {
   email: string;
   role: string;
   isActive: boolean; 
+  updatedAt?: string | Date; // ✅ Agregado para calcular los 30 días
 }
 
 interface CardSeeModalProps {
@@ -26,9 +26,10 @@ interface CardSeeModalProps {
   onClose: () => void;
   user: UsuarioData | null;
   onEditClick?: () => void;
+  onDeleteClick?: () => void; // ✅ Agregado para manejar la eliminación desde el padre
 }
 
-export function CardSeeModal({ open, onClose, user, onEditClick }: CardSeeModalProps) {
+export function CardSeeModal({ open, onClose, user, onEditClick, onDeleteClick }: CardSeeModalProps) {
   
   React.useEffect(() => {
     if (open) {
@@ -43,34 +44,27 @@ export function CardSeeModal({ open, onClose, user, onEditClick }: CardSeeModalP
   // Función para obtener la configuración visual del rol
   const getRoleConfig = (role: string) => {
     const roleConfigs: Record<string, { label: string; bgcolor: string; color: string; icon: string }> = {
-      admin: { 
-        label: 'Administrador', 
-        bgcolor: '#e3f2fd', 
-        color: '#1565c0',
-        icon: '👑'
-      },
-      operador: { 
-        label: 'Operador', 
-        bgcolor: '#fff3e0', 
-        color: '#e65100',
-        icon: '⚙️'
-      },
-      editor: { 
-        label: 'Operator Editor', 
-        bgcolor: '#f3e5f5', 
-        color: '#6a1b9a',
-        icon: '👨‍💻'
-      },
+      admin: { label: 'Administrador', bgcolor: '#e3f2fd', color: '#1565c0', icon: '👑' },
+      operador: { label: 'Operador', bgcolor: '#fff3e0', color: '#e65100', icon: '⚙️' },
+      editor: { label: 'Operator Editor', bgcolor: '#f3e5f5', color: '#6a1b9a', icon: '👨‍💻' },
     };
-    return roleConfigs[role] || { 
-      label: role, 
-      bgcolor: '#f5f5f5', 
-      color: '#616161',
-      icon: '👤'
-    };
+    return roleConfigs[role] || { label: role, bgcolor: '#f5f5f5', color: '#616161', icon: '👤' };
   };
 
   const roleConfig = user ? getRoleConfig(user.role || 'editor') : null;
+
+  // ✅ LÓGICA: Verificar si el usuario lleva más de 30 días inactivo
+  const canDeleteUser = useMemo(() => {
+    if (!user || user.isActive) return false; // Si está activo, no se puede eliminar
+    
+    const fechaReferencia = new Date(user.updatedAt || Date.now());
+    const hoy = new Date();
+    
+    const diferenciaMs = Math.abs(hoy.getTime() - fechaReferencia.getTime());
+    const diferenciaDias = Math.ceil(diferenciaMs / (1000 * 60 * 60 * 24));
+    
+    return diferenciaDias > 30;
+  }, [user]);
 
   return (
     <AnimatePresence>
@@ -91,7 +85,7 @@ export function CardSeeModal({ open, onClose, user, onEditClick }: CardSeeModalP
                 bgcolor: '#ffffff', position: 'relative', overflow: 'hidden'
               }}
             >
-            
+              {/* Barra superior de estado */}
               <Box sx={{ 
                 position: 'absolute', top: 0, left: 0, width: '100%', height: '5px',
                 bgcolor: user.isActive ? '#22c55e' : '#ef4444'
@@ -157,10 +151,8 @@ export function CardSeeModal({ open, onClose, user, onEditClick }: CardSeeModalP
                   </Box>
                 </Grid>
 
-              
-
                 {/* Nombre y Apellido */}
-                <Grid size={6}>
+                <Grid size={{ xs: 12, sm: 7 }}>
                   <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700, letterSpacing: '0.5px' }}>
                     Nombre y Apellido
                   </Typography>
@@ -169,9 +161,8 @@ export function CardSeeModal({ open, onClose, user, onEditClick }: CardSeeModalP
                   </Typography>
                 </Grid>
 
-
-  {/* ✅ Rol de Usuario */}
-                <Grid size={{ xs: 12, sm:5 }}>
+                {/* Rol de Usuario */}
+                <Grid size={{ xs: 12, sm: 5 }}>
                   <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700, letterSpacing: '0.5px' }}>
                     Rol de Usuario
                   </Typography>
@@ -185,20 +176,15 @@ export function CardSeeModal({ open, onClose, user, onEditClick }: CardSeeModalP
                       label={roleConfig?.label || 'N/A'} 
                       size="small"
                       sx={{ 
-                        fontWeight: 700, 
-                        borderRadius: '6px', 
-                        fontSize: '0.72rem', 
-                        px: 1,
+                        fontWeight: 700, borderRadius: '6px', fontSize: '0.72rem', px: 1,
                         bgcolor: roleConfig?.bgcolor || '#f5f5f5',
                         color: roleConfig?.color || '#616161',
-                        '& .MuiChip-icon': {
-                          color: roleConfig?.color || '#616161',
-                          ml: '6px'
-                        }
+                        '& .MuiChip-icon': { color: roleConfig?.color || '#616161', ml: '6px' }
                       }} 
                     />
                   </Box>
                 </Grid>
+
                 {/* Correo */}
                 <Grid size={12}>
                   <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700, letterSpacing: '0.5px' }}>
@@ -209,6 +195,40 @@ export function CardSeeModal({ open, onClose, user, onEditClick }: CardSeeModalP
                   </Typography>
                 </Grid>
               </Grid>
+
+              {/* ✅ SECCIÓN DE ELIMINACIÓN CONDICIONAL (Solo si está inactivo) */}
+              {!user.isActive && (
+                <Box sx={{ mt: 4, pt: 3, borderTop: '1px solid #f1f5f9' }}>
+                  {canDeleteUser ? (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                      <Alert severity="warning" sx={{ borderRadius: '8px', fontSize: '0.85rem' }}>
+                        Este usuario lleva <strong>más de 30 días</strong> inactivo en el sistema.
+                      </Alert>
+                      <Button
+                        variant="contained"
+                        color="error"
+                        startIcon={<DeleteIcon />}
+                        onClick={onDeleteClick}
+                        fullWidth
+                        sx={{ 
+                          borderRadius: '8px', 
+                          textTransform: 'none', 
+                          fontWeight: 700,
+                          boxShadow: '0 4px 12px rgba(211, 47, 47, 0.2)',
+                          '&:hover': { boxShadow: '0 6px 16px rgba(211, 47, 47, 0.3)' }
+                        }}
+                      >
+                        Eliminar Usuario Permanentemente
+                      </Button>
+                    </Box>
+                  ) : (
+                    <Alert severity="info" sx={{ borderRadius: '8px', fontSize: '0.85rem', bgcolor: '#f0f9ff', color: '#0369a1', border: '1px solid #bae6fd' }}>
+                      ℹ️ El usuario debe permanecer inactivo por más de 30 días antes de poder ser eliminado del sistema.
+                    </Alert>
+                  )}
+                </Box>
+                )}
+
             </Paper>
           </motion.div>
         </Modal>

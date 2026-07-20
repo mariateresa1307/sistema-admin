@@ -6,7 +6,6 @@ import { saveTicket, updateTicket, closeTicket, reopenTicket } from '@/lib/api';
 import { TICKET_STATUS, TIPO_INCIDENCIA } from 'app/utils/constants';
 import { TicketModalProps } from '../utils/types';
 import { isEditTicket, mapTicketToFormData, mapFormToUpdatePayload } from '../utils/ticketHelpers';
-
 import { useTicketData } from './hooks/useTicketData';
 import { useTicketForm } from './hooks/useTicketForm';
 import { TicketHeader } from '../components/ticketHeader';
@@ -287,7 +286,12 @@ export default function TicketModal({ open, onClose, onSave, ticketToEdit }: Tic
     <>
       <Modal open={open} onClose={handleClose}>
         <Box sx={modalStyle}>
-          <TicketHeader severidad={ticketForm.form.severidad} isEditMode={ticketForm.isEditMode} onClose={handleClose} />
+          <TicketHeader 
+          severidad={ticketForm.form.severidad}
+          isEditMode={ticketForm.isEditMode} 
+          onClose={handleClose}
+           numeroTicket={ticketForm.form.numeroTicket} />
+           
           <FormStepper activeStep={ticketForm.activeStep} steps={PASOS} />
           <Divider sx={{ mb: 3 }} />
 
