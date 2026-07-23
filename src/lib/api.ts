@@ -32,16 +32,12 @@ api.interceptors.response.use(
   (error) => {
     let message = 'Ocurrió un error inesperado. Por favor, intenta de nuevo.';
     
-    if (error.response) {
+  if (error.response) {
       if (error.response.status === 401) {
-        message = 'Sesión expirada. Por favor, inicia sesión nuevamente.';
-        
-        // Limpiar datos de sesión
+        message = 'Sesión expirada o credenciales incorrectas. Por favor, verifica tus datos.';
         localStorage.removeItem('token');
         localStorage.removeItem('userData');
-        
-        // Redirigir al login (si no estás ya ahí)
-        if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+        if (typeof window !== 'undefined' && !window.location.pathname.includes('/')) {
           window.location.href = '/';
         }
       } else if (error.response.status === 403) {
@@ -49,10 +45,32 @@ api.interceptors.response.use(
       } else if (error.response.status === 404) {
         message = 'El recurso solicitado no fue encontrado.';
       } else if (error.response.data?.message) {
-        message = error.response.data.message;
+        const rawMessage = error.response.data.message;
+        
+        // ✅ TRADUCCIONES DE MENSAJES DE VALIDACIÓN DEL BACKEND
+        if (typeof rawMessage === 'string') {
+          if (rawMessage.includes('clave must be longer than or equal to 6 characters')) {
+            message = 'La contraseña debe tener al menos 6 caracteres.';
+          } else if (rawMessage.includes('email must be an email')) {
+            message = 'El formato del correo electrónico no es válido.';
+          } else {
+            message = rawMessage;
+          }
+        } else if (Array.isArray(rawMessage)) {
+          // Si el backend devuelve un array de errores (class-validator)
+          message = rawMessage.map((msg: string) => {
+            if (msg.includes('clave must be longer than or equal to 6 characters')) {
+              return 'La contraseña debe tener al menos 6 caracteres.';
+            }
+            if (msg.includes('email must be an email')) {
+              return 'El formato del correo electrónico no es válido.';
+            }
+            return msg;
+          }).join(' ');
+        }
       }
     } else if (error.request) {
-      message = 'Error de red. Revisa tu conexión a internet.';
+      message = 'Error de red. Verifica tu conexión a internet o que el servidor esté activo.';
     }
 
     if (typeof window !== 'undefined') {
@@ -64,7 +82,6 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-
 export default api;
 
 export const getMiscellaneousById = (id: string) => api.get(`/miscellaneous/${id}`);

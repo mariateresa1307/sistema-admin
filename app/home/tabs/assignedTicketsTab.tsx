@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
-import { CustomDataGrid, SearchParams } from "../../components/customDataGrid";
+import CustomDataGrid, { SearchParams } from "../../components/customDataGrid";
 import { GridColDef, GridCellParams } from "@mui/x-data-grid";
 import { Chip, Box } from "@mui/material";
 import { getTickets } from "@/lib/api";

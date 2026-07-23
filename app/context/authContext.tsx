@@ -1,13 +1,5 @@
 "use client";
-
-import {
-  createContext,
-  ReactNode,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
+import { createContext, ReactNode, useCallback, useContext, useEffect, useState, useMemo } from "react";
 
 export interface UserData {
   _id?: string;
@@ -153,14 +145,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [user?.role],
   );
 
-  const value = {
+  const value = useMemo(() => ({
     user,
     isAuthenticated: !!user,
     isLoading,
     login,
     logout,
     hasPermission,
-  };
+  }), [user, isLoading, login,logout, hasPermission]);
 
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

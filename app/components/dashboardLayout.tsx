@@ -93,26 +93,6 @@ const sharedStyles = {
   textSecondary: { "& span": { color: "text.secondary" } },
 };
 
-function useUserData() {
-  const [userData, setUserData] = React.useState<UserData>({
-    primerNombre: "U",
-    primerApellido: "S",
-  });
-  
-  React.useEffect(() => {
-    const stored = localStorage.getItem("userData");
-    if (stored) {
-      try {
-        setUserData(JSON.parse(stored));
-      } catch (err) {
-        console.error("Error parsing userData:", err);
-      }
-    }
-  }, []);
-
-  return { userData };
-}
-
 const ThemeSwitcher = React.memo<{
   isDark: boolean;
   onToggle: (mode: ThemeMode) => void;
@@ -128,8 +108,7 @@ const ThemeSwitcher = React.memo<{
     }}
   >
     {(["corporate", "dark"] as ThemeMode[]).map((mode) => {
-      const isActive =
-        (mode === "dark" && isDark) || (mode === "corporate" && !isDark);
+      const isActive = (mode === "dark" && isDark) || (mode === "corporate" && !isDark);
       return (
         <ListItemButton
           key={mode}
@@ -156,16 +135,38 @@ const ThemeSwitcher = React.memo<{
 ));
 ThemeSwitcher.displayName = "ThemeSwitcher";
 
+// ✅ UserMenu corregido: maneja su propio estado de forma segura para evitar Hydration Mismatch
 const UserMenu = React.memo<{
-  userData: UserData;
   onThemeToggle: (mode: ThemeMode) => void;
   isDark: boolean;
   onNavigate: (path: string) => void;
-}>(({ userData, onThemeToggle, isDark, onNavigate }) => {
+}>(({ onThemeToggle, isDark, onNavigate }) => {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
   const [modalOpen, setModalOpen] = React.useState(false);
   const { refreshHomeData } = useHomeRefresh();
+
+  // ✅ 1. Inicializar como null para que coincida perfectamente con el renderizado del servidor
+  const [userData, setUserData] = useState<UserData | null>(null);
+
+  // ✅ 2. Leer localStorage SOLO después de que el componente se monta en el cliente
+  useEffect(() => {
+    const stored = localStorage.getItem('userData');
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        setUserData({
+          primerNombre: parsed.primerNombre || "U",
+          primerApellido: parsed.primerApellido || "S"
+        });
+      } catch (err) {
+        console.error('Error parsing userData:', err);
+        setUserData({ primerNombre: "U", primerApellido: "S" });
+      }
+    } else {
+      setUserData({ primerNombre: "U", primerApellido: "S" });
+    }
+  }, []);
 
   const handleCloseModal = () => {
     setModalOpen(false);
@@ -175,6 +176,9 @@ const UserMenu = React.memo<{
   const handleSaveTicket = () => {
     setModalOpen(false);
   };
+
+  // ✅ 3. Usar "U" como fallback mientras userData es null (evita el mismatch)
+  const initial = userData ? userData.primerNombre[0]?.toUpperCase() : "U";
 
   return (
     <Box sx={{ display: "flex", alignItems: "center" }}>
@@ -208,7 +212,7 @@ const UserMenu = React.memo<{
       />
       
       <Avatar sx={{ bgcolor: "secondary.main", width: 38, height: 38, ml: 2 }}>
-        {userData.primerNombre[0]?.toUpperCase()}
+        {initial}
       </Avatar>
 
       <Tooltip title="Configuración de Interfaz">
@@ -354,7 +358,6 @@ const Sidebar = React.memo<{
   }, [user?.role]);
 
   if (isLoading && !user) {
-    console.log("⏳ [Sidebar] Esperando carga del usuario...");
     return (
       <Drawer
         variant="permanent"
@@ -381,7 +384,6 @@ const Sidebar = React.memo<{
   }
 
   if (!user) {
-    console.warn("⚠️ [Sidebar] No hay usuario, mostrando menú mínimo");
     return (
       <Drawer
         variant="permanent"
@@ -458,7 +460,8 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { toggleTheme, isDark } = useTheme();
-  const { userData } = useUserData();
+  
+  // ✅ Eliminado el hook useUserData defectuoso. UserMenu ahora maneja sus propios datos.
 
   const handleNavigate = React.useCallback(
     (path: string) => {
@@ -467,18 +470,16 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
     [router],
   );
 
- const handleLogout = React.useCallback(async () => {
-  try {
-  
-    await logout();
-  } catch (error) {
-    console.error('Error durante el logout:', error);
-  } finally {
-   
-    localStorage.clear();
-    window.location.href = '/';
-  }
-}, []);
+  const handleLogout = React.useCallback(async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Error durante el logout:', error);
+    } finally {
+      localStorage.clear();
+      window.location.href = '/';
+    }
+  }, []);
 
   return (
     <Box
@@ -500,7 +501,6 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         <Toolbar sx={{ justifyContent: "space-between" }}>
           <AcUnitIcon />
           <UserMenu
-            userData={userData}
             isDark={isDark}
             onThemeToggle={toggleTheme}
             onNavigate={handleNavigate}

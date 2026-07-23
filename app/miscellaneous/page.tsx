@@ -250,6 +250,22 @@ export default function MiscellaneousPage() {
         };
       });
     }
+
+ if (currentCategoria === 'SOLUCION_CASO') {
+    return rowsFiltradas.map(solucion => {
+      const causaId = solucion.padreId;
+      const causaRaizAsociada = causasRaiz.find(
+        causa => (causa._id || causa.id) === causaId && causa.activo !== false
+      );
+
+      return {
+        ...solucion,
+        causaRaizAsociada: causaRaizAsociada || null
+      };
+    });
+  }
+
+
     
     return rowsFiltradas;
   }, [rows, currentCategoria, soluciones]);

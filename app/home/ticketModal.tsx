@@ -54,7 +54,13 @@ export default function TicketModal({ open, onClose, onSave, ticketToEdit }: Tic
   }, []);
 
   const ticketData = useTicketData(open);
-  const ticketForm = useTicketForm({ sessionOperatorId: sessionOperatorId.current });
+ 
+  const ticketForm = useTicketForm({ 
+    sessionOperatorId: sessionOperatorId.current, 
+    causasRaiz: ticketData.causasRaiz || [],      
+    solucionesCaso: ticketData.solucionesCaso || [] 
+  });
+
 
   useEffect(() => {
     if (open && !isEditTicket(ticketToEdit)) 

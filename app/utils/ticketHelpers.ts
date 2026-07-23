@@ -1,5 +1,5 @@
-// app/home/utils/ticketHelpers.ts
 import dayjs from 'dayjs';
+import { TICKET_STATUS } from 'app/utils/constants';
 
 export type ServicioAfectado = { _id: string; name: string };
 
@@ -134,7 +134,6 @@ export const initialFormState: TicketFormData = {
   afectacion: false,
 };
 
-// ✅ Funciones puras (fáciles de testear)
 export const getLocalDateTimeString = (date = new Date()): string => {
   const tzOffset = date.getTimezoneOffset() * 60000;
   return new Date(date.getTime() - tzOffset).toISOString().slice(0, 16);
@@ -142,7 +141,9 @@ export const getLocalDateTimeString = (date = new Date()): string => {
 
 export const formatToHumanDate = (dateTimeStr: string): string => {
   if (!dateTimeStr) return '';
-  const [datePart, timePart] = dateTimeStr.split('T');
+  // Manejar tanto formato ISO como el que ya viene "YYYY-MM-DDTHH:mm"
+  const cleanStr = dateTimeStr.includes('T') ? dateTimeStr.replace('T', ' ') : dateTimeStr;
+  const [datePart, timePart] = cleanStr.split(' ');
   const [year, month, day] = datePart.split('-');
   return `${day}/${month}/${year} ${timePart}`;
 };
@@ -155,24 +156,8 @@ export const diffMin = (start: string, end: string): number => {
 
 export const generarNumeroTicket = (prefijo: string, actual?: string): string => {
   if (actual && actual.startsWith(prefijo)) return actual;
-    const numeroAleatorio = Math.floor(100000 + Math.random() * 900000);
+  const numeroAleatorio = Math.floor(100000 + Math.random() * 900000);
   return `${prefijo}-${numeroAleatorio}`;
-};
-
-export const generarDescripcion = (formData: Partial<TicketFormData>): string => {
-  const fechaNoc = formData.horaDeteccionNoc ? formatToHumanDate(formData.horaDeteccionNoc) : '';
-  const fechaInicio = formData.horaInicioFalla ? formatToHumanDate(formData.horaInicioFalla) : '';
-  const fechaFin = formData.horaFinAfectacion ? formatToHumanDate(formData.horaFinAfectacion) : '';
-  const fechaCierre = formData.horaCierreFalla ? formatToHumanDate(formData.horaCierreFalla) : '';
-
-  return [
-    `Fecha y Hora apertura Ticket: ${fechaNoc}`,
-    `Fecha y Hora Inicio Afectación: ${fechaInicio}`,
-    `Fecha y hora de fin de Afectación: ${fechaFin}`,
-    `Fecha y hora de cierre ticket: ${fechaCierre}`,
-    `Causa: ${formData.causaRaiz || ''}`,
-    `Solución: ${formData.SolucionCaso || ''}`,
-  ].join('\n');
 };
 
 export const calcularTurno = (horaDeteccionNoc: string): 'DIURNO' | 'NOCTURNO' => {
@@ -198,8 +183,8 @@ const toDateTimeLocal = (value?: string): string => {
     if (!isNaN(date.getTime())) {
       return getLocalDateTimeString(date);
     }
-    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(value)) {
-      return value.slice(0, 16);
+    if (/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(value)) {
+      return value.slice(0, 16).replace(' ', 'T');
     }
   } catch {
     return value;
@@ -222,6 +207,7 @@ const normalizeServiciosAfectados = (
   return value as ServicioAfectado[];
 };
 
+// ✅ FUNCIÓN CORREGIDA: Ahora inyecta la fecha de cierre en la descripción si el ticket está cerrado
 export const mapTicketToFormData = (
   ticket: TicketRecord,
   sessionOperatorId = '',
@@ -229,6 +215,24 @@ export const mapTicketToFormData = (
 ): TicketFormData => {
   const tipoIncidencia = normalizeIncidentType(ticket.incidentType);
   const horaCierre = ticket.horaCierreFalla || ticket.horaCierre;
+
+  // ✅ LÓGICA CLAVE: Asegurar que la descripción tenga la fecha de cierre si el estatus es CERRADO
+  let descripcion = ticket.description || '';
+  const isClosed = ticket.status === TICKET_STATUS.CERRADO || ticket.status === 'CERRADO';
+  
+  if (isClosed && horaCierre) {
+    const fechaCierreLocal = toDateTimeLocal(horaCierre);
+    const fechaCierreFormateada = fechaCierreLocal ? formatToHumanDate(fechaCierreLocal) : formatToHumanDate(horaCierre);
+    
+    if (!descripcion.includes('Fecha y hora de cierre ticket:')) {
+      // Si la línea no existe, la agregamos al final
+      descripcion = (descripcion.trim() ? descripcion.trim() + '\n' : '') + `Fecha y hora de cierre ticket: ${fechaCierreFormateada}`;
+    } else {
+      // Si la línea existe pero está vacía o incompleta, la reemplazamos
+      const regex = /Fecha y hora de cierre ticket:\s*.*/g;
+      descripcion = descripcion.replace(regex, `Fecha y hora de cierre ticket: ${fechaCierreFormateada}`);
+    }
+  }
 
   return {
     ...initialFormState,
@@ -247,10 +251,7 @@ export const mapTicketToFormData = (
     nombreCliente: ticket.nombreCliente || '',
     bitacora: ticket.bitacora || '',
     afectacion: ticket.afectacion ?? false,
-      serviciosAfectados: ticket.serviciosAfectados?.map((sa: any) => ({
-      _id: sa._id || sa,
-      name: sa.name || sa.valor || '',
-    })) || [],
+    serviciosAfectados: normalizeServiciosAfectados(ticket.serviciosAfectados),
     operatorResponsable: extractOperatorId(ticket.operatorResponsable) || sessionOperatorId,
     operatorAsignado: extractOperatorId(ticket.operatorAsignado),
     ttZoho: ticket.ttZoho || '',
@@ -267,7 +268,7 @@ export const mapTicketToFormData = (
     SolucionCaso: ticket.SolucionCaso || '',
     severidad: ticket.severidad || ticket.nivelSeveridad || '',
     imputable: ticket.imputable || '',
-    descripcion: ticket.description || '',
+    descripcion: descripcion, // ✅ Usamos la descripción corregida
     estatus: ticket.status || '',
     turnoAsignado: ticket.turnoAsignado === 'NOCTURNO' ? 'NOCTURNO' : 'DIURNO',
     operador: ticket.operador || '',

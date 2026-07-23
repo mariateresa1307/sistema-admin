@@ -24,6 +24,7 @@ export type NotificationType = {
 export const useMiscellaneous = (currentCategoria: string) => {
   const [rows, setRows] = useState<MiscellaneousItem[]>([]);
   const [loading, setLoading] = useState(true);
+   const [totalCount, setTotalCount] = useState(0);
   const [notification, setNotification] = useState<NotificationType>({
     open: false,
     message: '',

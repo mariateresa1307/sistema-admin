@@ -17,7 +17,7 @@ export type SearchParams = {
 interface CustomDataGridProps extends Omit<DataGridProps, 'rows'> {
   rows: Array<any>;
   columns: Array<GridColDef>;
- // loading?: boolean;
+  loading?: boolean;
   onSearch?: (params: SearchParams) => void;
   debounceMs?: number;
   paginationModel?: { page: number; pageSize: number };
@@ -27,19 +27,20 @@ interface CustomDataGridProps extends Omit<DataGridProps, 'rows'> {
   paginationMode?: 'client' | 'server';
 }
 
-const CustomDataGrid = ({
+// ✅ EXPORTACIÓN POR DEFECTO
+export default function CustomDataGrid({
   rows,
   columns,
- // loading,
+  loading,
   onSearch,
   debounceMs = 400,
   paginationModel,
   onPaginationModelChange,
-  pageSizeOptions = [10, 50, 100],
+  pageSizeOptions = [10, 25, 50],
   rowCount,
   paginationMode = 'server',
   ...restProps
-}: CustomDataGridProps) => {
+}: CustomDataGridProps) {
   const [isMounted, setIsMounted] = useState(false);
   const [searchField, setSearchField] = useState<string>(
     columns.find(col => col.field === 'name') ? 'name' : (columns[0]?.field || "")
@@ -115,9 +116,8 @@ const CustomDataGrid = ({
   }, [searchTerm, searchField, onSearch, debounceMs]);
 
   const safePageSizeOptions = useMemo(() => {
-   const currentSize = paginationModel?.pageSize ?? pageSizeOptions[0] ?? 10;
-
-     if (pageSizeOptions.includes(currentSize)) {
+    const currentSize = paginationModel?.pageSize ?? pageSizeOptions[0] ?? 10;
+    if (pageSizeOptions.includes(currentSize)) {
       return pageSizeOptions;
     }
     return [...pageSizeOptions, currentSize].sort((a, b) => a - b);
@@ -185,20 +185,18 @@ const CustomDataGrid = ({
         getRowId={(row) => row._id || row.id}
         rows={displayRows}
         columns={columns}
-       // loading={loading || isSearching}
-        
+        loading={loading || isSearching}
         paginationModel={paginationModel}
         onPaginationModelChange={onPaginationModelChange}
         pageSizeOptions={safePageSizeOptions}
-        rowCount={rowCount ?? 0} // ✅ Garantiza que sea un número, nunca undefined
+        rowCount={rowCount ?? 0}
         paginationMode={paginationMode}
-        
         disableRowSelectionOnClick
         sx={{
           borderRadius: "12px",
           border: '1px solid #eaedf1',
-          "& .MuiDataGrid-columnHeaders": { backgroundColor: "rgb(8, 7, 105)" },
-          "& .MuiDataGrid-columnHeader": { backgroundColor: "rgb(8, 7, 105)", color: "#FFFFFF !important" },
+          "& .MuiDataGrid-columnHeaders": { backgroundColor: "#121227" },
+          "& .MuiDataGrid-columnHeader": { backgroundColor: "#080769", color: "#FFFFFF !important" },
           "& .MuiDataGrid-columnHeaderTitle": { fontWeight: 700, color: "#FFFFFF !important" },
         }}
         {...restProps}
@@ -206,5 +204,3 @@ const CustomDataGrid = ({
     </Box>
   );
 }
-
-export { CustomDataGrid };

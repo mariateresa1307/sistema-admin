@@ -8,7 +8,6 @@ import {
   TextField,
   Box,
   Typography,
-  Link,
   InputAdornment,
 } from '@mui/material';
 import { Mail, Lock, Hub as HubIcon } from '@mui/icons-material';
@@ -58,42 +57,33 @@ export default function LoginPage() {
       });
 
       if (response.data) {
-        // ✅ Guardar token
         if (response.data.access_token) {
           localStorage.setItem('token', response.data.access_token);
         }
         
-        // ✅ Guardar usuario COMPLETO
         if (response.data.user) {
           const userData = response.data.user;
-          
-          // ✅ CORREGIDO: Normalizar roles a español (consistente con AuthContext)
           const roleMap: Record<string, string> = {
             'administrador': 'admin',
             'admin': 'admin',
-            'operador': 'operador',      // ← CAMBIADO: era 'operator'
-            'operator': 'operador',      // ← CAMBIADO: era 'operator'
-            'editor': 'editor',          // ← CAMBIADO: era 'operator_edit'
-            'operator_edit': 'editor',   // ← CAMBIADO: era 'operator_edit'
-            'operator editor': 'editor', // ← NUEVO
-            'operador editor': 'editor', // ← NUEVO
+            'operador': 'operador',
+            'operator': 'operador',
+            'editor': 'editor',
+            'operator_edit': 'editor',
+            'operator editor': 'editor',
+            'operador editor': 'editor',
           };
           
           userData.role = roleMap[userData.role?.toLowerCase()] || 'operador';
-          
-          console.log("✅ Usuario guardado con role:", userData.role);
-          console.log("✅ Usuario completo:", userData);
           localStorage.setItem('userData', JSON.stringify(userData));
         }
         
         window.location.href = '/home';
       }
     } catch (error: any) {
-      if (error.response) {
-        alert(`Error: ${error.response.data.message || 'Credenciales incorrectas'}`);
-      } else {
-        alert("Error de conexión. Verifica que el Backend esté activo.");
-      }
+      // ✅ Ya no necesitamos setNotification aquí. 
+      // El interceptor de api.ts se encargará de mostrar la notificación global.
+      console.error("Error de login:", error);
     }
   };
 
@@ -181,6 +171,8 @@ export default function LoginPage() {
           </Box>
         </Box>
       </motion.div>
+      
+      {/* ✅ Se eliminó el componente <Notification /> local para evitar la duplicidad */}
     </Box>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 import { ContainerBox } from "../components/containerBox";
-import { CustomDataGrid } from "../components/customDataGrid";
+import CustomDataGrid from "app/components/customDataGrid";
 import { CardSeeModal } from "./cardUserSeeModal";
 import { ConfirmDialog } from '../components/confirmDialog'; // ✅ Importado
 import { useState, useCallback, useEffect } from "react";
