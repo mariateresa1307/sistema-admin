@@ -1,11 +1,11 @@
 'use client';
-import React, { useMemo } from 'react';
-import { Modal, Paper, Box, Typography, IconButton, Divider, Chip, Tooltip, Button, Alert } from '@mui/material';
+import React from 'react';
+import { Modal, Paper, Box, Typography, IconButton, Divider, Chip, Tooltip } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import { motion, AnimatePresence } from 'framer-motion';
 import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
+import DeleteIcon from '@mui/icons-material/Delete'; // ✅ Ícono de eliminar
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 
 interface UsuarioData {
@@ -18,7 +18,6 @@ interface UsuarioData {
   email: string;
   role: string;
   isActive: boolean; 
-  updatedAt?: string | Date; // ✅ Agregado para calcular los 30 días
 }
 
 interface CardSeeModalProps {
@@ -26,7 +25,7 @@ interface CardSeeModalProps {
   onClose: () => void;
   user: UsuarioData | null;
   onEditClick?: () => void;
-  onDeleteClick?: () => void; // ✅ Agregado para manejar la eliminación desde el padre
+  onDeleteClick?: () => void; // ✅ Función para manejar la eliminación
 }
 
 export function CardSeeModal({ open, onClose, user, onEditClick, onDeleteClick }: CardSeeModalProps) {
@@ -52,19 +51,6 @@ export function CardSeeModal({ open, onClose, user, onEditClick, onDeleteClick }
   };
 
   const roleConfig = user ? getRoleConfig(user.role || 'editor') : null;
-
-  // ✅ LÓGICA: Verificar si el usuario lleva más de 30 días inactivo
-  const canDeleteUser = useMemo(() => {
-    if (!user || user.isActive) return false; // Si está activo, no se puede eliminar
-    
-    const fechaReferencia = new Date(user.updatedAt || Date.now());
-    const hoy = new Date();
-    
-    const diferenciaMs = Math.abs(hoy.getTime() - fechaReferencia.getTime());
-    const diferenciaDias = Math.ceil(diferenciaMs / (1000 * 60 * 60 * 24));
-    
-    return diferenciaDias > 30;
-  }, [user]);
 
   return (
     <AnimatePresence>
@@ -101,6 +87,7 @@ export function CardSeeModal({ open, onClose, user, onEditClick, onDeleteClick }
                 </Box>
                 
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  {/* Botón Editar (Solo si hay función y el usuario está activo, opcional) */}
                   {onEditClick && (
                     <Tooltip title="Editar Usuario">
                       <IconButton 
@@ -112,6 +99,24 @@ export function CardSeeModal({ open, onClose, user, onEditClick, onDeleteClick }
                       </IconButton>
                     </Tooltip>
                   )}
+
+                  {/* ✅ NUEVO: Botón Eliminar (Solo si el usuario está INACTIVO) */}
+                  {!user.isActive && onDeleteClick && (
+                    <Tooltip title="Eliminar Usuario">
+                      <IconButton 
+                        onClick={onDeleteClick} 
+                        size="small" 
+                        sx={{ 
+                          color: '#ef4444', // Rojo de advertencia
+                          '&:hover': { bgcolor: '#ef44441a' } // Fondo rojo muy suave al pasar el mouse
+                        }}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+
+                  {/* Botón Cerrar */}
                   <IconButton onClick={onClose} size="small" sx={{ color: '#94a3b8', '&:hover': { color: '#0f172a' } }}>
                     <CloseIcon />
                   </IconButton>
@@ -195,39 +200,15 @@ export function CardSeeModal({ open, onClose, user, onEditClick, onDeleteClick }
                   </Typography>
                 </Grid>
               </Grid>
-
-              {/* ✅ SECCIÓN DE ELIMINACIÓN CONDICIONAL (Solo si está inactivo) */}
+              
+              {/* Mensaje informativo sutil en la parte inferior si está inactivo */}
               {!user.isActive && (
-                <Box sx={{ mt: 4, pt: 3, borderTop: '1px solid #f1f5f9' }}>
-                  {canDeleteUser ? (
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                      <Alert severity="warning" sx={{ borderRadius: '8px', fontSize: '0.85rem' }}>
-                        Este usuario lleva <strong>más de 30 días</strong> inactivo en el sistema.
-                      </Alert>
-                      <Button
-                        variant="contained"
-                        color="error"
-                        startIcon={<DeleteIcon />}
-                        onClick={onDeleteClick}
-                        fullWidth
-                        sx={{ 
-                          borderRadius: '8px', 
-                          textTransform: 'none', 
-                          fontWeight: 700,
-                          boxShadow: '0 4px 12px rgba(211, 47, 47, 0.2)',
-                          '&:hover': { boxShadow: '0 6px 16px rgba(211, 47, 47, 0.3)' }
-                        }}
-                      >
-                        Eliminar Usuario Permanentemente
-                      </Button>
-                    </Box>
-                  ) : (
-                    <Alert severity="info" sx={{ borderRadius: '8px', fontSize: '0.85rem', bgcolor: '#f0f9ff', color: '#0369a1', border: '1px solid #bae6fd' }}>
-                      ℹ️ El usuario debe permanecer inactivo por más de 30 días antes de poder ser eliminado del sistema.
-                    </Alert>
-                  )}
+                <Box sx={{ mt: 4, pt: 2, borderTop: '1px dashed #f1f5f9', textAlign: 'center' }}>
+                  <Typography variant="caption" sx={{ color: '#ef4444', fontWeight: 600 }}>
+                    ⚠️ Este usuario se encuentra inactivo y puede ser eliminado del sistema.
+                  </Typography>
                 </Box>
-                )}
+              )}
 
             </Paper>
           </motion.div>
