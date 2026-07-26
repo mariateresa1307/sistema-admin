@@ -67,7 +67,6 @@ export const useTicketForm = ({ sessionOperatorId, causasRaiz = [], solucionesCa
         const causaNombre = getNombreFromId(formForDescription.causaRaiz, causasRaiz);
         const solucionNombre = getNombreFromId(formForDescription.SolucionCaso, solucionesCaso);
         
-        // ✅ NUEVA LÓGICA: Solo mostrar la fecha de cierre si el estatus es CERRADO
         const isClosed = formForDescription.estatus === TICKET_STATUS.CERRADO || formForDescription.estatus === 'CERRADO';
         const fechaCierreTexto = isClosed && formForDescription.horaCierreFalla 
           ? formatToHumanDate(formForDescription.horaCierreFalla) 
@@ -210,8 +209,7 @@ export const useTicketForm = ({ sessionOperatorId, causasRaiz = [], solucionesCa
     setIsEditMode(false);
   }, [sessionOperatorId]);
 
-    const prepareFinalData = useCallback(() => {
-    // ✅ Usar horaCierreFalla del form si existe, si no, generar la actual
+  const prepareFinalData = useCallback(() => {
     const fechaHoraCierreFinal = form.horaCierreFalla || getLocalDateTimeString();
     const cierreFormateado = formatToHumanDate(fechaHoraCierreFinal);
 
@@ -234,7 +232,6 @@ export const useTicketForm = ({ sessionOperatorId, causasRaiz = [], solucionesCa
         lineas[index] = `Fecha y hora de fin de Afectación: ${fechaFin}`;
       }
       if (linea.startsWith('Fecha y hora de cierre ticket:')) {
-        // ✅ Solo muestra la fecha si está cerrado Y existe horaCierreFalla
         if (isClosed && form.horaCierreFalla) {
           lineas[index] = `Fecha y hora de cierre ticket: ${formatToHumanDate(form.horaCierreFalla)}`;
         } else {
@@ -261,7 +258,9 @@ export const useTicketForm = ({ sessionOperatorId, causasRaiz = [], solucionesCa
       descripcion: descripcionFinal,
       cCierreSoporte: diffMin(form.horaInicioAtencion, fechaHoraCierreFinal),
       mttrTotal: diffMin(form.horaInicioFalla, fechaHoraCierreFinal),
-      estatus: isClosed ? 'CERRADO' : form.estatus,
+      
+      // ✅ CAMBIO CLAVE: Si no está cerrado, forzar el estatus a ACTIVO al guardar
+      estatus: isClosed ? TICKET_STATUS.CERRADO : TICKET_STATUS.ACTIVO,
     };
   }, [form, causasRaiz, solucionesCaso, getNombreFromId]);
 

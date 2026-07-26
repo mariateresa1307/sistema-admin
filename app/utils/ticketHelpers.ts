@@ -141,7 +141,6 @@ export const getLocalDateTimeString = (date = new Date()): string => {
 
 export const formatToHumanDate = (dateTimeStr: string): string => {
   if (!dateTimeStr) return '';
-  // Manejar tanto formato ISO como el que ya viene "YYYY-MM-DDTHH:mm"
   const cleanStr = dateTimeStr.includes('T') ? dateTimeStr.replace('T', ' ') : dateTimeStr;
   const [datePart, timePart] = cleanStr.split(' ');
   const [year, month, day] = datePart.split('-');
@@ -207,7 +206,6 @@ const normalizeServiciosAfectados = (
   return value as ServicioAfectado[];
 };
 
-// ✅ FUNCIÓN CORREGIDA: Ahora inyecta la fecha de cierre en la descripción si el ticket está cerrado
 export const mapTicketToFormData = (
   ticket: TicketRecord,
   sessionOperatorId = '',
@@ -216,7 +214,6 @@ export const mapTicketToFormData = (
   const tipoIncidencia = normalizeIncidentType(ticket.incidentType);
   const horaCierre = ticket.horaCierreFalla || ticket.horaCierre;
 
-  // ✅ LÓGICA CLAVE: Asegurar que la descripción tenga la fecha de cierre si el estatus es CERRADO
   let descripcion = ticket.description || '';
   const isClosed = ticket.status === TICKET_STATUS.CERRADO || ticket.status === 'CERRADO';
   
@@ -225,10 +222,8 @@ export const mapTicketToFormData = (
     const fechaCierreFormateada = fechaCierreLocal ? formatToHumanDate(fechaCierreLocal) : formatToHumanDate(horaCierre);
     
     if (!descripcion.includes('Fecha y hora de cierre ticket:')) {
-      // Si la línea no existe, la agregamos al final
       descripcion = (descripcion.trim() ? descripcion.trim() + '\n' : '') + `Fecha y hora de cierre ticket: ${fechaCierreFormateada}`;
     } else {
-      // Si la línea existe pero está vacía o incompleta, la reemplazamos
       const regex = /Fecha y hora de cierre ticket:\s*.*/g;
       descripcion = descripcion.replace(regex, `Fecha y hora de cierre ticket: ${fechaCierreFormateada}`);
     }
@@ -268,7 +263,7 @@ export const mapTicketToFormData = (
     SolucionCaso: ticket.SolucionCaso || '',
     severidad: ticket.severidad || ticket.nivelSeveridad || '',
     imputable: ticket.imputable || '',
-    descripcion: descripcion, // ✅ Usamos la descripción corregida
+    descripcion: descripcion,
     estatus: ticket.status || '',
     turnoAsignado: ticket.turnoAsignado === 'NOCTURNO' ? 'NOCTURNO' : 'DIURNO',
     operador: ticket.operador || '',
@@ -316,6 +311,9 @@ export const mapFormToUpdatePayload = (form: TicketFormData & Record<string, unk
   tEscalado: form.tEscalado as number | undefined,
   cCierreSoporte: form.cCierreSoporte as number | undefined,
   mttrTotal: form.mttrTotal as number | undefined,
+  
+  // ✅ CLAVE: Envía el estatus final (ACTIVO o CERRADO) al backend para actualizar la BD
+  status: form.estatus, 
 });
 
 export const calcularTiempos = (form: TicketFormData) => {
