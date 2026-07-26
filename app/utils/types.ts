@@ -83,3 +83,11 @@ export type NivelSeveridadItem = {
   color: string;
   icon: string;
 };
+
+
+
+export type ReportePreview = {
+  cards?: { title: string; value: string; color: string; subtitle: string }[];
+  mttrPlataforma?: { title: string; value: number }[];
+  mttrServicio?: { title: string; value: number }[];
+};
