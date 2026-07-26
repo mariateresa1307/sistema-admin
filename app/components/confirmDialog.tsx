@@ -1,3 +1,4 @@
+// app/components/confirmDialog.tsx
 'use client';
 import React from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography } from '@mui/material';
@@ -59,7 +60,6 @@ export const ConfirmDialog = ({
         }
       }}
     >
-      {/* ✅ CORRECCIÓN: component="div" evita que MUI renderice un <h2> y anide el <h6> */}
       <DialogTitle component="div" sx={{ 
         display: 'flex',
         alignItems: 'center',
@@ -97,7 +97,9 @@ export const ConfirmDialog = ({
       </DialogContent>
       
       <DialogActions sx={{ p: 2.5, pt: 1, gap: 1.5 }}>
+        {/* ✅ CORRECCIÓN 1: Agregar type="button" */}
         <Button 
+          type="button" 
           onClick={onCancel} 
           variant="outlined"
           sx={{ 
@@ -116,7 +118,10 @@ export const ConfirmDialog = ({
         >
           {cancelText}
         </Button>
+        
+        {/* ✅ CORRECCIÓN 1: Agregar type="button" */}
         <Button 
+          type="button"
           onClick={onConfirm} 
           variant="contained"
           autoFocus

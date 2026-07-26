@@ -149,13 +149,17 @@ export const CardSeeMiscellaneousModal = ({
 
   return (
     <>
-      <ConfirmDialog
-        open={confirmDeleteOpen}
-        onClose={handleCancelDelete}
-        onConfirm={handleConfirmDelete}
-        title="Confirmar Eliminación"
-        description={`¿Estás seguro de eliminar "${item.valor}"? Esta acción no se puede deshacer.`}
-      />
+
+<ConfirmDialog
+  open={confirmDeleteOpen} 
+  title="Eliminar Estado"
+  message="¿Estás seguro de que deseas eliminar este estado? Esta acción no se puede deshacer."
+  type="warning"
+  onConfirm={handleConfirmDelete} 
+  onCancel={() => setConfirmDeleteOpen(false)} 
+  confirmText="Eliminar"
+  cancelText="Cancelar"
+/>
 
       <AnimatePresence>
         {open && item && (

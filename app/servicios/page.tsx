@@ -171,7 +171,11 @@ export default function RBSPage() {
 
       <FullScreenServiceDialog
         isOpen={isDialogOpen}
-        onClose={() => { setIsDialogOpen(false); setSearchParams(null); setPaginationModel({ page: 0, pageSize: 10 });fetchServices(); }}
+        onClose={() => { 
+          setIsDialogOpen(false); 
+          setSearchParams(null);
+          setPaginationModel({ page: 0, pageSize: 10 });
+          fetchServices(); }}
         title={selectedService ? "Editar Servicio" : "Nuevo Servicio"}
         initialData={selectedService}
       />
@@ -181,7 +185,8 @@ export default function RBSPage() {
         onClose={() => setIsDetailOpen(false)}
         service={selectedService ? { ...selectedService, id_circuito: selectedService.id_circuito || "" } as any : null}
         onEditClick={() => { setIsDetailOpen(false); setIsDialogOpen(true); }}
-        onDeleteSuccess={() => { setSearchParams(null); setPaginationModel({ page: 0, pageSize: 10 }); }}
+        onDeleteSuccess={() => { setSearchParams(null); setPaginationModel({ page: 0, pageSize: 10 });
+      fetchServices();  }}
       />
     </>
   );
