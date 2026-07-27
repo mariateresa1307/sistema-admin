@@ -1,7 +1,9 @@
 'use client';
-import { DataGrid, GridColDef, DataGridProps, SxProps } from "@mui/x-data-grid";
-import { useMemo, useState, useEffect, useCallback, useRef, Theme } from "react";
-import { TextField, Box, InputAdornment, MenuItem } from "@mui/material";
+import { DataGrid, GridColDef, DataGridProps } from "@mui/x-data-grid";
+import { useMemo, useState, useEffect, useCallback, useRef } from "react";
+import { SxProps } from "@mui/system";
+import { Theme } from "@mui/material/styles";
+import { TextField, Box, InputAdornment, MenuItem, Typography } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import { TICKET_STATUS } from "app/utils/constants";
 
@@ -18,16 +20,36 @@ interface CustomDataGridProps extends Omit<DataGridProps, 'rows' | 'sx'> {
   pageSizeOptions?: number[];
   rowCount?: number;
   paginationMode?: 'client' | 'server';
-  sx?: SxProps<Theme>; // ✅ Permitir estilos personalizados
+  sx?: SxProps<Theme>;
 }
 
 export default function CustomDataGrid({
-  rows, columns, loading, onSearch, debounceMs = 400,
-  paginationModel, onPaginationModelChange, pageSizeOptions = [10, 25, 50],
-  rowCount, paginationMode = 'server',
-  sx: externalSx = {}, // ✅ Recibir estilos externos
+  rows, 
+  columns: rawColumns = [], // ✅ Valor por defecto
+  loading, 
+  onSearch, 
+  debounceMs = 400,
+  paginationModel, 
+  onPaginationModelChange, 
+  pageSizeOptions = [10, 25, 50],
+  rowCount, 
+  paginationMode = 'server',
+  sx: externalSx = {}, 
   ...restProps
 }: CustomDataGridProps) {
+  
+  // ✅ VALIDACIÓN DEFENSIVA: Asegurar que columns sea un array válido y filtrar elementos nulos/indefinidos
+  const columns = Array.isArray(rawColumns) 
+    ? rawColumns.filter((col): col is GridColDef => Boolean(col) && typeof col === 'object') 
+    : [];
+
+  // Advertencia en consola para ayudarte a identificar el componente padre que falla
+  useEffect(() => {
+    if (!Array.isArray(rawColumns) || rawColumns.length === 0) {
+      console.warn("⚠️ [CustomDataGrid] El prop 'columns' está vacío, es undefined o no es un array. Revisa el componente padre (ej: MiscellaneousTable).");
+    }
+  }, [rawColumns]);
+
   const [isMounted, setIsMounted] = useState(false);
   const [searchField, setSearchField] = useState<string>(
     columns.find(col => col.field === 'name') ? 'name' : (columns[0]?.field || "")
@@ -95,7 +117,15 @@ export default function CustomDataGrid({
   }, [pageSizeOptions, paginationModel?.pageSize]);
 
   const displayRows = isApiSearch ? rows : searchResults;
-  if (!isMounted) return null;
+  
+  // ✅ Si no hay columnas válidas, no renderizamos el DataGrid para evitar errores
+  if (!isMounted || columns.length === 0) {
+    return (
+      <Box sx={{ p: 4, textAlign: 'center', color: 'text.secondary', border: '1px dashed #cbd5e1', borderRadius: '12px' }}>
+        <Typography>Cargando configuración de la tabla o columnas no disponibles...</Typography>
+      </Box>
+    );
+  }
 
   const renderStatusMenuItems = () => {
     const items = [<MenuItem key="all" value="">Todos</MenuItem>];
@@ -110,11 +140,9 @@ export default function CustomDataGrid({
     return items;
   };
 
-  // ✅ ESTILOS BASE DE LA TABLA (incluyen el azul del encabezado)
   const baseSx: SxProps<Theme> = {
     borderRadius: "12px",
     border: '1px solid #eaedf1',
-    // ✅ ENCABEZADO AZUL OSCURO - IGUAL QUE TICKETS
     "& .MuiDataGrid-columnHeaders": { 
       backgroundColor: "#080769 !important",
       color: "#FFFFFF !important",
@@ -132,7 +160,6 @@ export default function CustomDataGrid({
     "& .MuiDataGrid-row:hover": {
       backgroundColor: "#f5f5f5 !important",
     },
-    // ✅ Combinar con estilos externos (como filas inactivas en rojo)
     ...externalSx,
   };
 
@@ -188,7 +215,7 @@ export default function CustomDataGrid({
         rowCount={rowCount ?? 0}
         paginationMode={paginationMode}
         disableRowSelectionOnClick
-        sx={baseSx} // ✅ Aplicar estilos combinados
+        sx={baseSx}
         {...restProps}
       />
     </Box>

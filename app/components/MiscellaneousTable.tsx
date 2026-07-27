@@ -24,10 +24,11 @@ interface MiscellaneousTableProps {
   onDelete: (item: MiscellaneousItem) => void;
   onOpenLocalidades: (item: MiscellaneousItem) => void;
   onOpenSubcategorias: (item: MiscellaneousItem) => void;
-   paginationModel: { page: number; pageSize: number };
-  onPaginationModelChange: (model: { page: number; pageSize: number }) => void;
-  rowCount: number;
-
+  paginationMode?: "client" | "server";
+  rowCount?: number;
+  paginationModel?: { page: number; pageSize: number };
+  onPaginationModelChange?: (model: { page: number; pageSize: number }) => void;
+  pageSizeOptions?: number[];
 }
 
 export const MiscellaneousTable = ({
@@ -40,9 +41,12 @@ export const MiscellaneousTable = ({
   onDelete,
   onOpenLocalidades,
   onOpenSubcategorias,
-  paginationModel,         
-  onPaginationModelChange, 
-  rowCount,           
+
+  paginationMode = "server",
+  rowCount,
+  paginationModel,
+  onPaginationModelChange,
+  pageSizeOptions = [10, 25, 50],
 }: MiscellaneousTableProps) => {
   const getLocalidadesByCiudad = (ciudadId: string) => {
     if (!ciudadId) return [];
@@ -462,71 +466,68 @@ export const MiscellaneousTable = ({
           />
         ),
       });
-    } 
-    
-  else if (currentCategoria === "SOLUCION_CASO") {
-  baseColumns.push({
-    field: "causaRaizAsociada",  // ✅ CAMBIAR: de "padreNombre" a "causaRaizAsociada"
-    headerName: "Detalles",
-    flex: 1.5,
-    minWidth: 250,
-    renderCell: (params) => {
-      const causaRaizObj = params.row.causaRaizAsociada;  // ✅ CAMBIAR: acceder al objeto completo
-      const causaRaizValor = causaRaizObj?.valor;  // ✅ Extraer el valor
+    } else if (currentCategoria === "SOLUCION_CASO") {
+      baseColumns.push({
+        field: "causaRaizAsociada", // ✅ CAMBIAR: de "padreNombre" a "causaRaizAsociada"
+        headerName: "Detalles",
+        flex: 1.5,
+        minWidth: 250,
+        renderCell: (params) => {
+          const causaRaizObj = params.row.causaRaizAsociada; // ✅ CAMBIAR: acceder al objeto completo
+          const causaRaizValor = causaRaizObj?.valor; // ✅ Extraer el valor
 
-      if (!causaRaizValor) {
-        return (
-          <Typography
-            variant="caption"
-            color="text.secondary"
-            sx={{ fontStyle: "italic" }}
-          >
-            Sin causa raíz asociada
-          </Typography>
-        );
-      }
+          if (!causaRaizValor) {
+            return (
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ fontStyle: "italic" }}
+              >
+                Sin causa raíz asociada
+              </Typography>
+            );
+          }
 
-      return (
-        <Box sx={{ display: "flex", alignItems: "center", gap: 0.8 }}>
-          <ReportProblemIcon sx={{ fontSize: 18, color: "#c62828" }} />
+          return (
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.8 }}>
+              <ReportProblemIcon sx={{ fontSize: 18, color: "#c62828" }} />
+              <Chip
+                label={causaRaizValor} // ✅ Usar el valor extraído
+                size="small"
+                sx={{
+                  bgcolor: "#ffebee",
+                  color: "#c62828",
+                  fontWeight: 600,
+                  borderRadius: "6px",
+                  fontSize: "0.75rem",
+                }}
+              />
+            </Box>
+          );
+        },
+      });
+
+      baseColumns.push({
+        field: "activo",
+        headerName: "Estado",
+        width: 120,
+        align: "center",
+        headerAlign: "center",
+        renderCell: (params) => (
           <Chip
-            label={causaRaizValor}  // ✅ Usar el valor extraído
+            label={params.value !== false ? "Activo" : "Inactivo"}
             size="small"
             sx={{
-              bgcolor: "#ffebee",
-              color: "#c62828",
-              fontWeight: 600,
-              borderRadius: "6px",
-              fontSize: "0.75rem",
+              bgcolor: params.value !== false ? "#e8f5e9" : "#ffebee",
+              color: params.value !== false ? "#2e7d32" : "#c62828",
+              fontWeight: "bold",
             }}
           />
-        </Box>
-      );
-    },
-  });
-
-  baseColumns.push({
-    field: "activo",
-    headerName: "Estado",
-    width: 120,
-    align: "center",
-    headerAlign: "center",
-    renderCell: (params) => (
-      <Chip
-        label={params.value !== false ? "Activo" : "Inactivo"}
-        size="small"
-        sx={{
-          bgcolor: params.value !== false ? "#e8f5e9" : "#ffebee",
-          color: params.value !== false ? "#2e7d32" : "#c62828",
-          fontWeight: "bold",
-        }}
-      />
-    ),
-  });
-}
-    else if (currentCategoria === "TIPO_CLIENTE") {
+        ),
+      });
+    } else if (currentCategoria === "TIPO_CLIENTE") {
       baseColumns.push({
-        field: "nivelSeveridad", 
+        field: "nivelSeveridad",
         headerName: "Nivel de Severidad",
         flex: 1.2,
         minWidth: 200,
@@ -651,11 +652,11 @@ export const MiscellaneousTable = ({
         loading={loading}
         onCellClick={onCellClick}
         getRowId={(row) => row._id || row.id || Math.random().toString()}
-        paginationMode="server"
+        paginationMode={paginationMode}
+        rowCount={rowCount}
         paginationModel={paginationModel}
         onPaginationModelChange={onPaginationModelChange}
-        rowCount={rowCount}
-        pageSizeOptions={[10,  50, 100]}
+        pageSizeOptions={pageSizeOptions}
       />
     </Box>
   );

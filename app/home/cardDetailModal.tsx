@@ -9,6 +9,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import PersonIcon from '@mui/icons-material/Person';
+import ReportProblemIcon from '@mui/icons-material/ReportProblem'; // ✅ AGREGADO: Ícono para Causa Raíz
 import { getNivelSeveridadConfig } from "app/utils/auxiliares";
 import { getUsers } from "@/lib/api";
 import { TicketRecord } from "app/utils/ticketHelpers";
@@ -136,8 +137,17 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
       });
   }, [open]);
 
-  // ✅ AHORA SÍ el return condicional (después de todos los hooks)
   if (!ticket) return null;
+
+  console.log('🎫 [TicketDetailModal] Ticket completo:', {
+    id: ticket._id,
+    status: ticket.status,
+    causaRaiz: ticket.causaRaiz,
+    causaRaizValor: typeof ticket.causaRaiz === 'object' && ticket.causaRaiz !== null && 'valor' in ticket.causaRaiz
+      ? (ticket.causaRaiz as any).valor
+      : ticket.causaRaiz,
+    todosLosCampos: Object.keys(ticket)
+  });
 
   const theme = getTheme(ticket.status || '');
   const severidadValue = getSeveridadValue(ticket);
@@ -170,7 +180,6 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
   return (
     <AnimatePresence>
       {open && (
-        console.log('Renderizando TicketDetailModal con ticket:', ticket),
         <Modal open={open} onClose={onClose} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2 }}>
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -357,6 +366,32 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
                     </Box>
                   </Grid>
 
+                  {/* ✅ NUEVO: Bloque de Causa Raíz (A prueba de fallos para cualquier estado del ticket) */}
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <ReportProblemIcon sx={{ fontSize: 14 }} />
+                      Causa Raíz
+                    </Typography>
+                    <Box sx={{ mt: 0.5 }}>
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          fontWeight: 600, 
+                          color: ticket.causaRaiz ? '#c62828' : '#94a3b8',
+                          bgcolor: ticket.causaRaiz ? '#ffebee' : 'transparent',
+                          px: ticket.causaRaiz ? 1.5 : 0,
+                          py: ticket.causaRaiz ? 0.5 : 0,
+                          borderRadius: '6px',
+                          display: 'inline-block'
+                        }}
+                      >
+                        {typeof ticket.causaRaiz === 'object' && ticket.causaRaiz !== null && 'valor' in ticket.causaRaiz 
+                          ? (ticket.causaRaiz as any).valor 
+                          : (ticket.causaRaiz || 'Sin especificar')}
+                      </Typography>
+                    </Box>
+                  </Grid>
+
                   <Grid size={{ xs: 12, sm: 6 }}>
                     <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>
                       Hora de Inicio de Falla
@@ -417,9 +452,6 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
                     </Box>
                   </Grid>
 
-                
-              
-                
                   {ticket.operatorResponsable && (
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <Box sx={{ bgcolor: '#f8fafc', p: 2.5, borderRadius: '12px', border: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -436,8 +468,7 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
                     </Grid>
                   )}
 
-
-                      <Grid size={{ xs: 12, sm: 6 }}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <Box sx={{ bgcolor: '#f8fafc', p: 2.5, borderRadius: '12px', border: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 2 }}>
                       <PersonIcon sx={{ color: '#4f46e5', fontSize: '2rem', bgcolor: '#ffffff', p: 0.8, borderRadius: '50%', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }} />
                       <Box>

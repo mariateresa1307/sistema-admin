@@ -61,6 +61,37 @@ export default function TicketModal({ open, onClose, onSave, ticketToEdit }: Tic
     solucionesCaso: ticketData.solucionesCaso || [] 
   });
 
+  // ✅ EFECTO DEFINITIVO: Carga de servicios con lógica explícita para Residencial
+  useEffect(() => {
+    if (!open) return;
+    
+    const tipoCliente = ticketForm.form.tipoCliente;
+    const selectedTipoCliente = ticketData.tipoCliente.find(tc => tc._id === tipoCliente);
+    
+    // Normalizamos a mayúsculas para comparar sin importar cómo esté en la BD
+    const valorTipoCliente = selectedTipoCliente?.valor?.toUpperCase() || '';
+
+    console.log('🔍 [DIAGNÓSTICO SERVICIOS]', {
+      tipoClienteId: tipoCliente,
+      nombreTipoCliente: valorTipoCliente,
+      esResidencial: valorTipoCliente === 'RESIDENCIAL'
+    });
+
+    // Si es Residencial, NO consultamos la BD (se usan campos manuales)
+    if (valorTipoCliente === 'RESIDENCIAL') {
+      console.log('🏠 [TicketModal] Tipo Residencial detectado. Limpiando servicios.');
+      ticketData.clearServiciosAfectados();
+      return; 
+    }
+
+    // Para Carrier, Corporativo y Banca, sí consultamos la BD
+    if (tipoCliente) {
+      console.log('🚀 [TicketModal] Solicitando servicios a la BD para tipoCliente ID:', tipoCliente);
+      ticketData.loadServiciosAfectados(tipoCliente);
+    } else {
+      ticketData.clearServiciosAfectados();
+    }
+  }, [ticketForm.form.tipoCliente, open, ticketData.tipoCliente, ticketData.loadServiciosAfectados]);
 
   useEffect(() => {
     if (open && !isEditTicket(ticketToEdit)) 
@@ -74,8 +105,7 @@ export default function TicketModal({ open, onClose, onSave, ticketToEdit }: Tic
       'Causa: ',
       'Solución: ',
     ].join('\n');
-        ticketForm.updateField('descripcion', descripcionInicial);
-
+    ticketForm.updateField('descripcion', descripcionInicial);
 
   }, [open, ticketToEdit?._id]);
 
@@ -91,13 +121,11 @@ export default function TicketModal({ open, onClose, onSave, ticketToEdit }: Tic
         await ticketData.loadCategoriasRed(tipoIncidencia);
         if (tipoIncidencia !== TIPO_INCIDENCIA.FALLA_MASIVA) {
           await ticketData.loadTipoCliente();
-          if (formData.tipoCliente) await ticketData.loadServiciosAfectados(formData.tipoCliente);
         }
       }
       if (categoria) await ticketData.loadSubcategorias(categoria);
       if (subcategoria) await ticketData.loadDetalle(subcategoria);
       if (ciudad) await ticketData.loadLocalidades(ciudad);
-      if (tipoCliente) await ticketData.loadServiciosAfectados(tipoCliente);
       
       if (causaRaiz) {
         await ticketData.loadCausasRaiz();
@@ -105,11 +133,6 @@ export default function TicketModal({ open, onClose, onSave, ticketToEdit }: Tic
       } else {
         await ticketData.loadCausasRaiz();
       }
-      
-      // ✅ DIAGNÓSTICO: Verificar escaladoA (Grupo Destino)
-      console.log('🔍 [Modal] Valor de escaladoA en BD:', ticketToEdit.escaladoA);
-      console.log('🔍 [Modal] Valor de escaladoA en formData:', formData.escaladoA);
-      console.log('🔍 [Modal] Opciones de grupoDestino cargadas:', ticketData.grupoDestino);
       
       await ticketData.loadGrupoDestino();
     };
@@ -125,11 +148,6 @@ export default function TicketModal({ open, onClose, onSave, ticketToEdit }: Tic
     if (ticketForm.form.ciudad) ticketData.loadLocalidades(ticketForm.form.ciudad);
     else ticketData.clearLocalidades();
   }, [ticketForm.form.ciudad]);
-
-  useEffect(() => {
-    if (ticketForm.form.tipoCliente) ticketData.loadServiciosAfectados(ticketForm.form.tipoCliente);
-    else ticketData.clearServiciosAfectados();
-  }, [ticketForm.form.tipoCliente]);
 
   useEffect(() => {
     if (ticketForm.form.causaRaiz) ticketData.loadSolucionesCaso(ticketForm.form.causaRaiz);
@@ -173,7 +191,10 @@ export default function TicketModal({ open, onClose, onSave, ticketToEdit }: Tic
 
   const handleTipoIncidenciaChange = useCallback(async (tipoIncidencia: string) => {
     ticketForm.handleTipoIncidenciaChange(tipoIncidencia);
-    ticketData.clearSubcategorias(); ticketData.clearDetalle(); ticketData.clearLocalidades(); ticketData.clearServiciosAfectados();
+    ticketData.clearSubcategorias(); 
+    ticketData.clearDetalle(); 
+    ticketData.clearLocalidades(); 
+    ticketData.clearServiciosAfectados();
     if (tipoIncidencia !== TIPO_INCIDENCIA.FALLA_MASIVA) await ticketData.loadTipoCliente();
     else ticketData.clearTipoCliente();
     await ticketData.loadCategoriasRed(tipoIncidencia);
@@ -183,7 +204,8 @@ export default function TicketModal({ open, onClose, onSave, ticketToEdit }: Tic
     const categoria = ticketData.categoriaRed.find((c) => c._id === categoriaId);
     if (!categoria) return;
     ticketForm.handleCategoriaChange(categoria, ticketForm.form.numeroTicket);
-    ticketData.clearSubcategorias(); ticketData.clearDetalle();
+    ticketData.clearSubcategorias(); 
+    ticketData.clearDetalle();
     await ticketData.loadSubcategorias(categoriaId);
   }, [ticketForm, ticketData]);
 
@@ -194,9 +216,8 @@ export default function TicketModal({ open, onClose, onSave, ticketToEdit }: Tic
 
   const handleTipoClienteChange = useCallback(async (tipoClienteId: string) => {
     ticketForm.handleTipoClienteChange(tipoClienteId, ticketData.tipoCliente);
-    ticketData.clearServiciosAfectados();
-    await ticketData.loadServiciosAfectados(tipoClienteId);
-  }, [ticketForm, ticketData]);
+    // El useEffect principal se encarga de cargar los servicios
+  }, [ticketForm, ticketData.tipoCliente]);
 
   const handleCiudadChange = useCallback((ciudadValue: string) => {
     const selected = ticketData.ciudadesOptions.find((c: any) => c.valor === ciudadValue || c._id === ciudadValue);
@@ -273,65 +294,69 @@ export default function TicketModal({ open, onClose, onSave, ticketToEdit }: Tic
     }
   }, []);
 
-  // ✅ LOGS DE DIAGNÓSTICO ACTUALIZADOS
-  useEffect(() => {
-    console.log('🔍 [DIAGNÓSTICO] Form completo:', {
-      requiereEscalamiento: ticketForm.form.requiereEscalamiento,
-      escaladoA: ticketForm.form.escaladoA, // ✅ Campo correcto
-      estatus: ticketForm.form.estatus,
-   
-    });
-    
-    console.log('🔍 [DIAGNÓSTICO] Grupo destino data (opciones):', {
-      totalOpciones: ticketData.grupoDestino?.length || 0,
-      opciones: ticketData.grupoDestino,
-    });
-  }, [ticketForm.form.requiereEscalamiento, ticketForm.form.escaladoA, ticketData.grupoDestino]);
-
   return (
     <>
       <Modal open={open} onClose={handleClose}>
         <Box sx={modalStyle}>
           <TicketHeader 
-          severidad={ticketForm.form.severidad}
-          isEditMode={ticketForm.isEditMode} 
-          onClose={handleClose}
-           numeroTicket={ticketForm.form.numeroTicket} />
+            severidad={ticketForm.form.severidad}
+            isEditMode={ticketForm.isEditMode} 
+            onClose={handleClose}
+            numeroTicket={ticketForm.form.numeroTicket} 
+          />
            
           <FormStepper activeStep={ticketForm.activeStep} steps={PASOS} />
           <Divider sx={{ mb: 3 }} />
 
           {ticketForm.activeStep === 0 ? (
             <TicketStep1
-              form={ticketForm.form} data={ticketData} operatorDisplayName=""
-              onFieldChange={ticketForm.updateField} onTipoIncidenciaChange={handleTipoIncidenciaChange}
-              onCategoriaChange={handleCategoriaChange} onSubcategoriaChange={handleSubcategoriaChange}
-              onTipoClienteChange={handleTipoClienteChange} onCiudadChange={handleCiudadChange}
+              form={ticketForm.form} 
+              data={ticketData} 
+              operatorDisplayName=""
+              onFieldChange={ticketForm.updateField} 
+              onTipoIncidenciaChange={handleTipoIncidenciaChange}
+              onCategoriaChange={handleCategoriaChange} 
+              onSubcategoriaChange={handleSubcategoriaChange}
+              onTipoClienteChange={handleTipoClienteChange} 
+              onCiudadChange={handleCiudadChange}
               onServiciosAfectadosChange={ticketForm.handleServiciosAfectadosChange}
             />
           ) : (
             <TicketStep2
-              form={ticketForm.form} tiempos={ticketForm.tiemposCalculados} operadores={ticketData.operadores}
-              causasRaiz={ticketData.causasRaiz} solucionesCaso={ticketData.solucionesCaso}
+              form={ticketForm.form} 
+              tiempos={ticketForm.tiemposCalculados} 
+              operadores={ticketData.operadores}
+              causasRaiz={ticketData.causasRaiz} 
+              solucionesCaso={ticketData.solucionesCaso}
               grupoDestino={ticketData.grupoDestino || []}
-              onFieldChange={ticketForm.updateField} onCausaRaizChange={ticketForm.handleCausaRaizChange}
+              onFieldChange={ticketForm.updateField} 
+              onCausaRaizChange={ticketForm.handleCausaRaizChange}
             />
           )}
 
           <TicketActions
-            activeStep={ticketForm.activeStep} totalSteps={PASOS.length} isStep0Complete={ticketForm.isStep0Complete}
-            onBack={handleBack} onNext={handleNext} onClose={handleClose} onSave={handleFullSave}
-            onCloseTicket={requestCloseTicket} onReopenTicket={requestReopenTicket}
+            activeStep={ticketForm.activeStep} 
+            totalSteps={PASOS.length} 
+            isStep0Complete={ticketForm.isStep0Complete}
+            onBack={handleBack} 
+            onNext={handleNext} 
+            onClose={handleClose} 
+            onSave={handleFullSave}
+            onCloseTicket={requestCloseTicket} 
+            onReopenTicket={requestReopenTicket}
             isEditMode={ticketForm.isEditMode}
-            ticketStatus={ticketForm.form.estatus } // ✅ CORREGIDO: estatus || status
+            ticketStatus={ticketForm.form.estatus}
             isAdmin={isAdmin}
           />
         </Box>
       </Modal>
 
       <ConfirmDialog
-        open={confirmDialog.open} title={confirmDialog.title} message={confirmDialog.message}
-        type={confirmDialog.type} onConfirm={confirmDialog.onConfirm}
+        open={confirmDialog.open} 
+        title={confirmDialog.title} 
+        message={confirmDialog.message}
+        type={confirmDialog.type} 
+        onConfirm={confirmDialog.onConfirm}
         onCancel={() => setConfirmDialog(prev => ({ ...prev, open: false }))}
         confirmText={confirmDialog.type === 'warning' ? 'Sí, cerrar' : 'Sí, reabrir'}
         cancelText="Cancelar"

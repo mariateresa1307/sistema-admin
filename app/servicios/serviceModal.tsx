@@ -2,9 +2,8 @@
 "use client";
 import * as React from "react";
 import {
-  Dialog, DialogTitle, DialogContent, DialogActions, IconButton, Typography, Button,
-  TextField, MenuItem, Box, Divider, Avatar, Collapse, Snackbar, Alert, CircularProgress,
-  Switch, FormControlLabel, Backdrop
+  Dialog, DialogTitle, DialogContent, IconButton, Typography, Button,
+  TextField, MenuItem, Box, Divider, Avatar, Collapse, Snackbar, Alert, CircularProgress
 } from "@mui/material";
 import Grid from "@mui/material/Grid";
 import { 
@@ -13,93 +12,165 @@ import {
   PhotoCamera, 
   Schema as DiagramIcon, 
   AddPhotoAlternate as AddIcon,
-  ZoomIn as ZoomInIcon // ✅ Nuevo icono para indicar que se puede ampliar
+  ZoomIn as ZoomInIcon
 } from "@mui/icons-material";
 import { ConfiguracionInterface } from "app/utils/types";
 import { createService, updateService, getMiscellaneous } from "@/lib/api";
 
-const CIUDADES_VENEZUELA = ["Caracas", "Maracaibo", "Valencia", "Guarenas / Guatire", "Barquisimeto", "Maracay", "San Cristóbal", "Mérida", "Puerto la cruz"].sort();
 const TIPOS_SERVICIO = ["DOG", "Redes Compartidas", "METROLAN", "RBS", "IU"];
-const TIPO_CLIENTE_FULL = ["TELEFONICA", "GALANET", "DIGITEL", "MOVILNET", "INTER", "EWINET", "VNET"];
-const PROVEEDOR_IU = ["INTER", "DIGITEL", "VNET"];
-const TIPOS_CLIENTE_METROLAN = ["CARRIER", "BANCA", "CORPO"];
-const PROVEEDORES_UM = ["Inter", "Digitel", "Vnet", "Movistar", "Otro"];
 
-export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servicio", initialData }: any) => {
+export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servicio", initialData, onSuccess }: any) => {
   const [tipoServicio, setTipoServicio] = React.useState("RBS");
-  const [proveedorCompartido, setProveedorCompartido] = React.useState("");
+  const [proveedorOUM, setProveedorOUM] = React.useState("");
   const [imagePreview, setImagePreview] = React.useState<string | null>(null);
   const [showImageSection, setShowImageSection] = React.useState(false);
-  
-  // ✅ NUEVO: Estado para controlar el modal de vista completa de la imagen
   const [isImageModalOpen, setIsImageModalOpen] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
+
+  // Listas desde Miscellaneous
+  const [ciudades, setCiudades] = React.useState<ConfiguracionInterface[]>([]);
+  const [tipoClienteList, setTipoClienteList] = React.useState<ConfiguracionInterface[]>([]);
+  const [proveedoresList, setProveedoresList] = React.useState<ConfiguracionInterface[]>([]);
+  const [ultimaMillaList, setUltimaMillaList] = React.useState<ConfiguracionInterface[]>([]);
   
-  const [tipoCliente, setTipoCliente] = React.useState<Array<ConfiguracionInterface>>([]);
+  const [loadingMisc, setLoadingMisc] = React.useState(true);
+
+  // Selecciones
+  const [ciudadSeleccionada, setCiudadSeleccionada] = React.useState<string>("");
   const [tipoClienteSeleccionado, setTipoClienteSeleccionado] = React.useState<string>('');
-  const [hasUltimaMilla, setHasUltimaMilla] = React.useState(false);
-  const [proveedorUM, setProveedorUM] = React.useState("");
-  const [notification, setNotification] = React.useState({ open: false, message: '', severity: 'success' as any });
-  const [loadingTiposCliente, setLoadingTiposCliente] = React.useState(false);
+  const [notification, setNotification] = React.useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
   const [vlanValue, setVlanValue] = React.useState<string>("");
 
   const triggerNotification = (message: string, severity: 'success' | 'error') => {
     setNotification({ open: true, message, severity });
   };
 
+  // 🔄 Carga de Miscellaneous desde Backend
   React.useEffect(() => {
     if (!isOpen) return;
     let isMounted = true;
 
-    const cargarTiposCliente = async () => {
-      setLoadingTiposCliente(true);
+    const cargarMiscellaneous = async () => {
+      setLoadingMisc(true);
       try {
-        const config = await getMiscellaneous({ categoria: 'TIPO_CLIENTE' });
-        if (isMounted) setTipoCliente(config.data || []);
+        const [resCiudades, resTiposCliente, resProveedores, resUltimaMilla] = await Promise.all([
+          getMiscellaneous({ categoria: 'CIUDAD' }),
+          getMiscellaneous({ categoria: 'TIPO_CLIENTE' }),
+          getMiscellaneous({ categoria: 'PROVEEDOR' }),
+          getMiscellaneous({ categoria: 'ULTIMA_MILLA' }),
+        ]);
+
+        if (isMounted) {
+          setCiudades(resCiudades?.data || []);
+          setTipoClienteList(resTiposCliente?.data || []);
+          setProveedoresList(resProveedores?.data || []);
+          setUltimaMillaList(resUltimaMilla?.data || []);
+        }
       } catch (error) {
-        console.error("❌ [Modal] Error cargando tipos de cliente:", error);
+        console.error("❌ [Modal] Error cargando los datos miscellaneous:", error);
       } finally {
-        if (isMounted) setLoadingTiposCliente(false);
+        if (isMounted) setLoadingMisc(false);
       }
     };
 
-    cargarTiposCliente();
+    cargarMiscellaneous();
     return () => { isMounted = false; };
   }, [isOpen]);
 
+  // ✏️ Carga y sincronización de datos iniciales con dependencias estables
   React.useEffect(() => {
-    if (!isOpen) return;
-    setTipoServicio(initialData?.tipoServicio || "RBS");
-    setProveedorCompartido(initialData?.proveedorDelServicioCompartido || "");
-    setHasUltimaMilla(!!initialData?.ultimaMilla);
-    setProveedorUM(initialData?.proveedorUM || "");
-    setImagePreview(initialData?.diagramaRed || null);
-    setShowImageSection(!!initialData?.diagramaRed);
-    setVlanValue(initialData?.vlan !== undefined && initialData?.vlan !== null ? String(initialData.vlan) : "");
-
-    if (initialData?.tipoCliente) {
-      const tipoClienteId = typeof initialData.tipoCliente === 'object' && initialData.tipoCliente._id 
-        ? initialData.tipoCliente._id 
-        : String(initialData.tipoCliente);
-      setTipoClienteSeleccionado(tipoClienteId);
-    } else {
-      setTipoClienteSeleccionado('');
+    if (!isOpen) {
+      setTipoServicio("RBS");
+      setProveedorOUM("");
+      setCiudadSeleccionada("");
+      setTipoClienteSeleccionado("");
+      setImagePreview(null);
+      setShowImageSection(false);
+      setVlanValue("");
+      return;
     }
-  }, [isOpen, initialData]);
+
+    if (loadingMisc) return;
+
+    if (!initialData || !initialData._id) {
+      setTipoServicio("RBS");
+      setProveedorOUM("");
+      setCiudadSeleccionada("");
+      setTipoClienteSeleccionado("");
+      setImagePreview(null);
+      setShowImageSection(false);
+      setVlanValue("");
+      return;
+    }
+
+    const currentTipo = initialData?.tipoServicio || "RBS";
+    setTipoServicio(currentTipo);
+    
+    // ✅ MEJORA: Búsqueda robusta de la ciudad (maneja si viene como ID o como Nombre)
+    let cityVal = "";
+    if (typeof initialData.city === 'object' && initialData.city?.valor) {
+      cityVal = initialData.city.valor;
+    } else if (typeof initialData.city === 'string') {
+      const foundCity = ciudades.find(c => String(c._id) === initialData.city || c.valor === initialData.city);
+      cityVal = foundCity ? foundCity.valor : initialData.city;
+    }
+    setCiudadSeleccionada(cityVal || "");
+
+    const tcId = typeof initialData.tipoCliente === 'object' ? initialData.tipoCliente?._id : initialData.tipoCliente;
+    setTipoClienteSeleccionado(tcId ? String(tcId) : "");
+
+    // ✅ LÓGICA ROBUSTA PARA RECUPERAR EL VALOR GUARDADO DE PROVEEDOR/ULTIMA MILLA
+    if (currentTipo === "METROLAN") {
+      const rawValue = initialData?.proveedorUM || initialData?.ultimaMilla;
+      if (rawValue) {
+        if (typeof rawValue === 'object' && rawValue.valor) {
+          setProveedorOUM(String(rawValue.valor));
+        } else {
+          const searchId = String(rawValue);
+          const foundItem = ultimaMillaList.find(item => String(item._id) === searchId);
+          if (foundItem) {
+            setProveedorOUM(String(foundItem.valor));
+          } else {
+            const foundByValue = ultimaMillaList.find(item => String(item.valor) === searchId);
+            setProveedorOUM(foundByValue ? String(foundByValue.valor) : searchId);
+          }
+        }
+      } else {
+        setProveedorOUM("");
+      }
+    } else {
+      const rawValue = initialData?.proveedorDelServicioCompartido;
+      if (rawValue) {
+        if (typeof rawValue === 'object' && rawValue.valor) {
+          setProveedorOUM(String(rawValue.valor));
+        } else {
+          const searchId = String(rawValue);
+          const foundItem = proveedoresList.find(item => String(item._id) === searchId);
+          if (foundItem) {
+            setProveedorOUM(String(foundItem.valor));
+          } else {
+            const foundByValue = proveedoresList.find(item => String(item.valor) === searchId);
+            setProveedorOUM(foundByValue ? String(foundByValue.valor) : searchId);
+          }
+        }
+      } else {
+        setProveedorOUM("");
+      }
+    }
+
+    setImagePreview(initialData?.diagramaRed || null);
+    setShowImageSection(Boolean(initialData?.diagramaRed));
+    setVlanValue(initialData?.vlan ? String(initialData.vlan) : "");
+    
+  }, [isOpen, loadingMisc, initialData, ciudades, ultimaMillaList, proveedoresList]);
 
   const formRef = React.useRef<HTMLFormElement>(null);
   const labelStyle = { fontWeight: 700, fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', mb: 0.5 };
   const isEditMode = Boolean(initialData?._id);
 
-  const opcionesCliente = React.useMemo(() => {
-    if (tipoServicio === "METROLAN") return TIPOS_CLIENTE_METROLAN;
-    if (tipoServicio === "IU") return PROVEEDOR_IU;
-    return TIPO_CLIENTE_FULL;
-  }, [tipoServicio]);
-
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // Validación de tamaño (máximo 5MB)
       if (file.size > 5 * 1024 * 1024) {
         triggerNotification("La imagen no debe superar los 5MB", "error");
         return;
@@ -116,7 +187,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
   };
 
   const handleSave = async () => {
-    if (!formRef.current) return;
+    if (!formRef.current || saving) return;
     
     const formData = new FormData(formRef.current);
     const data = Object.fromEntries(formData.entries()) as any;
@@ -133,50 +204,83 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
       return isNaN(parsed) ? null : parsed;
     };
 
-    const payload = {
+    let parsedVlan: string | null = null;
+    if (vlanValue && vlanValue.trim() !== "") {
+      parsedVlan = vlanValue.trim();
+    }
+
+    const isMetrolan = tipoServicio === "METROLAN";
+    
+    // ✅ Busca el ID correspondiente al valor seleccionado para enviarlo al backend
+    let idToSend: string | null = null;
+    if (proveedorOUM && proveedorOUM.trim() !== "") {
+      const listToSearch = isMetrolan ? ultimaMillaList : proveedoresList;
+      const foundItem = listToSearch.find(item => 
+        String(item.valor) === proveedorOUM || String(item._id) === proveedorOUM
+      );
+      idToSend = foundItem ? String(foundItem._id) : null;
+    }
+
+    const rawPayload = {
       tipoServicio,
-      name: data.name || "",
-      city: data.city || "",
-      tipoCliente: tipoClienteSeleccionado || "",
-      proveedorDelServicioCompartido: proveedorCompartido || data.proveedorDelServicioCompartido || "",
-      diagramaRed: imagePreview || "",
-      ipNetuno: data.ipNetuno || null,
-      id_circuito: data.id_circuito || null,
-      id_netuno: data.id_netuno || null,
-      idRBS: data.idRBS || null,
-      idDOG: data.idDOG || null,
-      nodoA: data.nodoA || null,
-      nodoB: data.nodoB || null,
-      nodoOLT: data.oltnode || null,
-      vlan: vlanValue.trim() === "" ? null : vlanValue,
+      name: data.name || undefined,
+      city: ciudadSeleccionada || undefined,
+      tipoCliente: tipoClienteSeleccionado || undefined,
+      
+      ...(isMetrolan 
+        ? { proveedorUM: idToSend || undefined } 
+        : { proveedorDelServicioCompartido: idToSend || undefined }
+      ),
+
+      diagramaRed: imagePreview || undefined,
+      ipNetuno: data.ipNetuno || undefined,
+      id_circuito: data.id_circuito || undefined,
+      id_netuno: data.id_netuno || undefined,
+      idRBS: data.idRBS || undefined,
+      idDOG: data.idDOG || undefined,
+      nodoA: data.nodoA || undefined,
+      nodoB: data.nodoB || undefined,
+      nodoOLT: data.oltnode || undefined,
+      vlan: parsedVlan || undefined,
       contrato: parseNumberOrNull(data.contrato),
-      serialONT: data.serialONT || null,
-      ultimaMilla: hasUltimaMilla,
-      proveedorUM: hasUltimaMilla ? (data.proveedorUM || proveedorUM || null) : null,
-      proveedor: data.proveedor || null,
-      status: "Activo"
+      serialONT: data.serialONT || undefined,
+      proveedor: data.proveedor || undefined,
+      status: initialData?.status || "Activo"
     };
 
+    // ✅ Limpia el payload eliminando undefined y strings vacíos, pero mantiene null y 0
+    const payload = Object.fromEntries(
+      Object.entries(rawPayload).filter(([_, v]) => v !== undefined && v !== "")
+    );
+
     try {
+      setSaving(true);
       if (isEditMode && serviceId) {
         const response = await updateService(payload, String(serviceId));
         if (response.status === 200 || response.status === 201) {
           triggerNotification("Servicio actualizado correctamente", "success");
-          setTimeout(onClose, 1000);
+          onClose();
+          if (onSuccess) onSuccess();
         }
       } else {
         const response = await createService(payload);
         if (response.status === 201) {
           triggerNotification("Servicio creado correctamente", "success");
-          setTimeout(onClose, 1000);
+          onClose();
+          if (onSuccess) onSuccess();
         }
       }
     } catch (error: any) {
       console.error("❌ [Modal] Error completo:", error);
       const errorMessage = error.response?.data?.message || error.message || "Error al guardar";
-      triggerNotification(errorMessage, "error");
+      triggerNotification(Array.isArray(errorMessage) ? errorMessage.join(', ') : errorMessage, "error");
+    } finally {
+      setSaving(false);
     }
   };
+
+  const isMetrolan = tipoServicio === "METROLAN";
+  const listaOpcionesDinamica = isMetrolan ? ultimaMillaList : proveedoresList;
 
   return (
     <>
@@ -191,7 +295,6 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
         </Alert>
       </Snackbar>
 
-      {/* ✅ MODAL VISOR DE IMAGEN A PANTALLA COMPLETA */}
       <Dialog 
         open={isImageModalOpen} 
         onClose={() => setIsImageModalOpen(false)} 
@@ -248,7 +351,6 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
                 </Box>
                 <Collapse in={showImageSection}>
                   <Box sx={{ mb: 3, px: 1 }}>
-                    {/* ✅ Miniatura clickeable con efecto hover y cursor de zoom */}
                     <Box 
                       onClick={() => imagePreview && setIsImageModalOpen(true)}
                       sx={{ 
@@ -286,48 +388,65 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
                 </Collapse>
               </Grid>
 
-              {/* ... (El resto de los campos del formulario se mantienen exactamente igual que antes) ... */}
               <Grid size={{ xs: 12, md: 6 }}>
                 <Typography sx={labelStyle}>Tipo de Servicio</Typography>
                 <TextField select fullWidth value={tipoServicio} onChange={(e) => {
                   setTipoServicio(e.target.value);
-                  if (e.target.value !== "METROLAN" && e.target.value !== "IU") setProveedorCompartido("");
+                  setProveedorOUM("");
                 }} size="small">
                   {TIPOS_SERVICIO.map((opt) => <MenuItem key={opt} value={opt}>{opt}</MenuItem>)}
                 </TextField>
               </Grid>
+
               <Grid size={{ xs: 12, md: 6 }}>
                 <Typography sx={labelStyle}>{tipoServicio === "IU" ? "Nombre del enlace" : "Nombre del Cliente"}</Typography>
                 <TextField fullWidth name="name" defaultValue={initialData?.name ?? ""} size="small" />
               </Grid>
+
               <Grid size={6}>
                 <Typography sx={labelStyle}>Ciudad</Typography>
-                <TextField select fullWidth name="city" defaultValue={initialData?.city ?? ""} size="small">
-                  {CIUDADES_VENEZUELA.map((c) => <MenuItem key={c} value={c}>{c}</MenuItem>)}
+                <TextField 
+                  select 
+                  fullWidth 
+                  name="city" 
+                  value={ciudadSeleccionada} 
+                  onChange={(e) => setCiudadSeleccionada(e.target.value)} 
+                  size="small"
+                >
+                  <MenuItem value=""><em>Seleccione una ciudad</em></MenuItem>
+                  {ciudades.map((c) => (
+                    <MenuItem key={c._id || c.valor} value={c.valor}>{c.valor}</MenuItem>
+                  ))}
                 </TextField>
               </Grid>
               
               <Grid size={6}>
-                <Typography sx={labelStyle}>Proveedor del servicio compartido</Typography>
-                <TextField select fullWidth name="proveedorDelServicioCompartido" value={proveedorCompartido} onChange={(e) => setProveedorCompartido(e.target.value)} size="small">
+                <Typography sx={labelStyle}>
+                  {isMetrolan ? "Última Milla" : "Proveedor del servicio compartido"}
+                </Typography>
+                <TextField 
+                  select 
+                  fullWidth 
+                  name={isMetrolan ? "proveedorUM" : "proveedorDelServicioCompartido"} 
+                  value={proveedorOUM} 
+                  onChange={(e) => setProveedorOUM(e.target.value)} 
+                  size="small"
+                >
                   <MenuItem value=""><em>Ninguno</em></MenuItem>
-                  {opcionesCliente.map((c) => <MenuItem key={c} value={c}>{c}</MenuItem>)}
+                  {listaOpcionesDinamica.map((item) => (
+                    <MenuItem key={item._id || item.valor} value={item.valor}>{item.valor}</MenuItem>
+                  ))}
                 </TextField>
               </Grid>
               
               <Grid size={6}>
                 <Typography sx={labelStyle}>Tipo de cliente</Typography>
-                {loadingTiposCliente ? (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
-                    <CircularProgress size={20} />
-                    <Typography variant="body2" color="text.secondary">Cargando...</Typography>
-                  </Box>
-                ) : (
-                  <TextField select fullWidth name="tipoCliente" value={tipoClienteSeleccionado} onChange={(e) => setTipoClienteSeleccionado(e.target.value)} size="small">
-                    <MenuItem value=""><em>Ninguno</em></MenuItem>
-                    {tipoCliente.map((c) => <MenuItem key={c._id} value={c._id}>{c.valor}</MenuItem>)}
-                  </TextField>
-                )}
+                <TextField select fullWidth name="tipoCliente" value={tipoClienteSeleccionado} onChange={(e) => setTipoClienteSeleccionado(e.target.value)} size="small">
+                  <MenuItem value=""><em>Ninguno</em></MenuItem>
+                  {tipoClienteList.map((c) => (
+                    <MenuItem key={c._id} value={String(c._id)}>{c.valor}</MenuItem>
+                  ))}
+                </TextField>
               </Grid>
 
               <Grid size={12}><Divider sx={{ my: 1 }} /></Grid>
@@ -339,19 +458,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
                   <Grid size={6}><TextField name="nodoA" label="NODO A" fullWidth defaultValue={initialData?.nodoA ?? ""} size="small" /></Grid>
                   <Grid size={6}><TextField name="nodoB" label="NODO B" fullWidth defaultValue={initialData?.nodoB ?? ""} size="small" /></Grid>
                   <Grid size={6}><TextField name="ipNetuno" label="IP NETUNO" fullWidth defaultValue={initialData?.ipNetuno ?? ""} size="small" /></Grid>
-                  <Grid size={6}>
-                    <TextField name="vlan" label="VLAN" fullWidth value={vlanValue} onChange={handleVlanChange} size="small" inputProps={{ maxLength: 20 }} helperText="Solo números y guiones (ej: 600-609)" />
-                  </Grid>
-                  <Grid size={6} sx={{ display: 'flex', alignItems: 'center' }}>
-                    <FormControlLabel control={<Switch checked={hasUltimaMilla} onChange={(e) => setHasUltimaMilla(e.target.checked)} />} label="¿Tiene última milla?" />
-                  </Grid>
-                  {hasUltimaMilla && (
-                    <Grid size={6}>
-                      <TextField select fullWidth name="proveedorUM" label="Proveedor UM" size="small" value={proveedorUM} onChange={(e) => setProveedorUM(e.target.value)}>
-                        {PROVEEDORES_UM.map((prov) => <MenuItem key={prov} value={prov}>{prov}</MenuItem>)}
-                      </TextField>
-                    </Grid>
-                  )}
+                  <Grid size={6}><TextField name="vlan" label="VLAN" fullWidth value={vlanValue} onChange={handleVlanChange} size="small" inputProps={{ maxLength: 20 }} /></Grid>
                 </>
               )}
 
@@ -401,9 +508,9 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
           </Box>
 
           <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-            <Button onClick={onClose}>Cancelar</Button>
-            <Button variant="contained" onClick={handleSave} sx={{ bgcolor: '#080769', borderRadius: '8px', px: 4 }}>
-              Guardar
+            <Button onClick={onClose} disabled={saving}>Cancelar</Button>
+            <Button variant="contained" onClick={handleSave} sx={{ bgcolor: '#080769', borderRadius: '8px', px: 4 }} disabled={saving}>
+              {saving ? <CircularProgress size={24} color="inherit" /> : "Guardar"}
             </Button>
           </Box>
         </DialogContent>

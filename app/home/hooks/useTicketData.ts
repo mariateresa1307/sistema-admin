@@ -24,7 +24,7 @@ export interface UseTicketDataReturn {
   grupoDestino: ConfiguracionInterface[];
   loading: boolean;
   error: Error | null;
-  
+
   loadInitialData: () => Promise<void>;
   loadCategoriasRed: (tipoIncidencia: string) => Promise<ConfiguracionInterface[]>;
   loadSubcategorias: (categoriaId: string) => Promise<void>;
@@ -32,10 +32,10 @@ export interface UseTicketDataReturn {
   loadTipoCliente: () => Promise<void>;
   loadLocalidades: (ciudad: string) => Promise<void>;
   loadSolucionesCaso: (causaRaizId: string) => Promise<void>;
-  loadServiciosAfectados: (tipoClienteId: string) => Promise<void>;
+  loadServiciosAfectados: (tipoClienteInput: string | ConfiguracionInterface) => Promise<void>;
   loadCausasRaiz: () => Promise<void>;
   loadGrupoDestino: () => Promise<void>;
-  
+
   clearSubcategorias: () => void;
   clearDetalle: () => void;
   clearTipoCliente: () => void;
@@ -67,12 +67,13 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
 
     try {
       console.log('🔄 [useTicketData] Cargando datos iniciales...');
-      
-      const [operadoresRes, ciudadesRes, causasRes, grupoDestinoRes] = await Promise.all([
+
+      const [operadoresRes, ciudadesRes, causasRes, grupoDestinoRes, tipoClienteRes] = await Promise.all([
         getUsers(undefined, { isActive: true }),
         getMiscellaneous({ categoria: 'CIUDAD' }),
         getMiscellaneous({ categoria: CATEGORIA.CAUSA_RAIZ }),
         getMiscellaneous({ categoria: 'GRUPO_DESTINO' }),
+        getMiscellaneous({ categoria: 'TIPO_CLIENTE' }),
       ]);
 
       setOperadores(
@@ -86,7 +87,8 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
       setCiudadesOptions(ciudadesRes.data || []);
       setCausasRaiz(causasRes.data || []);
       setGrupoDestino(grupoDestinoRes.data || []);
-      
+      setTipoCliente(tipoClienteRes.data || []);
+
       console.log('✅ [useTicketData] Datos iniciales cargados');
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Error desconocido');
@@ -106,11 +108,11 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
 
     setLoading(true);
     try {
-      const res = await getMiscellaneous({ 
-        categoria: 'CATEGORIA_RED', 
-        tipoIncidencia 
+      const res = await getMiscellaneous({
+        categoria: 'CATEGORIA_RED',
+        tipoIncidencia,
       });
-      
+
       const data = res.data || [];
       setCategoriaRed(data);
       return data;
@@ -186,17 +188,86 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
     }
   }, []);
 
-  const loadServiciosAfectados = useCallback(async (tipoClienteId: string) => {
-    try {
-      const res = await getService({ tipoCliente: tipoClienteId });
-      setServiciosAfectados(res.data || []);
-    } catch (error) {
-      console.error('Error cargando servicios:', error);
-      setServiciosAfectados([]);
-    }
-  }, []);
+  // 🎯 FIX: Filtra estrictamente por Tipo de Cliente ANTES de consultar
+  const loadServiciosAfectados = useCallback(
+    async (tipoClienteInput: string | ConfiguracionInterface) => {
+      if (!tipoClienteInput) {
+        setServiciosAfectados([]);
+        return;
+      }
 
-  // ✅ Cargar Causas Raíz (útil para recargar o forzar carga)
+      try {
+        let idAEnviar = '';
+        let valorAEnviar = '';
+
+        // Si se recibe directamente el objeto seleccionado
+        if (typeof tipoClienteInput === 'object') {
+          idAEnviar = tipoClienteInput._id;
+          valorAEnviar = tipoClienteInput.valor;
+        } else {
+          // Si se recibe solo el ID/Texto, buscar en el listado cargado
+          const clienteObj = tipoCliente.find(
+            (tc) => tc._id === tipoClienteInput || tc.valor === tipoClienteInput
+          );
+          idAEnviar = clienteObj?._id || tipoClienteInput;
+          valorAEnviar = clienteObj?.valor || tipoClienteInput;
+        }
+
+        console.log('📡 [loadServiciosAfectados] Filtrando previo a la consulta con:', {
+          idAEnviar,
+          valorAEnviar,
+        });
+
+        // 1. Petición filtrada por ID / padreId
+        let res = await getService({
+          tipoCliente: idAEnviar,
+          padreId: idAEnviar,
+        });
+
+        let dataServicios: any[] = Array.isArray(res)
+          ? res
+          : Array.isArray(res?.data)
+          ? res.data
+          : Array.isArray(res?.data?.data)
+          ? res.data.data
+          : [];
+
+        // 2. Si no retornó datos por ID, reintentar filtrando directamente por el 'valor' (ej. "CORPORATIVO")
+        if (dataServicios.length === 0 && valorAEnviar) {
+          console.log('⚠️ [loadServiciosAfectados] Reintentando filtro por valor en texto:', valorAEnviar);
+          res = await getService({
+            tipoCliente: valorAEnviar,
+            padreNombre: valorAEnviar,
+          });
+
+          dataServicios = Array.isArray(res)
+            ? res
+            : Array.isArray(res?.data)
+            ? res.data
+            : Array.isArray(res?.data?.data)
+            ? res.data.data
+            : [];
+        }
+
+        // 3. Filtrado preventivo en el Frontend en caso de que la API retorne todos los servicios sin filtrar
+        const serviciosFiltrados = dataServicios.filter((servicio: any) => {
+          if (!servicio) return false;
+          // Validar si el objeto del servicio trae propiedad de relación con Tipo de Cliente
+          const tcRel = servicio.tipoCliente || servicio.padreId || servicio.categoriaId || servicio.padreNombre;
+          if (!tcRel) return true; // Si no tiene el campo, se conserva
+          return tcRel === idAEnviar || tcRel === valorAEnviar;
+        });
+
+        console.log('✅ [loadServiciosAfectados] Servicios filtrados listos:', serviciosFiltrados);
+        setServiciosAfectados(serviciosFiltrados);
+      } catch (error) {
+        console.error('❌ [loadServiciosAfectados] Error al obtener servicios filtrados:', error);
+        setServiciosAfectados([]);
+      }
+    },
+    [tipoCliente]
+  );
+
   const loadCausasRaiz = useCallback(async () => {
     try {
       const response = await getMiscellaneous({ categoria: CATEGORIA.CAUSA_RAIZ });
@@ -206,7 +277,6 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
     }
   }, []);
 
-  // ✅ Cargar Grupo Destino (útil para recargar o forzar carga)
   const loadGrupoDestino = useCallback(async () => {
     try {
       const response = await getMiscellaneous({ categoria: 'GRUPO_DESTINO' });
