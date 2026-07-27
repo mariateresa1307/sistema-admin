@@ -52,7 +52,7 @@ export default function RBSPage() {
 
       const response = await getService(apiParams);
       const payload = response.data;
-      
+
       setRows(payload?.data || []);
       setTotalRows(payload?.total ?? 0);
     } catch (error) {
@@ -147,7 +147,7 @@ export default function RBSPage() {
           columns={tabValue === 0 ? serviciosColumns : enlacesColumns}
           loading={loading}
           onCellClick={(params: GridCellParams) => { setSelectedService(params.row as Service); setIsDetailOpen(true); }}
-          getRowId={(row) => row._id || row.id_netuno}
+          getRowId={(row) => row._id}
           onSearch={handleSearch}
           getRowClassName={(params) => (params.row.status === 'Inactivo' ? 'fila-inactiva' : '')}
           paginationMode="server"
@@ -171,11 +171,14 @@ export default function RBSPage() {
 
       <FullScreenServiceDialog
         isOpen={isDialogOpen}
-        onClose={() => { 
-          setIsDialogOpen(false); 
+        onClose={() => {
+          setIsDialogOpen(false);
+          // ✅ Forzar recarga de la tabla al cerrar el modal
           setSearchParams(null);
           setPaginationModel({ page: 0, pageSize: 10 });
-          fetchServices(); }}
+          fetchServices();
+        }}
+        
         title={selectedService ? "Editar Servicio" : "Nuevo Servicio"}
         initialData={selectedService}
       />
@@ -185,8 +188,10 @@ export default function RBSPage() {
         onClose={() => setIsDetailOpen(false)}
         service={selectedService ? { ...selectedService, id_circuito: selectedService.id_circuito || "" } as any : null}
         onEditClick={() => { setIsDetailOpen(false); setIsDialogOpen(true); }}
-        onDeleteSuccess={() => { setSearchParams(null); setPaginationModel({ page: 0, pageSize: 10 });
-      fetchServices();  }}
+        onDeleteSuccess={() => {
+          setSearchParams(null); setPaginationModel({ page: 0, pageSize: 10 });
+          fetchServices();
+        }}
       />
     </>
   );

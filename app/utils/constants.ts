@@ -16,6 +16,26 @@ export const CATEGORIA_RED = [
   "TRANSPORTE"
 ] 
 
+export const PRODUCTO = [
+  "	FiberPonBusinessPlus100Mb	",
+"	FiberPonBusinessPlus200Mb	",
+"	FiberPonBusinessPlus400Mb	",
+"	FiberPonBusinessPlus600Mb	",
+"	FiberPonPremium100Mb	",
+"	FiberPonPremium200Mb	",
+"	FiberPonPremium250Mb	",
+"	FiberPonPremium300Mb	",
+"	FiberPonPremium400Mb	",
+"	FiberPonPremium500Mb	",
+"	FiberPonPremium600Mb	",
+"	FiberPonPremium800Mb	",
+"	FiberPonPremium1Gb	",
+"	FiberPonPremium5Gb	",
+"	FiberPonPremium8Gb	",
+"	FiberPonPremium10Gb	",
+
+] 
+
 
 export const TICKET_STATUS = {
   EN_GESTION: 'en_gestion',

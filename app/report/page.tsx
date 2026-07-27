@@ -11,7 +11,7 @@ import { KpiCard } from "./components/kpiCards";
 import { Search } from "@mui/icons-material"
 import { getReportPreview } from "@/lib/api";
 import { GrupoA } from "./grupos/a";
-import { CATEGORIA_RED, TIPO_CLIENTE } from "app/utils/constants";
+import { CATEGORIA_RED, TIPO_CLIENTE } from "app/utils/constants"; // DEBE SER DE MISELANEOUS
 import { ReportePreview } from "app/utils/types";
 
 
