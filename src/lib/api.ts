@@ -37,9 +37,10 @@ api.interceptors.response.use(
         message = 'Sesión expirada o credenciales incorrectas. Por favor, verifica tus datos.';
         localStorage.removeItem('token');
         localStorage.removeItem('userData');
-        if (typeof window !== 'undefined' && !window.location.pathname.includes('/')) {
-          window.location.href = '/';
-        }
+        
+        // Handle redirect if token expire
+        window.location.href = '/';
+        
       } else if (error.response.status === 403) {
         message = 'No tienes permisos para realizar esta acción.';
       } else if (error.response.status === 404) {
@@ -122,3 +123,6 @@ export const getMiscellaneousWithParent = (id: string) => api.get(`/miscellaneou
 export const getAuditLogs = (params?: any) => api.get('/audit', { params });
 export const getAuditStats = (params?: any) => api.get('/audit/stats', { params });
 export const createAuditLog = (data: any) => api.post('/audit/log', data);
+
+// ENDPOINTS DE REPORTES
+export const getReportPreview = (params: any) => api.get('/reports/preview', { params });

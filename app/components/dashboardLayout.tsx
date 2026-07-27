@@ -472,7 +472,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
 
   const handleLogout = React.useCallback(async () => {
     try {
-      await logout();
+      // await logout();
     } catch (error) {
       console.error('Error durante el logout:', error);
     } finally {
