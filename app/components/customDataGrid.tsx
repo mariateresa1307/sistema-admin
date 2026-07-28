@@ -104,7 +104,7 @@ export default function CustomDataGrid({
     return () => clearTimeout(timer);
   }, [searchTerm, searchField, handleSearch, debounceMs]);
 
-  // ✅ Envío al servidor (Padre)
+  //  Envío al servidor (Padre)
   useEffect(() => {
     if (!onSearch) return;
     if (skipInitialSearch.current) { 
@@ -197,7 +197,7 @@ export default function CustomDataGrid({
             <MenuItem value="RBS">RBS</MenuItem>
             <MenuItem value="METROLAN">METROLAN</MenuItem>
             <MenuItem value="DOG">DOG</MenuItem>
-            <MenuItem value="Redes Compartidas">Redes Compartidas</MenuItem>
+            <MenuItem value="REDES COMPARTIDAS">REDES COMPARTIDAS</MenuItem>
           </TextField>
         ) : isStatusField ? (
           <TextField 

@@ -32,11 +32,11 @@ export default function RBSPage() {
       let excludeTipo = undefined;
       let tipoServicioParam = undefined;
 
-      // 1️⃣ Lógica de Pestañas por defecto
+
       if (tabValue === 0) {
-        excludeTipo = "IU"; // Por defecto en "Servicios" ocultamos IU
+        excludeTipo = "IU";
       } else if (tabValue === 1) {
-        tipoServicioParam = "IU"; // En "Enlaces IU" forzamos IU
+        tipoServicioParam = "IU"; 
       }
 
       // 2️⃣ Lógica del Filtro del CustomDataGrid (Sobreescribe la lógica por defecto si el usuario eligió algo)
@@ -93,7 +93,7 @@ export default function RBSPage() {
       case "RBS": return `ID RBS: ${row.idRBS} | Serial: ${row.serialONT || "-"}`;
       case "IU": return `ID: ${row.id_circuito} | Proveedor: ${row.tipoCliente || "-"}`;
       case "DOG": return `Circuito: ${row.id_circuito} | Contrato: ${row.contrato || "-"}`;
-      case "Redes Compartidas": return `VLAN: ${row.vlan} | Equipo: ${row.nodoA || "-"}`;
+      case "REDES COMPARTIDAS": return `VLAN: ${row.vlan} | Equipo: ${row.nodoA || "-"}`;
       default: return "N/A";
     }
   };

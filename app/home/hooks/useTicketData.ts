@@ -59,15 +59,12 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  // ✅ Carga inicial paralela
   const loadInitialData = useCallback(async () => {
     if (!open) return;
     setLoading(true);
     setError(null);
 
     try {
-      console.log('🔄 [useTicketData] Cargando datos iniciales...');
-
       const [operadoresRes, ciudadesRes, causasRes, grupoDestinoRes, tipoClienteRes] = await Promise.all([
         getUsers(undefined, { isActive: true }),
         getMiscellaneous({ categoria: 'CIUDAD' }),
@@ -76,20 +73,16 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
         getMiscellaneous({ categoria: 'TIPO_CLIENTE' }),
       ]);
 
-      setOperadores(
-        (operadoresRes.data || []).map((u: any) => ({
-          _id: u._id,
-          primerNombre: u.primerNombre,
-          primerApellido: u.primerApellido,
-          username: u.username,
-        }))
-      );
+      setOperadores((operadoresRes.data || []).map((u: any) => ({
+        _id: u._id,
+        primerNombre: u.primerNombre,
+        primerApellido: u.primerApellido,
+        username: u.username,
+      })));
       setCiudadesOptions(ciudadesRes.data || []);
       setCausasRaiz(causasRes.data || []);
       setGrupoDestino(grupoDestinoRes.data || []);
       setTipoCliente(tipoClienteRes.data || []);
-
-      console.log('✅ [useTicketData] Datos iniciales cargados');
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Error desconocido');
       setError(error);
@@ -99,27 +92,18 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
     }
   }, [open]);
 
-  // ✅ CARGAR CATEGORÍAS DE RED
   const loadCategoriasRed = useCallback(async (tipoIncidencia: string) => {
     if (!tipoIncidencia) {
       setCategoriaRed([]);
       return [];
     }
-
     setLoading(true);
     try {
-      const res = await getMiscellaneous({
-        categoria: 'CATEGORIA_RED',
-        tipoIncidencia,
-      });
-
-      const data = res.data || [];
-      setCategoriaRed(data);
-      return data;
+      const res = await getMiscellaneous({ categoria: 'CATEGORIA_RED', tipoIncidencia });
+      setCategoriaRed(res.data || []);
+      return res.data || [];
     } catch (err) {
-      const error = err instanceof Error ? err : new Error('Error cargando categorías');
-      setError(error);
-      console.error('❌ [useTicketData] Error cargando categorías:', error);
+      console.error('❌ [useTicketData] Error cargando categorías:', err);
       setCategoriaRed([]);
       return [];
     } finally {
@@ -177,10 +161,7 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
       return;
     }
     try {
-      const res = await getMiscellaneous({
-        categoria: CATEGORIA.SOLUCION_CASO,
-        padreId: causaRaizId,
-      });
+      const res = await getMiscellaneous({ categoria: CATEGORIA.SOLUCION_CASO, padreId: causaRaizId });
       setSolucionesCaso(res.data || []);
     } catch (error) {
       console.error('Error cargando soluciones:', error);
@@ -188,85 +169,53 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
     }
   }, []);
 
-  // 🎯 FIX: Filtra estrictamente por Tipo de Cliente ANTES de consultar
-  const loadServiciosAfectados = useCallback(
-    async (tipoClienteInput: string | ConfiguracionInterface) => {
-      if (!tipoClienteInput) {
+  // ✅ CORREGIDO: Delega el filtrado 100% al Backend. Solo envía el ID.
+  const loadServiciosAfectados = useCallback(async (tipoClienteInput: string | ConfiguracionInterface) => {
+    if (!tipoClienteInput) {
+      setServiciosAfectados([]);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // 1. Extraer el ID limpiamente
+      let idAEnviar = '';
+      if (typeof tipoClienteInput === 'object' && tipoClienteInput !== null) {
+        idAEnviar = tipoClienteInput._id;
+      } else {
+        idAEnviar = String(tipoClienteInput);
+      }
+
+      if (!idAEnviar) {
         setServiciosAfectados([]);
         return;
       }
 
-      try {
-        let idAEnviar = '';
-        let valorAEnviar = '';
+      console.log('📡 [useTicketData] Solicitando servicios a la BD para tipoCliente ID:', idAEnviar);
 
-        // Si se recibe directamente el objeto seleccionado
-        if (typeof tipoClienteInput === 'object') {
-          idAEnviar = tipoClienteInput._id;
-          valorAEnviar = tipoClienteInput.valor;
-        } else {
-          // Si se recibe solo el ID/Texto, buscar en el listado cargado
-          const clienteObj = tipoCliente.find(
-            (tc) => tc._id === tipoClienteInput || tc.valor === tipoClienteInput
-          );
-          idAEnviar = clienteObj?._id || tipoClienteInput;
-          valorAEnviar = clienteObj?.valor || tipoClienteInput;
-        }
+      // 2. Petición limpia al backend. El backend debe filtrar por este ID.
+      const res = await getService({ tipoCliente: idAEnviar });
 
-        console.log('📡 [loadServiciosAfectados] Filtrando previo a la consulta con:', {
-          idAEnviar,
-          valorAEnviar,
-        });
+      // 3. Normalizar la respuesta (maneja diferentes estructuras de respuesta de Axios)
+      const dataServicios: any[] = Array.isArray(res)
+        ? res
+        : Array.isArray(res?.data)
+        ? res.data
+        : Array.isArray(res?.data?.data)
+        ? res.data.data
+        : [];
 
-        // 1. Petición filtrada por ID / padreId
-        let res = await getService({
-          tipoCliente: idAEnviar,
-          padreId: idAEnviar,
-        });
-
-        let dataServicios: any[] = Array.isArray(res)
-          ? res
-          : Array.isArray(res?.data)
-          ? res.data
-          : Array.isArray(res?.data?.data)
-          ? res.data.data
-          : [];
-
-        // 2. Si no retornó datos por ID, reintentar filtrando directamente por el 'valor' (ej. "CORPORATIVO")
-        if (dataServicios.length === 0 && valorAEnviar) {
-          console.log('⚠️ [loadServiciosAfectados] Reintentando filtro por valor en texto:', valorAEnviar);
-          res = await getService({
-            tipoCliente: valorAEnviar,
-            padreNombre: valorAEnviar,
-          });
-
-          dataServicios = Array.isArray(res)
-            ? res
-            : Array.isArray(res?.data)
-            ? res.data
-            : Array.isArray(res?.data?.data)
-            ? res.data.data
-            : [];
-        }
-
-        // 3. Filtrado preventivo en el Frontend en caso de que la API retorne todos los servicios sin filtrar
-        const serviciosFiltrados = dataServicios.filter((servicio: any) => {
-          if (!servicio) return false;
-          // Validar si el objeto del servicio trae propiedad de relación con Tipo de Cliente
-          const tcRel = servicio.tipoCliente || servicio.padreId || servicio.categoriaId || servicio.padreNombre;
-          if (!tcRel) return true; // Si no tiene el campo, se conserva
-          return tcRel === idAEnviar || tcRel === valorAEnviar;
-        });
-
-        console.log('✅ [loadServiciosAfectados] Servicios filtrados listos:', serviciosFiltrados);
-        setServiciosAfectados(serviciosFiltrados);
-      } catch (error) {
-        console.error('❌ [loadServiciosAfectados] Error al obtener servicios filtrados:', error);
-        setServiciosAfectados([]);
-      }
-    },
-    [tipoCliente]
-  );
+      console.log('✅ [useTicketData] Servicios recibidos del backend:', dataServicios.length);
+      
+      // 4. Guardar directamente lo que devuelve la BD (sin filtrar en el frontend)
+      setServiciosAfectados(dataServicios);
+    } catch (error) {
+      console.error('❌ [useTicketData] Error al obtener servicios:', error);
+      setServiciosAfectados([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   const loadCausasRaiz = useCallback(async () => {
     try {
@@ -286,7 +235,6 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
     }
   }, []);
 
-  // ✅ Funciones de limpieza
   const clearSubcategorias = useCallback(() => setSubcategorias([]), []);
   const clearDetalle = useCallback(() => setDetalle([]), []);
   const clearTipoCliente = useCallback(() => setTipoCliente([]), []);

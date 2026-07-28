@@ -64,11 +64,8 @@ export default function TicketModal({ open, onClose, onSave, ticketToEdit }: Tic
   // ✅ EFECTO DEFINITIVO: Carga de servicios con lógica explícita para Residencial
   useEffect(() => {
     if (!open) return;
-    
     const tipoCliente = ticketForm.form.tipoCliente;
     const selectedTipoCliente = ticketData.tipoCliente.find(tc => tc._id === tipoCliente);
-    
-    // Normalizamos a mayúsculas para comparar sin importar cómo esté en la BD
     const valorTipoCliente = selectedTipoCliente?.valor?.toUpperCase() || '';
 
     console.log('🔍 [DIAGNÓSTICO SERVICIOS]', {
@@ -91,7 +88,7 @@ export default function TicketModal({ open, onClose, onSave, ticketToEdit }: Tic
     } else {
       ticketData.clearServiciosAfectados();
     }
-  }, [ticketForm.form.tipoCliente, open, ticketData.tipoCliente, ticketData.loadServiciosAfectados]);
+  }, [ticketForm.form.tipoCliente, open, ticketData.tipoCliente]);
 
   useEffect(() => {
     if (open && !isEditTicket(ticketToEdit)) 
@@ -248,22 +245,62 @@ export default function TicketModal({ open, onClose, onSave, ticketToEdit }: Tic
   const handleBack = useCallback(() => ticketForm.setActiveStep((prev) => prev - 1), [ticketForm]);
   const handleClose = useCallback(() => { ticketForm.resetForm(); onClose(); }, [ticketForm, onClose]);
 
+  // ✅ MODIFICADO: Validación estricta antes de permitir el cierre
   const requestCloseTicket = useCallback(() => {
     if (!ticketForm.preSaved) return;
+
+    // 1. Validar campos obligatorios para el cierre
+    const camposFaltantes: string[] = [];
+
+    if (!ticketForm.form.horaInicioFalla || String(ticketForm.form.horaInicioFalla).trim() === '') {
+      camposFaltantes.push('Hora de Inicio de Falla');
+    }
+    if (!ticketForm.form.horaInicioAtencion || String(ticketForm.form.horaInicioAtencion).trim() === '') {
+      camposFaltantes.push('Hora de Inicio de Atención');
+    }
+    if (!ticketForm.form.horaFinAfectacion || String(ticketForm.form.horaFinAfectacion).trim() === '') {
+      camposFaltantes.push('Hora de Fin de Atención');
+    }
+    if (!ticketForm.form.causaRaiz || String(ticketForm.form.causaRaiz).trim() === '') {
+      camposFaltantes.push('Causa Raíz');
+    }
+    if (!ticketForm.form.SolucionCaso || String(ticketForm.form.SolucionCaso).trim() === '') {
+      camposFaltantes.push('Solución al Caso');
+    }
+
+    // 2. Si faltan datos, mostrar alerta y DETENER la ejecución (no abre el modal de confirmar)
+    if (camposFaltantes.length > 0) {
+      window.dispatchEvent(
+        new CustomEvent('app-notification', {
+          detail: {
+            message: `No se puede cerrar el ticket. Debe completar los campos: ${camposFaltantes.join(', ')}`,
+            severity: 'warning',
+          },
+        })
+      );
+      return; 
+    }
+
+    // 3. Si todo está correcto, proceder con el flujo original de confirmación
     setConfirmDialog({
-      open: true, title: 'Cerrar Ticket', message: '¿Estás seguro de que deseas cerrar este ticket? Esta acción cambiará su estado a CERRADO y registrará la hora de cierre.', type: 'warning',
+      open: true, 
+      title: 'Cerrar Ticket', 
+      message: '¿Estás seguro de que deseas cerrar este ticket? Esta acción cambiará su estado a CERRADO y registrará la hora de cierre.', 
+      type: 'warning',
       onConfirm: async () => {
         setConfirmDialog(prev => ({ ...prev, open: false }));
         try {
           const result = await closeTicket(ticketForm.preSaved!);
           window.dispatchEvent(new CustomEvent('app-notification', { detail: { message: 'Ticket cerrado exitosamente', severity: 'success' } }));
-          onSave(result.data); ticketForm.resetForm(); onClose();
+          onSave(result.data); 
+          ticketForm.resetForm(); 
+          onClose();
         } catch (err: any) {
           window.dispatchEvent(new CustomEvent('app-notification', { detail: { message: err.response?.data?.message || 'Error al cerrar el ticket', severity: 'error' } }));
         }
       }
     });
-  }, [ticketForm.preSaved, onSave, onClose]);
+  }, [ticketForm.preSaved, ticketForm.form, onSave, onClose]); // ✅ Agregado ticketForm.form a las dependencias
 
   const requestReopenTicket = useCallback(() => {
     if (!ticketForm.preSaved) return;

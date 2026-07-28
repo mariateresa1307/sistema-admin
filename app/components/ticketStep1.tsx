@@ -57,14 +57,14 @@ export const TicketStep1 = React.memo(
       onFieldChange(name as keyof TicketFormData, finalValue);
     };
 
-    // ✅ Carga los servicios automáticamente si cambia el tipoCliente en el form
+    /*✅ Carga los servicios automáticamente si cambia el tipoCliente en el form
     useEffect(() => {
       if (form.tipoCliente) {
         data.loadServiciosAfectados(form.tipoCliente);
       } else {
         data.clearServiciosAfectados();
       }
-    }, [form.tipoCliente]);
+    }, [form.tipoCliente]);*/
 
     return (
       <Grid container spacing={2.5}>
@@ -182,29 +182,25 @@ export const TicketStep1 = React.memo(
         {/* Tipo de Cliente */}
         {showTipoClienteInput && (
           <Grid size={{ xs: 12, sm: 4 }}>
-           <TextField
-  select
-  fullWidth
-  required
-  label="Tipo de cliente"
-  value={form.tipoCliente ?? ''}
-  onChange={(e) => {
-    const nuevoTipoId = e.target.value;
-    onTipoClienteChange(nuevoTipoId);
-    onServiciosAfectadosChange([]); // Limpiar selección previa
-
-    // Buscar el objeto seleccionado y pasarlo directamente
-    const clienteSeleccionado = data.tipoCliente.find((tc) => tc._id === nuevoTipoId);
-    data.loadServiciosAfectados(clienteSeleccionado || nuevoTipoId);
-  }}
-  size="small"
->
-  {data.tipoCliente.map((tc) => (
-    <MenuItem key={tc._id} value={tc._id}>
-      {tc.valor}
-    </MenuItem>
-  ))}
-</TextField>
+            <TextField
+              select
+              fullWidth
+              required
+              label="Tipo de cliente"
+              value={form.tipoCliente ?? ''}
+              onChange={(e) => {
+                const nuevoTipoId = e.target.value;
+                onTipoClienteChange(nuevoTipoId);
+                 onServiciosAfectadosChange([]); 
+              }}
+              size="small"
+            >
+              {data.tipoCliente.map((tc) => (
+                <MenuItem key={tc._id} value={tc._id}>
+                  {tc.valor}
+                </MenuItem>
+              ))}
+            </TextField>
           </Grid>
         )}
 

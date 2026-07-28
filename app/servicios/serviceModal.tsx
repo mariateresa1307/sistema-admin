@@ -43,7 +43,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
     setNotification({ open: true, message, severity });
   }, []);
 
-  // 1️⃣ Carga de listas de Miscellaneous (Solo una vez)
+  // Carga de listas de Miscellaneous 
   React.useEffect(() => {
     if (!isOpen || isMiscLoaded) return;
     let isMounted = true;
@@ -73,7 +73,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
     return () => { isMounted = false; };
   }, [isOpen, isMiscLoaded]);
 
-  // 2️⃣ Inicialización y Limpieza del Formulario
+  //  Inicialización y Limpieza del Formulario
   React.useEffect(() => {
     // A. Limpieza total al cerrar o al preparar modo "Nuevo"
     if (!isOpen || !initialData || !initialData._id) {
@@ -82,8 +82,8 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
       setTipoClienteSeleccionado("");
       setProductoSeleccionado("");
       setVlanValue("");
-      setContratoValue(""); // ✅ Limpieza correcta
-      setIpNetuno("");      // ✅ Limpieza correcta
+      setContratoValue(""); 
+      setIpNetuno("");     
       setImagePreview(null);
       setShowImageSection(false);
       setProveedorOUMId("");
@@ -91,7 +91,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
       return;
     }
 
-    // B. Carga de datos en modo "Edición"
+    //  Carga de datos en modo "Edición"
     const currentTipo = initialData.tipoServicio || "RBS";
     setTipoServicio(currentTipo);
 
@@ -177,7 +177,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
     setContratoValue(e.target.value.replace(/[^0-9]/g, ''));
   }, []);
 
-  // 3️⃣ Guardado de Datos
+  // Guardado de Datos
   const handleSave = React.useCallback(async () => {
     if (!formRef.current || saving) return;
 
@@ -204,7 +204,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
       city: ciudadSeleccionada || undefined,
       tipoCliente: tipoClienteSeleccionado || undefined,
       diagramaRed: imagePreview || undefined,
-      ipNetuno: ipNetuno.trim() || undefined, // ✅ Usa el estado controlado
+      ipNetuno: ipNetuno.trim() || undefined, 
       producto: tipoServicio === "Redes Compartidas" ? (productoSeleccionado || undefined) : undefined,
       id_circuito: data.id_circuito || undefined,
       id_netuno: data.id_netuno || undefined,
@@ -411,7 +411,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
                   <Grid size={6}><TextField name="nodoA" label="Nodo A y Puerto" fullWidth defaultValue={initialData?.nodoA ?? ""} size="small" /></Grid>
                   <Grid size={6}><TextField name="nodoB" label="Nodo B" fullWidth defaultValue={initialData?.nodoB ?? ""} size="small" /></Grid>
                   <Grid size={6}><TextField name="oltnode" label="Nodo OLT" fullWidth defaultValue={initialData?.nodoOLT ?? ""} size="small" /></Grid>
-                  <Grid size={6}><TextField name="vlan" label="VLAN" fullWidth value={vlanValue} onChange={handleVlanChange} size="small" inputProps={{ maxLength: 20 }} /></Grid>
+                 {/* <Grid size={6}><TextField name="vlan" label="VLAN" fullWidth value={vlanValue} onChange={handleVlanChange} size="small" inputProps={{ maxLength: 20 }} /></Grid>*/}
                 </>
               )}
 
