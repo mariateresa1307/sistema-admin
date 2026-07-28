@@ -15,14 +15,14 @@ export default function RBSPage() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
 
-  const [filtroTipo, setFiltroTipo] = useState("Todos");
   const [tabValue, setTabValue] = useState(0);
-
   const [rows, setRows] = useState<Service[]>([]);
   const [totalRows, setTotalRows] = useState(0);
   const [loading, setLoading] = useState(true);
   const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 10 });
   const [searchParams, setSearchParams] = useState<SearchParams | null>(null);
+  
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const fetchServices = useCallback(async () => {
     setLoading(true);
@@ -30,10 +30,20 @@ export default function RBSPage() {
       const backendPage = paginationModel.page + 1;
 
       let excludeTipo = undefined;
-      let tipoServicioParam = filtroTipo !== "Todos" ? filtroTipo : undefined;
+      let tipoServicioParam = undefined;
 
-      if (tabValue === 0 && filtroTipo === "Todos") excludeTipo = "IU";
-      else if (tabValue === 1) tipoServicioParam = "IU";
+      // 1️⃣ Lógica de Pestañas por defecto
+      if (tabValue === 0) {
+        excludeTipo = "IU"; // Por defecto en "Servicios" ocultamos IU
+      } else if (tabValue === 1) {
+        tipoServicioParam = "IU"; // En "Enlaces IU" forzamos IU
+      }
+
+      // 2️⃣ Lógica del Filtro del CustomDataGrid (Sobreescribe la lógica por defecto si el usuario eligió algo)
+      if (searchParams?.field === 'tipoServicio' && searchParams.value) {
+        tipoServicioParam = searchParams.value;
+        excludeTipo = undefined; // Si el usuario eligió un tipo específico, respetamos su elección y no excluimos nada
+      }
 
       const apiParams: any = {
         page: backendPage,
@@ -43,10 +53,10 @@ export default function RBSPage() {
       if (tipoServicioParam) apiParams.tipoServicio = tipoServicioParam;
       if (excludeTipo) apiParams.excludeTipo = excludeTipo;
 
-      // ✅ Solo enviar filtros si existen y tienen valor
-      if (searchParams?.field === 'status' && searchParams.value && searchParams.value.trim() !== "") {
+      // 3️⃣ Otros filtros (Status o Búsqueda general)
+      if (searchParams?.field === 'status' && searchParams.value) {
         apiParams.status = searchParams.value;
-      } else if (searchParams?.field !== 'status' && searchParams?.value) {
+      } else if (searchParams?.field && searchParams.field !== 'tipoServicio' && searchParams.field !== 'status' && searchParams.value) {
         apiParams.search = searchParams.value;
       }
 
@@ -56,22 +66,20 @@ export default function RBSPage() {
       setRows(payload?.data || []);
       setTotalRows(payload?.total ?? 0);
     } catch (error) {
-      console.error(" [RBSPage] Error:", error);
+      console.error("❌ [RBSPage] Error:", error);
       setRows([]);
       setTotalRows(0);
     } finally {
       setLoading(false);
     }
-  }, [paginationModel.page, paginationModel.pageSize, tabValue, filtroTipo, searchParams]);
+  }, [paginationModel.page, paginationModel.pageSize, tabValue, searchParams, refreshTrigger]);
 
   useEffect(() => { fetchServices(); }, [fetchServices]);
 
-  // ✅ CORREGIDO: Limpieza completa de filtros al cambiar de tab
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
-    setFiltroTipo("Todos");
-    setSearchParams(null); // Limpia el filtro de búsqueda
-    setPaginationModel({ page: 0, pageSize: 10 }); // Reinicia a página 1
+    setSearchParams(null); // Limpia filtros al cambiar de pestaña
+    setPaginationModel({ page: 0, pageSize: 10 });
   };
 
   const handleSearch = useCallback((params: SearchParams) => {
@@ -91,7 +99,7 @@ export default function RBSPage() {
   };
 
   const serviciosColumns = useMemo((): GridColDef[] => [
-    { field: "tipoServicio", headerName: "Tipo", width: 120 },
+    { field: "tipoServicio", headerName: "Tipo", width: 140 },
     { field: "name", headerName: "Nombre / Cliente", flex: 1 },
     { field: "city", headerName: "Ciudad", width: 140 },
     { field: "detalles", headerName: "Detalles Técnicos", flex: 1.5, renderCell: (params) => renderDetalles(params.row as Service) },
@@ -147,7 +155,7 @@ export default function RBSPage() {
           columns={tabValue === 0 ? serviciosColumns : enlacesColumns}
           loading={loading}
           onCellClick={(params: GridCellParams) => { setSelectedService(params.row as Service); setIsDetailOpen(true); }}
-          getRowId={(row) => row._id}
+          getRowId={(row) => String(row._id)}
           onSearch={handleSearch}
           getRowClassName={(params) => (params.row.status === 'Inactivo' ? 'fila-inactiva' : '')}
           paginationMode="server"
@@ -173,24 +181,24 @@ export default function RBSPage() {
         isOpen={isDialogOpen}
         onClose={() => {
           setIsDialogOpen(false);
-          // ✅ Forzar recarga de la tabla al cerrar el modal
-          setSearchParams(null);
-          setPaginationModel({ page: 0, pageSize: 10 });
-          fetchServices();
+          setSelectedService(null);
+          setRefreshTrigger(prev => prev + 1);
         }}
-        
         title={selectedService ? "Editar Servicio" : "Nuevo Servicio"}
         initialData={selectedService}
       />
 
       <CardSeeServiceModal
         open={isDetailOpen}
-        onClose={() => setIsDetailOpen(false)}
+        onClose={() => {
+          setIsDetailOpen(false);
+          setRefreshTrigger(prev => prev + 1);
+        }}
         service={selectedService ? { ...selectedService, id_circuito: selectedService.id_circuito || "" } as any : null}
         onEditClick={() => { setIsDetailOpen(false); setIsDialogOpen(true); }}
         onDeleteSuccess={() => {
-          setSearchParams(null); setPaginationModel({ page: 0, pageSize: 10 });
-          fetchServices();
+          setIsDetailOpen(false);
+          setRefreshTrigger(prev => prev + 1);
         }}
       />
     </>

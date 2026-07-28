@@ -64,15 +64,12 @@ export const CardSeeServiceModal = ({
 }: CardSeeServiceModalProps) => {
   const [tipoClienteNombre, setTipoClienteNombre] = useState<string>("");
   const [loadingTipoCliente, setLoadingTipoCliente] = useState(false);
-
-  // ✅ NUEVO: Estado para controlar el modal de vista completa de la imagen
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
-
   const [confirmDialog, setConfirmDialog] = useState({
     open: false,
     title: "",
     message: "",
-    onConfirm: () => {},
+    onConfirm: () => { },
     type: "warning" as "warning" | "info" | "success",
   });
 

@@ -6,45 +6,46 @@ import {
   FormControl, Select
 } from "@mui/material";
 import Grid from "@mui/material/Grid";
-import { 
-  Close as CloseIcon, CloudUpload as UploadIcon, PhotoCamera, 
+import {
+  Close as CloseIcon, CloudUpload as UploadIcon, PhotoCamera,
   Schema as DiagramIcon, AddPhotoAlternate as AddIcon, ZoomIn as ZoomInIcon,
   Warning as WarningIcon
 } from "@mui/icons-material";
 import { ConfiguracionInterface } from "app/utils/types";
 import { createService, updateService, getMiscellaneous } from "@/lib/api";
-import { PRODUCTO } from "app/utils/constants"; // ✅ Constante importada directamente
+import { PRODUCTO, TIPO_SERVICIO} from "app/utils/constants";
 
-const TIPOS_SERVICIO = ["DOG", "Redes Compartidas", "METROLAN", "RBS", "IU"];
+
 
 export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servicio", initialData, onSuccess }: any) => {
-  const [tipoServicio, setTipoServicio] = React.useState("RBS");
+  const [tipoServicio, setTipoServicio] = React.useState("DOG");
   const [proveedorOUMId, setProveedorOUMId] = React.useState("");
-  const [proveedorNotFound, setProveedorNotFound] = React.useState(false); 
+  const [proveedorNotFound, setProveedorNotFound] = React.useState(false);
   const [imagePreview, setImagePreview] = React.useState<string | null>(null);
   const [showImageSection, setShowImageSection] = React.useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
-
   const [ciudades, setCiudades] = React.useState<ConfiguracionInterface[]>([]);
   const [tipoClienteList, setTipoClienteList] = React.useState<ConfiguracionInterface[]>([]);
   const [proveedoresList, setProveedoresList] = React.useState<ConfiguracionInterface[]>([]);
   const [ultimaMillaList, setUltimaMillaList] = React.useState<ConfiguracionInterface[]>([]);
-  
   const [isMiscLoaded, setIsMiscLoaded] = React.useState(false);
-
+  
   const [ciudadSeleccionada, setCiudadSeleccionada] = React.useState<string>("");
   const [tipoClienteSeleccionado, setTipoClienteSeleccionado] = React.useState<string>('');
-  const [productoSeleccionado, setProductoSeleccionado] = React.useState<string>(''); // ✅ Estado para el producto
+  const [productoSeleccionado, setProductoSeleccionado] = React.useState<string>('');
   const [notification, setNotification] = React.useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
   const [vlanValue, setVlanValue] = React.useState<string>("");
+  const [contratoValue, setContratoValue] = React.useState<string>("");
+  const [ipNetuno, setIpNetuno] = React.useState<string>("");
 
   const triggerNotification = React.useCallback((message: string, severity: 'success' | 'error') => {
     setNotification({ open: true, message, severity });
   }, []);
 
+  // 1️⃣ Carga de listas de Miscellaneous (Solo una vez)
   React.useEffect(() => {
-    if (!isOpen || isMiscLoaded) return; 
+    if (!isOpen || isMiscLoaded) return;
     let isMounted = true;
 
     const cargarMiscellaneous = async () => {
@@ -72,13 +73,17 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
     return () => { isMounted = false; };
   }, [isOpen, isMiscLoaded]);
 
+  // 2️⃣ Inicialización y Limpieza del Formulario
   React.useEffect(() => {
-    if (!isOpen) {
+    // A. Limpieza total al cerrar o al preparar modo "Nuevo"
+    if (!isOpen || !initialData || !initialData._id) {
       setTipoServicio("RBS");
       setCiudadSeleccionada("");
       setTipoClienteSeleccionado("");
       setProductoSeleccionado("");
       setVlanValue("");
+      setContratoValue(""); // ✅ Limpieza correcta
+      setIpNetuno("");      // ✅ Limpieza correcta
       setImagePreview(null);
       setShowImageSection(false);
       setProveedorOUMId("");
@@ -86,57 +91,46 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
       return;
     }
 
-    if (!initialData || !initialData._id) {
-      setTipoServicio("RBS");
-      setCiudadSeleccionada("");
-      setTipoClienteSeleccionado("");
-      setProductoSeleccionado("");
-      setVlanValue("");
-      setImagePreview(null);
-      setShowImageSection(false);
-      setProveedorOUMId("");
-      setProveedorNotFound(false);
-      return;
-    }
-
+    // B. Carga de datos en modo "Edición"
     const currentTipo = initialData.tipoServicio || "RBS";
     setTipoServicio(currentTipo);
-    
-    const cityVal = typeof initialData.city === 'object' && initialData.city?.valor 
-      ? initialData.city.valor 
+
+    const cityVal = typeof initialData.city === 'object' && initialData.city?.valor
+      ? initialData.city.valor
       : (typeof initialData.city === 'string' ? initialData.city : "");
     setCiudadSeleccionada(cityVal);
 
     const tcId = typeof initialData.tipoCliente === 'object' ? initialData.tipoCliente?._id : initialData.tipoCliente;
     setTipoClienteSeleccionado(tcId ? String(tcId) : "");
 
-    // ✅ Inicializar el producto directamente con el valor del registro
     setProductoSeleccionado(initialData.producto || "");
-
     setVlanValue(initialData.vlan ? String(initialData.vlan) : "");
+    setContratoValue(initialData.contrato !== null && initialData.contrato !== undefined ? String(initialData.contrato) : "");
+    setIpNetuno(initialData.ipNetuno || ""); // ✅ Carga correcta de IP Netuno
+    
     setImagePreview(initialData.diagramaRed || null);
     setShowImageSection(Boolean(initialData.diagramaRed));
 
-    let rawValue = currentTipo === "METROLAN" 
-      ? (initialData.ultimaMilla || initialData.proveedorUM) 
+    let rawValue = currentTipo === "METROLAN"
+      ? (initialData.ultimaMilla || initialData.proveedorUM)
       : initialData.proveedorDelServicioCompartido;
 
     if (rawValue) {
-      let idValue = typeof rawValue === 'object' && rawValue !== null 
-        ? String(rawValue._id || rawValue.valor) 
+      let idValue = typeof rawValue === 'object' && rawValue !== null
+        ? String(rawValue._id || rawValue.valor)
         : String(rawValue);
 
       if (idValue) {
         const listToCheck = currentTipo === "METROLAN" ? ultimaMillaList : proveedoresList;
         const foundItem = listToCheck.find((item: any) => String(item._id) === idValue);
-        
+
         if (foundItem) {
           setProveedorOUMId(idValue);
           setProveedorNotFound(false);
         } else {
           const altList = currentTipo === "METROLAN" ? proveedoresList : ultimaMillaList;
           const foundInAlt = altList.find((item: any) => String(item._id) === idValue);
-          
+
           if (foundInAlt) {
             setProveedorOUMId(idValue);
             setProveedorNotFound(false);
@@ -175,13 +169,22 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
     setVlanValue(e.target.value.replace(/[^0-9-]/g, ''));
   }, []);
 
+  const handleIpChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setIpNetuno(e.target.value.replace(/[^0-9.]/g, ''));
+  }, []);
+
+  const handleContratoChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setContratoValue(e.target.value.replace(/[^0-9]/g, ''));
+  }, []);
+
+  // 3️⃣ Guardado de Datos
   const handleSave = React.useCallback(async () => {
     if (!formRef.current || saving) return;
-    
+
     const formData = new FormData(formRef.current);
     const data = Object.fromEntries(formData.entries()) as any;
     const serviceId = initialData?._id;
-    
+
     if (isEditMode && !serviceId) {
       triggerNotification("Error: No se encontró el ID del servicio", "error");
       return;
@@ -201,8 +204,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
       city: ciudadSeleccionada || undefined,
       tipoCliente: tipoClienteSeleccionado || undefined,
       diagramaRed: imagePreview || undefined,
-      ipNetuno: data.ipNetuno || undefined,
-      // ✅ Envía el producto seleccionado si es Redes Compartidas
+      ipNetuno: ipNetuno.trim() || undefined, // ✅ Usa el estado controlado
       producto: tipoServicio === "Redes Compartidas" ? (productoSeleccionado || undefined) : undefined,
       id_circuito: data.id_circuito || undefined,
       id_netuno: data.id_netuno || undefined,
@@ -212,7 +214,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
       nodoB: data.nodoB || undefined,
       nodoOLT: data.oltnode || undefined,
       vlan: vlanValue.trim() || undefined,
-      contrato: parseNumberOrNull(data.contrato),
+      contrato: parseNumberOrNull(contratoValue),
       serialONT: data.serialONT || undefined,
       proveedor: data.proveedor || undefined,
       status: initialData?.status || "Activo"
@@ -234,7 +236,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
 
     try {
       setSaving(true);
-      const response = isEditMode && serviceId 
+      const response = isEditMode && serviceId
         ? await updateService(payload, String(serviceId))
         : await createService(payload);
 
@@ -249,7 +251,12 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
     } finally {
       setSaving(false);
     }
-  }, [saving, initialData, isEditMode, tipoServicio, ciudadSeleccionada, tipoClienteSeleccionado, productoSeleccionado, imagePreview, vlanValue, proveedorOUMId, isMetrolan, triggerNotification, onClose, onSuccess]);
+  }, [
+    saving, initialData, isEditMode, tipoServicio, ciudadSeleccionada, 
+    tipoClienteSeleccionado, productoSeleccionado, imagePreview, vlanValue, 
+    ipNetuno, contratoValue, proveedorOUMId, isMetrolan, triggerNotification, 
+    onClose, onSuccess
+  ]);
 
   const listaBase = isMetrolan ? ultimaMillaList : proveedoresList;
 
@@ -266,11 +273,11 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
     return listaBase;
   }, [listaBase, proveedorNotFound, proveedorOUMId]);
 
-  const safeCiudadValue = React.useMemo(() => 
+  const safeCiudadValue = React.useMemo(() =>
     ciudades.some(c => c.valor === ciudadSeleccionada) ? ciudadSeleccionada : ""
   , [ciudades, ciudadSeleccionada]);
 
-  const safeTipoClienteValue = React.useMemo(() => 
+  const safeTipoClienteValue = React.useMemo(() =>
     tipoClienteList.some(c => String(c._id) === tipoClienteSeleccionado) ? tipoClienteSeleccionado : ""
   , [tipoClienteList, tipoClienteSeleccionado]);
 
@@ -330,7 +337,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
               <Grid size={{ xs: 12, md: 6 }}>
                 <Typography sx={labelStyle}>Tipo de Servicio</Typography>
                 <TextField select fullWidth value={tipoServicio} onChange={(e) => { setTipoServicio(e.target.value); setProveedorOUMId(""); setProveedorNotFound(false); }} size="small">
-                  {TIPOS_SERVICIO.map((opt) => <MenuItem key={opt} value={opt}>{opt}</MenuItem>)}
+                  {Object.values(TIPO_SERVICIO).map((opt) => <MenuItem key={opt} value={opt}>{opt}</MenuItem>)}
                 </TextField>
               </Grid>
 
@@ -346,7 +353,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
                   {ciudades.map((c) => <MenuItem key={c._id || c.valor} value={c.valor}>{c.valor}</MenuItem>)}
                 </TextField>
               </Grid>
-              
+
               <Grid size={6}>
                 <Typography sx={labelStyle}>{isMetrolan ? "Última Milla" : "Proveedor del servicio compartido"}</Typography>
                 <FormControl fullWidth size="small" error={proveedorNotFound}>
@@ -372,12 +379,14 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
                   </Typography>
                 )}
               </Grid>
-              
+
               <Grid size={6}>
                 <Typography sx={labelStyle}>Tipo de cliente</Typography>
                 <TextField select fullWidth name="tipoCliente" value={safeTipoClienteValue} onChange={(e) => setTipoClienteSeleccionado(e.target.value)} size="small">
                   <MenuItem value=""><em>Ninguno</em></MenuItem>
-                  {tipoClienteList.map((c) => <MenuItem key={c._id} value={String(c._id)}>{c.valor}</MenuItem>)}
+                  {tipoClienteList.map((c) => (
+                    <MenuItem key={c._id} value={String(c._id)}>{c.valor}</MenuItem>
+                  ))}
                 </TextField>
               </Grid>
 
@@ -386,10 +395,10 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
               {tipoServicio === "METROLAN" && (
                 <>
                   <Grid size={6}><TextField name="id_circuito" label="ID Circuito" fullWidth defaultValue={initialData?.id_circuito ?? ""} size="small" /></Grid>
-                  <Grid size={6}><TextField name="contrato" label="Contrato" fullWidth defaultValue={initialData?.contrato ?? ""} size="small" /></Grid>
+                  <Grid size={6}><TextField name="contrato" label="Contrato" fullWidth value={contratoValue} onChange={handleContratoChange} size="small" /></Grid>
                   <Grid size={6}><TextField name="nodoA" label="NODO A" fullWidth defaultValue={initialData?.nodoA ?? ""} size="small" /></Grid>
                   <Grid size={6}><TextField name="nodoB" label="NODO B" fullWidth defaultValue={initialData?.nodoB ?? ""} size="small" /></Grid>
-                  <Grid size={6}><TextField name="ipNetuno" label="IP NETUNO" fullWidth defaultValue={initialData?.ipNetuno ?? ""} size="small" /></Grid>
+                  <Grid size={6}><TextField name="ipNetuno" label="IP NETUNO" fullWidth value={ipNetuno} onChange={handleIpChange} size="small" /></Grid>
                   <Grid size={6}><TextField name="vlan" label="VLAN" fullWidth value={vlanValue} onChange={handleVlanChange} size="small" inputProps={{ maxLength: 20 }} /></Grid>
                 </>
               )}
@@ -418,7 +427,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
               {tipoServicio === "DOG" && (
                 <>
                   <Grid size={6}><TextField name="id_netuno" label="ID NETUNO" fullWidth defaultValue={initialData?.id_netuno ?? ""} size="small" /></Grid>
-                  <Grid size={6}><TextField name="contrato" label="Contrato" fullWidth defaultValue={initialData?.contrato ?? ""} size="small" /></Grid>
+                  <Grid size={6}><TextField name="contrato" label="Contrato" fullWidth value={contratoValue} onChange={handleContratoChange} size="small" /></Grid>
                   <Grid size={6}><TextField name="id_circuito" label="Circuito" fullWidth defaultValue={initialData?.id_circuito ?? ""} size="small" /></Grid>
                   <Grid size={6}><TextField name="vlan" label="VLAN" fullWidth value={vlanValue} onChange={handleVlanChange} size="small" inputProps={{ maxLength: 20 }} /></Grid>
                   <Grid size={6}><TextField name="nodoA" label="Nodo A y puerto" fullWidth defaultValue={initialData?.nodoA ?? ""} size="small" /></Grid>
@@ -428,22 +437,21 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
                 </>
               )}
 
-              {tipoServicio === "Redes Compartidas" && (
+              {tipoServicio === "REDES COMPARTIDAS" && (
                 <>
-                  <Grid size={6}><TextField name="ipNetuno" label="IP NETUNO" fullWidth defaultValue={initialData?.ipNetuno ?? ""} size="small" /></Grid>
-                  <Grid size={6}><TextField name="contrato" label="Contrato" fullWidth defaultValue={initialData?.contrato ?? ""} size="small" /></Grid>
+                  <Grid size={6}><TextField name="ipNetuno" label="IP NETUNO" fullWidth value={ipNetuno} onChange={handleIpChange} size="small" /></Grid>
+                  <Grid size={6}><TextField name="contrato" label="Contrato" fullWidth value={contratoValue} onChange={handleContratoChange} size="small" /></Grid>
                   <Grid size={6}><TextField name="nodoA" label="Nodo A" fullWidth defaultValue={initialData?.nodoA ?? ""} size="small" /></Grid>
                   <Grid size={6}><TextField name="vlan" label="VLAN" fullWidth value={vlanValue} onChange={handleVlanChange} size="small" inputProps={{ maxLength: 20 }} /></Grid>
-                  
-                  {/* ✅ Campo Producto mapeando directamente la constante importada PRODUCTO */}
+
                   <Grid size={6}>
-                    <TextField 
-                      select 
-                      fullWidth 
-                      name="producto" 
-                      label="Producto" 
-                      size="small" 
-                      value={productoSeleccionado} 
+                    <TextField
+                      select
+                      fullWidth
+                      name="producto"
+                      label="Producto"
+                      size="small"
+                      value={productoSeleccionado}
                       onChange={(e) => setProductoSeleccionado(e.target.value)}
                     >
                       <MenuItem value=""><em>Seleccione un producto</em></MenuItem>

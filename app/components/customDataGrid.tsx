@@ -25,7 +25,7 @@ interface CustomDataGridProps extends Omit<DataGridProps, 'rows' | 'sx'> {
 
 export default function CustomDataGrid({
   rows, 
-  columns: rawColumns = [], // ✅ Valor por defecto
+  columns: rawColumns = [],
   loading, 
   onSearch, 
   debounceMs = 400,
@@ -38,15 +38,13 @@ export default function CustomDataGrid({
   ...restProps
 }: CustomDataGridProps) {
   
-  // ✅ VALIDACIÓN DEFENSIVA: Asegurar que columns sea un array válido y filtrar elementos nulos/indefinidos
   const columns = Array.isArray(rawColumns) 
     ? rawColumns.filter((col): col is GridColDef => Boolean(col) && typeof col === 'object') 
     : [];
 
-  // Advertencia en consola para ayudarte a identificar el componente padre que falla
   useEffect(() => {
     if (!Array.isArray(rawColumns) || rawColumns.length === 0) {
-      console.warn("⚠️ [CustomDataGrid] El prop 'columns' está vacío, es undefined o no es un array. Revisa el componente padre (ej: MiscellaneousTable).");
+      console.warn("⚠️ [CustomDataGrid] El prop 'columns' está vacío o no es un array.");
     }
   }, [rawColumns]);
 
@@ -57,6 +55,7 @@ export default function CustomDataGrid({
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState(rows);
   const [isSearching, setIsSearching] = useState(false);
+  
   const isApiSearch = Boolean(onSearch);
   const skipInitialSearch = useRef(true);
 
@@ -88,6 +87,7 @@ export default function CustomDataGrid({
   }, [rows, debounceMs]);
 
   const handleSearch = useCallback(async () => {
+    if (isApiSearch) return;
     setIsSearching(true);
     try {
       setSearchResults(await mockApiSearch(searchField, searchTerm));
@@ -96,18 +96,24 @@ export default function CustomDataGrid({
     } finally {
       setIsSearching(false);
     }
-  }, [searchTerm, searchField, rows, mockApiSearch]);
+  }, [searchTerm, searchField, rows, mockApiSearch, isApiSearch]);
 
   useEffect(() => {
     if (isApiSearch) return;
     const timer = setTimeout(() => { handleSearch(); }, debounceMs);
     return () => clearTimeout(timer);
-  }, [searchTerm, searchField, handleSearch, isApiSearch, debounceMs]);
+  }, [searchTerm, searchField, handleSearch, debounceMs]);
 
+  // ✅ Envío al servidor (Padre)
   useEffect(() => {
     if (!onSearch) return;
-    if (skipInitialSearch.current) { skipInitialSearch.current = false; return; }
-    const timer = setTimeout(() => { onSearch({ field: searchField, value: searchTerm }); }, debounceMs);
+    if (skipInitialSearch.current) { 
+      skipInitialSearch.current = false; 
+      return; 
+    }
+    const timer = setTimeout(() => { 
+      onSearch({ field: searchField, value: searchTerm }); 
+    }, debounceMs);
     return () => clearTimeout(timer);
   }, [searchTerm, searchField, onSearch, debounceMs]);
 
@@ -118,7 +124,6 @@ export default function CustomDataGrid({
 
   const displayRows = isApiSearch ? rows : searchResults;
   
-  // ✅ Si no hay columnas válidas, no renderizamos el DataGrid para evitar errores
   if (!isMounted || columns.length === 0) {
     return (
       <Box sx={{ p: 4, textAlign: 'center', color: 'text.secondary', border: '1px dashed #cbd5e1', borderRadius: '12px' }}>
@@ -167,9 +172,12 @@ export default function CustomDataGrid({
     <Box>
       <Box sx={{ display: "flex", gap: 2, mb: 2, alignItems: "center", flexWrap: "wrap" }}>
         <TextField
-          select value={searchField}
+          select 
+          value={searchField}
           onChange={(e) => { setSearchField(e.target.value); setSearchTerm(""); }}
-          label="Buscar por" size="small" sx={{ minWidth: 150 }}
+          label="Buscar por" 
+          size="small" 
+          sx={{ minWidth: 150 }}
         >
           {columns.map((col) => (
             <MenuItem key={col.field} value={col.field}>{col.headerName || col.field}</MenuItem>
@@ -177,27 +185,50 @@ export default function CustomDataGrid({
         </TextField>
 
         {isTipoServicioField ? (
-          <TextField select size="small" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} sx={{ minWidth: 200, flex: 1, maxWidth: 500 }} label="Filtrar por tipo">
+          <TextField 
+            select 
+            size="small" 
+            value={searchTerm} 
+            onChange={(e) => setSearchTerm(e.target.value)} 
+            sx={{ minWidth: 200, flex: 1, maxWidth: 500 }} 
+            label="Filtrar por tipo"
+          >
             <MenuItem value="">Todos</MenuItem>
             <MenuItem value="RBS">RBS</MenuItem>
             <MenuItem value="METROLAN">METROLAN</MenuItem>
-            <MenuItem value="IU">IU</MenuItem>
             <MenuItem value="DOG">DOG</MenuItem>
             <MenuItem value="Redes Compartidas">Redes Compartidas</MenuItem>
           </TextField>
         ) : isStatusField ? (
-          <TextField select size="small" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} sx={{ minWidth: 200, maxWidth: 500, flex: 1 }} label="Filtrar por estado">
+          <TextField 
+            select 
+            size="small" 
+            value={searchTerm} 
+            onChange={(e) => setSearchTerm(e.target.value)} 
+            sx={{ minWidth: 200, maxWidth: 500, flex: 1 }} 
+            label="Filtrar por estado"
+          >
             {renderStatusMenuItems()}
           </TextField>
         ) : isUserStatusField ? (
-          <TextField select size="small" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} sx={{ minWidth: 200, maxWidth: 500, flex: 1 }} label="Filtrar por estado">
+          <TextField 
+            select 
+            size="small" 
+            value={searchTerm} 
+            onChange={(e) => setSearchTerm(e.target.value)} 
+            sx={{ minWidth: 200, maxWidth: 500, flex: 1 }} 
+            label="Filtrar por estado"
+          >
             <MenuItem value="true">Activo</MenuItem>
             <MenuItem value="false">Inactivo</MenuItem>
           </TextField>
         ) : (
           <TextField
-            fullWidth value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder={`Buscar ${searchField}...`} size="small"
+            fullWidth 
+            value={searchTerm} 
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder={`Buscar ${searchField}...`} 
+            size="small"
             InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment> }}
             sx={{ maxWidth: 500 }}
           />
@@ -205,7 +236,7 @@ export default function CustomDataGrid({
       </Box>
 
       <DataGrid
-        getRowId={(row) => row._id || row.id}
+        getRowId={(row) => String(row._id || row.id)}
         rows={displayRows}
         columns={columns}
         loading={loading || isSearching}
