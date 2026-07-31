@@ -13,7 +13,7 @@ export const TIPO_SERVICIO = {
   METROLAN: "METROLAN",
   RBS: "RBS",
   REDES_COMPARTIDAS: "REDES COMPARTIDAS",
-  UI: "UI"
+  IU: "IU"
 }
 
 

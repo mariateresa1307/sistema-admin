@@ -4,6 +4,7 @@ import { Box, Button } from '@mui/material';
 import SaveIcon from '@mui/icons-material/Save';
 import ReplayIcon from '@mui/icons-material/Replay';
 import CloseIcon from '@mui/icons-material/Close';
+import ExitToAppIcon from '@mui/icons-material/ExitToApp';
 
 const corporateFont = 'Calibri, Arial, sans-serif';
 
@@ -22,8 +23,6 @@ interface TicketActionsProps {
   isAdmin?: boolean;
 }
 
-
-
 export const TicketActions = ({
   activeStep,
   totalSteps,
@@ -38,28 +37,10 @@ export const TicketActions = ({
   ticketStatus = '',
   isAdmin = false,
 }: TicketActionsProps) => {
+  
   const isLastStep = activeStep === totalSteps - 1;
-
   const normalizedStatus = ticketStatus?.toString().trim().toUpperCase() || '';
-
-  // ✅ LOGS DE DIAGNÓSTICO (eliminar después de verificar)
-console.log('🔍 [TicketActions] Diagnóstico completo:', {
-    isLastStep,
-    isEditMode,
-    ticketStatus: `"${ticketStatus}"`,
-    normalizedStatus: `"${normalizedStatus}"`,
-    isAdmin,
-    hasOnReopenTicket: !!onReopenTicket,
-    hasOnCloseTicket: !!onCloseTicket,
-  });
-
-  console.log('🔍 [TicketActions] Condiciones para "Activar Ticket":', {
-    'isEditMode': isEditMode,
-    'onReopenTicket existe': !!onReopenTicket,
-    'ticketStatus es CERRADO': normalizedStatus === 'CERRADO',
-    'isAdmin': isAdmin,
-    'TODAS las condiciones': isEditMode && !!onReopenTicket && normalizedStatus === 'CERRADO' && isAdmin,
-  });
+  const isClosed = normalizedStatus === 'CERRADO';
 
   return (
     <Box
@@ -78,6 +59,7 @@ console.log('🔍 [TicketActions] Diagnóstico completo:', {
           <Button
             variant="outlined"
             onClick={onBack}
+            disabled={isClosed}
             sx={{
               borderRadius: '8px',
               textTransform: 'none',
@@ -85,7 +67,8 @@ console.log('🔍 [TicketActions] Diagnóstico completo:', {
               fontFamily: corporateFont,
               color: '#121227',
               borderColor: '#cbd5e1',
-              '&:hover': { borderColor: '#121227', bgcolor: 'rgba(18, 18, 39, 0.04)' }
+              '&:hover': { borderColor: '#121227', bgcolor: 'rgba(18, 18, 39, 0.04)' },
+              '&:disabled': { borderColor: '#e0e0e0', color: '#9e9e9e' }
             }}
           >
             Anterior
@@ -109,11 +92,11 @@ console.log('🔍 [TicketActions] Diagnóstico completo:', {
       {/* Botones de la derecha */}
       <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
         
-        {/* ✅ CASO 1: Último paso (Paso 2) */}
+        {/* CASO 1: Último paso (Paso 2) */}
         {isLastStep ? (
           <>
             {/* Botón de Estado: Activar (Solo si está CERRADO y es Admin) */}
-         {isEditMode && onReopenTicket && normalizedStatus === 'CERRADO' && isAdmin && (
+            {isEditMode && onReopenTicket && isClosed && isAdmin && (
               <Button
                 variant="contained"
                 onClick={onReopenTicket}
@@ -133,8 +116,8 @@ console.log('🔍 [TicketActions] Diagnóstico completo:', {
               </Button>
             )}
 
-            {/* Botón de Estado: Cerrar (Solo si está ACTIVO o EN_GESTION) */}
-          {isEditMode && onCloseTicket && (normalizedStatus === 'ACTIVO' || normalizedStatus === 'EN_GESTION') && (
+            {/* Botón de Estado Cerrar (Solo si está ACTIVO o EN_GESTION) */}
+            {isEditMode && onCloseTicket && !isClosed && (normalizedStatus === 'ACTIVO' || normalizedStatus === 'EN_GESTION') && (
               <Button
                 variant="contained"
                 onClick={onCloseTicket}
@@ -154,32 +137,55 @@ console.log('🔍 [TicketActions] Diagnóstico completo:', {
               </Button>
             )}
 
+            {/*  Botón Guardar*/}
+            {!isClosed && (
+              <Button
+                variant="contained"
+                onClick={onSave}
+                startIcon={<SaveIcon />}
+                sx={{
+                  bgcolor: '#121227',
+                  color: '#FFFFFF',
+                  '&:hover': { bgcolor: '#0a0a1a' },
+                  borderRadius: '8px',
+                  textTransform: 'none',
+                  fontWeight: 700,
+                  fontFamily: corporateFont,
+                  px: 3,
+                }}
+              >
+                Guardar
+              </Button>
+            )}
 
-            {/* Botón Guardar (SIEMPRE visible en el último paso) */}
-            <Button
-              variant="contained"
-              onClick={onSave}
-              startIcon={<SaveIcon />}
-              sx={{
-                bgcolor: '#121227',
-                color: '#FFFFFF',
-                '&:hover': { bgcolor: '#0a0a1a' },
-                borderRadius: '8px',
-                textTransform: 'none',
-                fontWeight: 700,
-                fontFamily: corporateFont,
-                px: 3,
-              }}
-            >
-              Guardar
-            </Button>
+            {/* ✅ Botón Salir: SOLO si está cerrado */}
+            {isClosed && (
+              <Button
+                variant="outlined"
+                onClick={onClose}
+                startIcon={<ExitToAppIcon />}
+                sx={{
+                  bgcolor: 'transparent',
+                  color: '#121227',
+                  border: '2px solid #121227',
+                  '&:hover': { bgcolor: '#121227', color: '#FFFFFF' },
+                  borderRadius: '8px',
+                  textTransform: 'none',
+                  fontWeight: 700,
+                  fontFamily: corporateFont,
+                  px: 3,
+                }}
+              >
+                Salir
+              </Button>
+            )}
           </>
         ) : (
           /* ✅ CASO 2: Paso 1 (Mostrar solo "Siguiente") */
-      <Button
+          <Button
             variant="contained"
             onClick={onNext}
-            disabled={!isStep0Complete}
+            disabled={!isStep0Complete }
             sx={{
               bgcolor: '#121227',
               color: '#FFFFFF',

@@ -1,5 +1,4 @@
 "use client";
-import { CustomDataGrid } from "app/components/customDataGrid";
 import { Box, Divider, Typography } from "@mui/material";
 import { useTheme } from "../context/ThemeContext";
 

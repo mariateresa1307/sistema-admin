@@ -6,6 +6,7 @@ import { TicketDetailModal } from "./cardDetailModal";
 import { Tabs, Tab, Box, Typography, Chip } from "@mui/material";
 import TicketModal from "../home/ticketModal";
 import { Tickets } from "app/utils/types";
+import { TicketRecord } from "app/utils/ticketHelpers";
 import { TICKET_STATUS } from "app/utils/constants";
 import { useHomeRefresh } from "../context/homeRefreshContext";
 import ActiveTicketsTab from "./tabs/activeTicketsTab";
@@ -31,9 +32,8 @@ export default function HomePage() {
   const [activeTab, setActiveTab] = useState(0);
   const [tabCounts, setTabCounts] = useState<number[]>([0, 0, 0]);
   const { refreshHomeData } = useHomeRefresh();
-
-  // ✅ CORRECCIÓN 1: Usar el tipo Tickets en lugar de any o TicketRecord
-  const [selectedTicket, setSelectedTicket] = useState<Tickets | null>(null);
+  
+  const [selectedTicket, setSelectedTicket] = useState<TicketRecord | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [ticketToEdit, setTicketToEdit] = useState<Tickets | null>(null);
@@ -66,23 +66,28 @@ export default function HomePage() {
     refreshHomeData();
   }, [refreshHomeData]);
 
-  const handleSaveTicket = useCallback((data?: any) => {
+  // ✅ AQUÍ ESTÁ LA MAGIA: Actualización instantánea sin fetch
+  const handleSaveTicket = useCallback((updatedTicketData?: any) => {
     setIsDialogOpen(false);
     setTicketToEdit(null);
+    
+    // Si el modal de detalle está abierto, actualizamos su estado con la respuesta fresca del backend
+    if (isDetailOpen && updatedTicketData) {
+      setSelectedTicket(updatedTicketData as TicketRecord);
+    }
+    
     refreshHomeData();
-  }, [refreshHomeData]);
+  }, [refreshHomeData, isDetailOpen]);
 
-  // ✅ CORRECCIÓN 2: El parámetro debe ser del tipo Tickets
   const handleTransitionToEdit = useCallback((ticket: Tickets) => {
     setIsDetailOpen(false);
     setTicketToEdit(ticket);
     setIsDialogOpen(true);
   }, []);
 
-  // ✅ CORRECCIÓN 3: El parámetro debe ser del tipo Tickets
   const handleCellClick = useCallback((params: any) => {
     if (params.row) {
-      setSelectedTicket(params.row as Tickets);
+      setSelectedTicket(params.row as TicketRecord);
       setIsDetailOpen(true);
     }
   }, []);
@@ -122,7 +127,7 @@ export default function HomePage() {
                         fontFamily: corporateFont,
                       }}
                     />
-                  )}
+                )}
                 </Box>
               }
             />
@@ -153,9 +158,12 @@ export default function HomePage() {
       
       <TicketDetailModal 
         open={isDetailOpen} 
-        onClose={() => setIsDetailOpen(false)} 
-        ticket={selectedTicket as React.ComponentProps<typeof TicketDetailModal>["ticket"]} 
-        onEditClick={() => selectedTicket && handleTransitionToEdit(selectedTicket)} 
+        onClose={() => {
+          setIsDetailOpen(false);
+          setSelectedTicket(null);
+        }} 
+        ticket={selectedTicket} 
+        onEditClick={() => selectedTicket && handleTransitionToEdit(selectedTicket as Tickets)} 
       />
     </ContainerBox>
   );

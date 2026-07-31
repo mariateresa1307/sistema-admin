@@ -51,38 +51,42 @@ export const useTicketForm = ({ sessionOperatorId, causasRaiz = [], solucionesCa
   }, [form, showTipoClienteInput]);
 
   const getNombreFromId = useCallback((id: string, lista: ConfiguracionInterface[]) => {
+    if (!id) return '';
     const item = lista.find(item => item._id === id);
     return item?.valor || id;
   }, []);
 
+  // ✅ CORREGIDO: Ahora acepta 'solucionCaso' (minúscula) que es lo que envía el formulario
   const updateField = useCallback((name: keyof TicketFormData, value: any) => {
     setForm((prev) => {
       const newForm = { ...prev, [name]: value };
       
-      if (name === 'causaRaiz' || name === 'SolucionCaso') {
-        const formForDescription = name === 'causaRaiz' 
-          ? { ...newForm, SolucionCaso: '' } 
-          : newForm;
-          
-        const causaNombre = getNombreFromId(formForDescription.causaRaiz, causasRaiz);
-        const solucionNombre = getNombreFromId(formForDescription.SolucionCaso, solucionesCaso);
+      // Verificamos ambas posibilidades por si acaso, pero 'solucionCaso' es la correcta
+      if (name === 'causaRaiz' || name === 'SolucionCaso' ) {
         
-        const isClosed = formForDescription.estatus === TICKET_STATUS.CERRADO || formForDescription.estatus === 'CERRADO';
-        const fechaCierreTexto = isClosed && formForDescription.horaCierreFalla 
-          ? formatToHumanDate(formForDescription.horaCierreFalla) 
-          : ''; // Si no está cerrado, se deja vacío
+        // Normalizamos la lectura de los IDs para evitar errores de undefined
+        const causaId = newForm.causaRaiz;
+        const solucionId = (newForm as any).SolucionCaso || (newForm as any).SolucionCaso;
+        
+        const causaNombre = getNombreFromId(causaId, causasRaiz);
+        const solucionNombre = getNombreFromId(solucionId, solucionesCaso);
+        
+        const isClosed = newForm.estatus === TICKET_STATUS.CERRADO || newForm.estatus === 'CERRADO';
+        const fechaCierreTexto = isClosed && newForm.horaCierreFalla 
+          ? formatToHumanDate(newForm.horaCierreFalla) 
+          : '';
 
         const descripcionGenerada = [
-          `Fecha y Hora apertura Ticket: ${formForDescription.horaDeteccionNoc ? formatToHumanDate(formForDescription.horaDeteccionNoc) : ''}`,
-          `Fecha y Hora Inicio Afectación: ${formForDescription.horaInicioFalla ? formatToHumanDate(formForDescription.horaInicioFalla) : ''}`,
-          `Fecha y hora de fin de Afectación: ${formForDescription.horaFinAfectacion ? formatToHumanDate(formForDescription.horaFinAfectacion) : ''}`,
+          `Fecha y Hora apertura Ticket: ${newForm.horaDeteccionNoc ? formatToHumanDate(newForm.horaDeteccionNoc) : ''}`,
+          `Fecha y Hora Inicio Afectación: ${newForm.horaInicioFalla ? formatToHumanDate(newForm.horaInicioFalla) : ''}`,
+          `Fecha y hora de fin de Afectación: ${newForm.horaFinAfectacion ? formatToHumanDate(newForm.horaFinAfectacion) : ''}`,
           `Fecha y hora de cierre ticket: ${fechaCierreTexto}`,
           `Causa: ${causaNombre}`,
           `Solución: ${solucionNombre}`,
         ].join('\n');
         
         return {
-          ...formForDescription,
+          ...newForm,
           descripcion: descripcionGenerada,
         };
       }
@@ -211,8 +215,7 @@ export const useTicketForm = ({ sessionOperatorId, causasRaiz = [], solucionesCa
 
   const prepareFinalData = useCallback(() => {
     const fechaHoraCierreFinal = form.horaCierreFalla || getLocalDateTimeString();
-    const cierreFormateado = formatToHumanDate(fechaHoraCierreFinal);
-
+    
     let descripcionFinal = form.descripcion;
     const lineas = descripcionFinal.split('\n');
 
@@ -242,8 +245,10 @@ export const useTicketForm = ({ sessionOperatorId, causasRaiz = [], solucionesCa
         const causaNombre = getNombreFromId(form.causaRaiz, causasRaiz);
         lineas[index] = `Causa: ${causaNombre}`;
       }
+      // ✅ CORREGIDO: Buscar el valor independientemente de si está en mayúscula o minúscula
       if (linea.startsWith('Solución:')) {
-        const solucionNombre = getNombreFromId(form.SolucionCaso, solucionesCaso);
+        const solucionId = (form as any).solucionCaso || (form as any).SolucionCaso;
+        const solucionNombre = getNombreFromId(solucionId, solucionesCaso);
         lineas[index] = `Solución: ${solucionNombre}`;
       }
     });
@@ -258,8 +263,6 @@ export const useTicketForm = ({ sessionOperatorId, causasRaiz = [], solucionesCa
       descripcion: descripcionFinal,
       cCierreSoporte: diffMin(form.horaInicioAtencion, fechaHoraCierreFinal),
       mttrTotal: diffMin(form.horaInicioFalla, fechaHoraCierreFinal),
-      
-      // ✅ CAMBIO CLAVE: Si no está cerrado, forzar el estatus a ACTIVO al guardar
       estatus: isClosed ? TICKET_STATUS.CERRADO : TICKET_STATUS.ACTIVO,
     };
   }, [form, causasRaiz, solucionesCaso, getNombreFromId]);

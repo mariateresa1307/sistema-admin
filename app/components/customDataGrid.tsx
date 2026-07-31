@@ -48,9 +48,22 @@ export default function CustomDataGrid({
     }
   }, [rawColumns]);
 
+  // ✅ CREAR ARRAY ORDENADO SOLO PARA EL DROPDOWN (Ticket primero)
+  const dropdownOptions = useMemo(() => {
+    if (!Array.isArray(columns) || columns.length === 0) return [];
+    
+    const caseNumberCol = columns.find(col => col.field === 'caseNumber');
+    const otherCols = columns.filter(col => col.field !== 'caseNumber');
+    
+    // Si existe caseNumber, la ponemos primera en el dropdown, luego el resto
+    return caseNumberCol ? [caseNumberCol, ...otherCols] : columns;
+  }, [columns]);
+
   const [isMounted, setIsMounted] = useState(false);
   const [searchField, setSearchField] = useState<string>(
-    columns.find(col => col.field === 'name') ? 'name' : (columns[0]?.field || "")
+    columns.find(col => col.field === 'caseNumber')?.field || 
+    columns.find(col => col.field === 'name')?.field || 
+    columns[0]?.field || ""
   );
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState(rows);
@@ -179,7 +192,8 @@ export default function CustomDataGrid({
           size="small" 
           sx={{ minWidth: 150 }}
         >
-          {columns.map((col) => (
+          {/* ✅ USAR dropdownOptions (con Ticket primero) SOLO en el dropdown */}
+          {dropdownOptions.map((col) => (
             <MenuItem key={col.field} value={col.field}>{col.headerName || col.field}</MenuItem>
           ))}
         </TextField>
@@ -238,7 +252,7 @@ export default function CustomDataGrid({
       <DataGrid
         getRowId={(row) => String(row._id || row.id)}
         rows={displayRows}
-        columns={columns}
+        columns={columns} // ✅ La tabla usa columns ORIGINAL (sin reordenar)
         loading={loading || isSearching}
         paginationModel={paginationModel}
         onPaginationModelChange={onPaginationModelChange}

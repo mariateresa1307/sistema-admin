@@ -8,16 +8,160 @@ import { Pagination, Tickets } from "app/utils/types";
 import { TICKET_STATUS } from "app/utils/constants";
 
 const corporateFont = 'Calibri, Arial, sans-serif';
+
+// ✅ PALETA ARMONIZADA - Fondos suaves con texto oscuro (menos agresivo visualmente)
+const getColorByTipoIncidencia = (tipoIncidencia: string): { bgcolor: string; color: string } => {
+  const tipoUpper = (tipoIncidencia || '').toUpperCase();
+  
+  // FALLA MASIVA: Rojo suave pero que siga destacando (es crítica)
+  if (tipoUpper.includes('MASIVA')) {
+    return { bgcolor: '#fee2e2', color: '#991b1b' }; // Rojo pastel con texto rojo oscuro
+  }
+  // MANTENIMIENTO / VENTANA DE MANTENIMIENTO
+  if (tipoUpper.includes('MANTENIMIENTO') || tipoUpper.includes('VENTANA')) {
+    return { bgcolor: '#dbeafe', color: '#1e40af' }; // Azul pastel con texto azul oscuro
+  }
+  // FALLA PUNTUAL (la más común, debe ser la más suave)
+  if (tipoUpper.includes('PUNTUAL')) {
+    return { bgcolor: '#f1f5f9', color: '#475569' }; // Gris azulado muy suave
+  }
+  // Por defecto
+  return { bgcolor: '#f8fafc', color: '#64748b' };
+};
+
+// ✅ PALETA ARMONIZADA PARA TIPO DE CLIENTE
+const getColorByTipoCliente = (tipoCliente: string): { bgcolor: string; color: string } => {
+  const tipoUpper = (tipoCliente || '').toUpperCase();
+  
+  // RESIDENCIAL
+  if (tipoUpper.includes('RESIDENCIAL')) {
+    return { bgcolor: '#dcfce7', color: '#166534' }; // Verde pastel suave
+  }
+  // CARRIER
+  if (tipoUpper.includes('CARRIER')) {
+    return { bgcolor: '#ffedd5', color: '#9a3412' }; // Naranja pastel suave
+  }
+  // BANCA
+  if (tipoUpper.includes('BANCA')) {
+    return { bgcolor: '#f3e8ff', color: '#6b21a8' }; // Morado/lavanda pastel
+  }
+  // CORPORATIVO
+  if (tipoUpper.includes('CORPORATIVO')) {
+    return { bgcolor: '#e0f2fe', color: '#075985' }; // Azul cielo pastel
+  }
+  // Sin especificar
+  return { bgcolor: '#f1f5f9', color: '#64748b' }; // Gris suave
+};
+
+// ✅ Helper para extraer el valor de tipoCliente
+const getTipoClienteValor = (value: any): string => {
+  if (!value) return 'Sin especificar';
+  if (typeof value === 'object' && value !== null) {
+    return value.valor || value.name || value.nombre || 'Sin especificar';
+  }
+  if (typeof value === 'string') {
+    if (value.length === 24 && /^[a-f0-9]+$/i.test(value)) {
+      return 'Sin especificar';
+    }
+    return value;
+  }
+  return 'Sin especificar';
+};
+
+// ✅ FUNCIÓN DE ORDENAMIENTO PERSONALIZADO - CORREGIDA
+const getTicketPriority = (ticket: any): number => {
+  const status = ticket.status;
+  const incidentType = (ticket.incidentType || '').toUpperCase();
+  const tipoClienteValor = getTipoClienteValor(ticket.tipoCliente).toUpperCase();
+
+  // 1. EN GESTIÓN - Siempre primero, sin importar el tipo
+  if (status === TICKET_STATUS.EN_GESTION) return 1;
+  
+  // 2. FALLA MASIVA (aunque estén ACTIVOS)
+  if (incidentType.includes('MASIVA')) return 2;
+  
+  // 3. CARRIER
+  if (tipoClienteValor.includes('CARRIER')) return 3;
+  
+  // 4. CORPORATIVO
+  if (tipoClienteValor.includes('CORPORATIVO')) return 4;
+  
+  // 5. RESIDENCIAL (y cualquier otro)
+  return 5;
+};
+
 const columns: GridColDef[] = [
+  {
+    field: 'tipoCliente',
+    headerName: 'Tipo de Cliente',
+    width: 160,
+    renderCell: (params: any) => {
+      const tipoClienteValor = getTipoClienteValor(params.value);
+      const incidentType = params.row.incidentType || '';
+
+      // REGLA 1: Si el Tipo de Cliente tiene un valor válido → Mostrarlo.
+      if (tipoClienteValor !== 'Sin especificar') {
+        const colors = getColorByTipoCliente(tipoClienteValor);
+        return (
+          <Chip
+            label={tipoClienteValor}
+            size="small"
+            sx={{
+              bgcolor: colors.bgcolor,
+              color: colors.color,
+              fontWeight: 600,
+              borderRadius: '6px',
+              fontSize: '0.72rem',
+              height: '26px',
+              border: `1px solid ${colors.bgcolor}`,
+              boxShadow: 'none',
+            }}
+          />
+        );
+      }
+
+      // REGLA 2: Si el Tipo de Cliente es "Sin especificar" Y el Tipo de Incidencia es DIFERENTE a "FALLA PUNTUAL" → Mostrar Tipo de Incidencia.
+      if (!incidentType.toUpperCase().includes('PUNTUAL')) {
+        const colors = getColorByTipoIncidencia(incidentType);
+        return (
+          <Chip
+            label={incidentType}
+            size="small"
+            sx={{
+              bgcolor: colors.bgcolor,
+              color: colors.color,
+              fontWeight: 600,
+              borderRadius: '6px',
+              fontSize: '0.72rem',
+              height: '26px',
+              border: `1px solid ${colors.bgcolor}`,
+              boxShadow: 'none',
+            }}
+          />
+        );
+      }
+
+      // FALLBACK NATURAL: Si es FALLA PUNTUAL sin tipo de cliente, muestra "Sin especificar"
+      return (
+        <Chip
+          label="Sin especificar"
+          size="small"
+          sx={{
+            bgcolor: '#f1f5f9',
+            color: '#94a3b8',
+            fontWeight: 500,
+            borderRadius: '6px',
+            fontSize: '0.72rem',
+            height: '26px',
+            border: '1px solid #e2e8f0',
+            boxShadow: 'none',
+          }}
+        />
+      );
+    },
+  },
   { field: "caseNumber", headerName: "Tickets", flex: 1, minWidth: 120 },
   { field: "subject", headerName: "Asunto de Caso", flex: 2, minWidth: 250 },
-  { 
-    field: "primerNombre", 
-    headerName: "Responsable", 
-    flex: 1.5, 
-    minWidth: 200, 
-    valueGetter: (value, row) => `${row?.primerNombre || ""} ${row?.primerApellido || ""}`.trim() 
-  },
   {
     field: "status", 
     headerName: "Estado", 
@@ -28,13 +172,28 @@ const columns: GridColDef[] = [
     renderCell: (params) => {
       const valor = params.value;
       const Translations: Record<string, any> = {
-        [TICKET_STATUS.EN_GESTION]: { labelText: "EN GESTIÓN", bgcolor: "#fff9c4", color: "#f57f17" },
-        [TICKET_STATUS.ACTIVO]: { labelText: "ACTIVO", bgcolor: "#e8f5e9", color: "#2e7d32" },
-        [TICKET_STATUS.CERRADO]: { labelText: "CERRADO", bgcolor: "#ffebee", color: "#c62828" },
-        ["default"]: { labelText: valor, bgcolor: "#f5f5f5", color: "#616161" },
+        [TICKET_STATUS.EN_GESTION]: { labelText: "EN GESTIÓN", bgcolor: "#fffbeb", color: "#92400e", border: "#fde68a" },
+        [TICKET_STATUS.ACTIVO]: { labelText: "ACTIVO", bgcolor: "#f0fdf4", color: "#166534", border: "#bbf7d0" },
+        [TICKET_STATUS.CERRADO]: { labelText: "CERRADO", bgcolor: "#fef2f2", color: "#991b1b", border: "#fecaca" },
+        ["default"]: { labelText: valor, bgcolor: "#f8fafc", color: "#64748b", border: "#e2e8f0" },
       };
-      const { labelText, ...otherProps } = Translations[valor] || Translations["default"];
-      return <Chip label={labelText} size="small" sx={{ ...otherProps, fontWeight: "bold", borderRadius: "6px", px: 0.5, fontFamily: corporateFont }} />;
+      const config = Translations[valor] || Translations["default"];
+      return (
+        <Chip 
+          label={config.labelText} 
+          size="small" 
+          sx={{ 
+            bgcolor: config.bgcolor, 
+            color: config.color, 
+            border: `1px solid ${config.border}`,
+            fontWeight: "bold", 
+            borderRadius: "6px", 
+            px: 0.5, 
+            fontFamily: corporateFont,
+            boxShadow: 'none',
+          }} 
+        />
+      );
     },
   },
 ];
@@ -49,6 +208,7 @@ export default function ActiveTicketsTab({
   const [tickets, setTickets] = useState<Pagination<Tickets[]> | null>(null);
   const [page, setPage] = useState({ page: 0, pageSize: 10 });
   const [searchParams, setSearchParams] = useState<SearchParams>({ field: "caseNumber", value: "" });
+  
   const fetchTickets = useCallback(async () => {
     try {
       const params: Record<string, string | number> = {
@@ -67,13 +227,20 @@ export default function ActiveTicketsTab({
 
       filteredData = filteredData.filter((t: any) => t.status !== TICKET_STATUS.CERRADO);
 
+      // ✅ APLICAR EL ORDENAMIENTO CORREGIDO
+      filteredData.sort((a: any, b: any) => {
+        const priorityA = getTicketPriority(a);
+        const priorityB = getTicketPriority(b);
+        if (priorityA === priorityB) return 0;
+        return priorityA - priorityB;
+      });
+
       setTickets({ ...response.data, data: filteredData, total: currentTotal });
       onCountChange(currentTotal);
     } catch (error) {
       console.error('❌ Error fetching tickets:', error);
     }
   }, [page.page, page.pageSize, searchParams.field, searchParams.value, onCountChange]);
-
 
   useEffect(() => { 
     fetchTickets(); 
@@ -86,7 +253,6 @@ export default function ActiveTicketsTab({
       return params;
     });
   }, []);
-
 
   const handlePagination = useCallback((model: { page: number; pageSize: number }) => {
     setPage(model);

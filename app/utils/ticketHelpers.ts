@@ -1,7 +1,7 @@
 import dayjs from 'dayjs';
 import { TICKET_STATUS } from 'app/utils/constants';
 
-export type ServicioAfectado = { _id: string; name: string };
+export type ServicioAfectado = { _id: string; name: string; valor?: string; nombre?: string };
 
 export type OperatorField =
   | { _id?: string; primerNombre?: string; primerApellido?: string; username?: string; email?: string }
@@ -17,7 +17,7 @@ export interface TicketRecord {
   networkCategory?: string;
   subcategoria?: string;
   detalle?: string;
-  tipoCliente?: string;
+  tipoCliente?: string | { _id: string; valor?: string; name?: string; nombre?: string };
   serviciosAfectados?: string[] | ServicioAfectado[];
   ciudad?: string;
   estado?: string;
@@ -50,6 +50,8 @@ export interface TicketRecord {
   description?: string;
   status?: string;
   email?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface TicketFormData {
@@ -132,6 +134,7 @@ export const initialFormState: TicketFormData = {
   severidad: '',
   imputable: '',
   afectacion: false,
+  
 };
 
 export const getLocalDateTimeString = (date = new Date()): string => {
@@ -139,6 +142,11 @@ export const getLocalDateTimeString = (date = new Date()): string => {
   return new Date(date.getTime() - tzOffset).toISOString().slice(0, 16);
 };
 
+export const formatTTZoho = (value: string | undefined | null): string => {
+  if (!value) return '-';
+  const str = String(value).trim();
+  return str.startsWith('#') ? str : `#${str}`;
+};
 export const formatToHumanDate = (dateTimeStr: string): string => {
   if (!dateTimeStr) return '';
   const cleanStr = dateTimeStr.includes('T') ? dateTimeStr.replace('T', ' ') : dateTimeStr;
@@ -201,7 +209,7 @@ const normalizeServiciosAfectados = (
 ): ServicioAfectado[] => {
   if (!value?.length) return [];
   if (typeof value[0] === 'string') {
-    return (value as string[]).map((id) => ({ _id: id, name: id }));
+    return (value as string[]).map((id) => ({ _id: id as string, name: id as string }));
   }
   return value as ServicioAfectado[];
 };
@@ -229,6 +237,11 @@ export const mapTicketToFormData = (
     }
   }
 
+  // ✅ CORRECCIÓN CLAVE: Extraer solo el _id si tipoCliente viene como objeto poblado
+  const tipoClienteId = typeof ticket.tipoCliente === 'object' && ticket.tipoCliente !== null
+    ? (ticket.tipoCliente as any)._id
+    : (ticket.tipoCliente || '');
+
   return {
     ...initialFormState,
     numeroTicket: ticket.caseNumber || '',
@@ -237,7 +250,7 @@ export const mapTicketToFormData = (
     categoria: ticket.networkCategory || '',
     subcategoria: ticket.subcategoria || '',
     detalle: ticket.detalle || '',
-    tipoCliente: ticket.tipoCliente || '',
+    tipoCliente: tipoClienteId, // ✅ Aquí usamos el ID extraído
     ciudad: ticket.ciudad || '',
     estado: ticket.estado || '',
     localidad: ticket.localidad || '',
@@ -267,6 +280,7 @@ export const mapTicketToFormData = (
     estatus: ticket.status || '',
     turnoAsignado: ticket.turnoAsignado === 'NOCTURNO' ? 'NOCTURNO' : 'DIURNO',
     operador: ticket.operador || '',
+    
   };
 };
 
@@ -311,8 +325,6 @@ export const mapFormToUpdatePayload = (form: TicketFormData & Record<string, unk
   tEscalado: form.tEscalado as number | undefined,
   cCierreSoporte: form.cCierreSoporte as number | undefined,
   mttrTotal: form.mttrTotal as number | undefined,
-  
-  // ✅ CLAVE: Envía el estatus final (ACTIVO o CERRADO) al backend para actualizar la BD
   status: form.estatus, 
 });
 
