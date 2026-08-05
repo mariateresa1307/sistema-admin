@@ -3,9 +3,9 @@ import * as React from "react";
 import { Modal, Paper, Box, Typography, IconButton, Divider, Chip, Tooltip } from "@mui/material";
 import Grid from "@mui/material/Grid";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Close as CloseIcon, Edit as EditIcon, Delete as DeleteIcon, 
-  Map as MapIcon, Place as PlaceIcon, Category as CategoryIcon, 
+import {
+  Close as CloseIcon, Edit as EditIcon, Delete as DeleteIcon,
+  Map as MapIcon, Place as PlaceIcon, Category as CategoryIcon,
   Info as InfoIcon, CheckCircle as CheckCircleIcon, Cancel as CancelIcon,
   ReportProblem as ReportProblemIcon, AccountTree as AccountTreeIcon,
   Warning as WarningIcon, CalendarToday as CalendarIcon, Update as UpdateIcon
@@ -25,7 +25,7 @@ type MiscellaneousItem = {
   createdAt?: string;
   updatedAt?: string;
   tipoIncidencia?: string[];
-  nivelSeveridad?: string; 
+  nivelSeveridad?: string;
 };
 
 interface CardSeeMiscellaneousModalProps {
@@ -46,11 +46,11 @@ const formatCategoria = (categoria: string): string => {
 
 export const getColorByTipoIncidencia = (tipoIncidencia: string): string => {
   const tipoUpper = (tipoIncidencia || '').toUpperCase();
-  
+
   if (tipoUpper.includes('PUNTUAL')) return '#67a6d9';
   if (tipoUpper.includes('MASIVA')) return '#b52323';
   if (tipoUpper.includes('MANTENIMIENTO')) return '#1565c0';
-  
+
   return '#1976d2';
 };
 
@@ -150,16 +150,16 @@ export const CardSeeMiscellaneousModal = ({
   return (
     <>
 
-<ConfirmDialog
-  open={confirmDeleteOpen} 
-  title="Eliminar Estado"
-  message="¿Estás seguro de que deseas eliminar este estado? Esta acción no se puede deshacer."
-  type="warning"
-  onConfirm={handleConfirmDelete} 
-  onCancel={() => setConfirmDeleteOpen(false)} 
-  confirmText="Eliminar"
-  cancelText="Cancelar"
-/>
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        title="Eliminar Estado"
+        message="¿Estás seguro de que deseas eliminar este estado? Esta acción no se puede deshacer."
+        type="warning"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setConfirmDeleteOpen(false)}
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+      />
 
       <AnimatePresence>
         {open && item && (
@@ -180,7 +180,7 @@ export const CardSeeMiscellaneousModal = ({
                 }}
               >
                 {/* Top border based on status */}
-                <Box sx={{ 
+                <Box sx={{
                   position: 'absolute', top: 0, left: 0, width: '100%', height: '5px',
                   bgcolor: item.activo !== false ? '#22c55e' : '#ef4444'
                 }} />
@@ -198,21 +198,21 @@ export const CardSeeMiscellaneousModal = ({
                       </Typography>
                     </Box>
                   </Box>
-                  
+
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Tooltip title="Editar">
-                      <IconButton 
-                        onClick={onEditClick} 
-                        size="small" 
+                      <IconButton
+                        onClick={onEditClick}
+                        size="small"
                         sx={{ color: '#080769', '&:hover': { bgcolor: '#0807690a' } }}
                       >
                         <EditIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
                     <Tooltip title="Eliminar">
-                      <IconButton 
-                        onClick={handleDeleteClick} 
-                        size="small" 
+                      <IconButton
+                        onClick={handleDeleteClick}
+                        size="small"
                         sx={{ color: '#d32f2f', '&:hover': { bgcolor: '#d32f2f0a' } }}
                       >
                         <DeleteIcon fontSize="small" />
@@ -245,15 +245,15 @@ export const CardSeeMiscellaneousModal = ({
                       Estado
                     </Typography>
                     <Box sx={{ mt: 0.5 }}>
-                      <Chip 
-                        label={item.activo !== false ? "Activo" : "Inactivo"} 
+                      <Chip
+                        label={item.activo !== false ? "Activo" : "Inactivo"}
                         size="small"
                         icon={item.activo !== false ? <CheckCircleIcon /> : <CancelIcon />}
-                        sx={{ 
+                        sx={{
                           fontWeight: 700, borderRadius: '6px', fontSize: '0.72rem', px: 1,
                           bgcolor: item.activo !== false ? '#e8f5e9' : '#ffebee',
                           color: item.activo !== false ? '#2e7d32' : '#c62828'
-                        }} 
+                        }}
                       />
                     </Box>
                   </Grid>
@@ -263,14 +263,14 @@ export const CardSeeMiscellaneousModal = ({
                       Sección
                     </Typography>
                     <Box sx={{ mt: 0.5 }}>
-                      <Chip 
-                        label={formatCategoria(item.categoria)} 
+                      <Chip
+                        label={formatCategoria(item.categoria)}
                         size="small"
-                        sx={{ 
+                        sx={{
                           fontWeight: 600, borderRadius: '6px', fontSize: '0.72rem', px: 1,
                           bgcolor: '#e8eaf6',
                           color: '#000027'
-                        }} 
+                        }}
                       />
                     </Box>
                   </Grid>
@@ -308,14 +308,14 @@ export const CardSeeMiscellaneousModal = ({
                         Nivel de Severidad
                       </Typography>
                       <Box sx={{ mt: 0.5 }}>
-                        <Chip 
+                        <Chip
                           label={`${nivelSeveridadConfig.icon} ${nivelSeveridadConfig.label}`}
                           size="small"
-                          sx={{ 
+                          sx={{
                             fontWeight: 700, borderRadius: '6px', fontSize: '0.72rem', px: 1,
                             bgcolor: nivelSeveridadConfig.bgcolor,
                             color: nivelSeveridadConfig.color
-                          }} 
+                          }}
                         />
                       </Box>
                     </Grid>

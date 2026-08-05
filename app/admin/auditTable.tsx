@@ -40,6 +40,19 @@ const ACTION_CONFIG: Record<string, { label: string; color: 'success' | 'error' 
   EXPORT: { label: 'Exportar', color: 'info', icon: HistoryIcon },
 };
 
+
+const extractRecordName = (log: AuditLog): string | undefined => {
+  if (log.oldValue) {
+    try {
+      const oldValue = typeof log.oldValue === 'string' ? JSON.parse(log.oldValue) : log.oldValue;
+      const name = oldValue?.valor || oldValue?.name || oldValue?.nombre || oldValue?.title || oldValue?.label;
+      if (name) return name;
+    } catch {
+    }
+  }
+  return undefined;
+}
+
 const formatModuleName = (moduleId: string | undefined | null): string => {
   if (!moduleId) return '—';
   const modules: Record<string, string> = {
@@ -93,7 +106,9 @@ export default function AuditTable({ data, loading, total, page, limit, onPageCh
               const eventDate = dateValue ? dayjs(dateValue) : null;
               const moduleId = (log as any).moduleId || (log as any).module;
               const moduleName = formatModuleName(moduleId);
+              const recordName = log.action === 'DELETE' ? extractRecordName(log) : (log.details || '—');
 
+ 
               return (
                 <TableRow key={log._id || Math.random()} hover onClick={() => handleRowClick(log)} sx={{ cursor: 'pointer', '&:hover': { bgcolor: '#f8fafc' }, transition: 'background-color 0.15s ease' }}>
                   <TableCell>
@@ -143,7 +158,7 @@ export default function AuditTable({ data, loading, total, page, limit, onPageCh
             onRowsPerPageChange(parseInt(event.target.value, 10));
           }
         }}
-        rowsPerPageOptions={[10, 50, 100]} // ✅ Opciones de registros por página
+        rowsPerPageOptions={[10, 50, 100]} 
         labelRowsPerPage="Registros por página"
         labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
         sx={{ '& .MuiTablePagination-toolbar': { fontSize: '0.85rem' } }}

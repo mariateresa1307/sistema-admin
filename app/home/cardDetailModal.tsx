@@ -108,7 +108,7 @@ const getNodoLabel = (nodoInfo: NodoInfo): string => {
 const getNodoColorByOrigen = (origen: string): { bgcolor: string; color: string; border: string } => {
   switch (origen) {
     case 'nodoOLT': return { bgcolor: '#e0f2fe', color: '#075985', border: '#bae6fd' };
-    case 'nodoA': return { bgcolor: '#ffedd5', color: '#9a3412', border: '#fed7aa' };
+    case 'nodoA': return { bgcolor: '#fafbfc', color: '#9a3412', border: '#f4f7fa' };
     case 'nodoB': return { bgcolor: '#f3e8ff', color: '#6b21a8', border: '#e9d5ff' };
     default: return { bgcolor: '#dcfce7', color: '#166534', border: '#bbf7d0' };
   }
@@ -135,6 +135,15 @@ const InfoItem = ({ label, value, icon }: { label: string; value: React.ReactNod
   </Box>
 );
 
+// ✅ FUNCIÓN AUXILIAR: Extrae array de respuesta paginada o directa
+const extractData = (response: any): any[] => {
+  if (!response) return [];
+  if (Array.isArray(response)) return response;
+  if (Array.isArray(response.data)) return response.data;
+  if (response.data && Array.isArray(response.data.data)) return response.data.data;
+  return [];
+};
+
 export function TicketDetailModal({ open, onClose, ticket, onEditClick }: TicketDetailModalProps) {
   const [operadores, setOperadores] = useState<Array<OperatorInfo & { _id: string }>>([]);
   const [causasRaizList, setCausasRaizList] = useState<any[]>([]);
@@ -144,21 +153,28 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
     if (!open) return;
     Promise.all([
       getUsers(),
-      getMiscellaneous({ categoria: 'CAUSA_RAIZ' }),
-      getMiscellaneous({ categoria: 'SOLUCION_CASO' })
+      getMiscellaneous({ categoria: 'CAUSA_RAIZ', limit: 999 }),
+      getMiscellaneous({ categoria: 'SOLUCION_CASO', limit: 999 })
     ]).then(([usersRes, causasRes, solucionesRes]) => {
       const data = Array.isArray(usersRes.data) ? usersRes.data : [];
       setOperadores(data.filter((u: any) => u.isActive !== false).map((u: any) => ({
         _id: u._id, primerNombre: u.primerNombre, primerApellido: u.primerApellido, username: u.username, email: u.email,
       })));
-      setCausasRaizList(causasRes?.data || []);
-      setSolucionesCasoList(solucionesRes?.data || []);
-    }).catch((err) => console.error("Error al obtener datos para el modal:", err));
+      
+      // ✅ EXTRAER correctamente los arrays de las respuestas paginadas
+      setCausasRaizList(extractData(causasRes));
+      setSolucionesCasoList(extractData(solucionesRes));
+      
+      console.log(' [TicketDetailModal] Datos cargados:', {
+        causasRaiz: extractData(causasRes).length,
+        solucionesCaso: extractData(solucionesRes).length,
+      });
+    }).catch((err) => console.error("❌ Error al obtener datos para el modal:", err));
   }, [open]);
 
   useEffect(() => {
     if (ticket  && open ) {
-      console.log('🎫 [Ticket Data]',
+      console.log(' [Ticket Data]',
          { createdAt: ticket.createdAt,
            updatedAt: ticket.updatedAt, 
            fullTicket: ticket });
@@ -216,6 +232,13 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
   const getValorFromId = (idOrObj: any, lista: any[]) => {
     if (!idOrObj) return 'Sin especificar';
     if (typeof idOrObj === 'object' && idOrObj !== null) return idOrObj.valor || idOrObj.name || idOrObj.nombre || idOrObj._id || 'Sin especificar';
+    
+    // ✅ VERIFICAR que lista sea un array antes de usar .find()
+    if (!Array.isArray(lista)) {
+      console.warn('⚠️ [getValorFromId] lista no es un array:', lista);
+      return idOrObj;
+    }
+    
     const encontrado = lista.find((item: any) => String(item._id) === String(idOrObj));
     return encontrado ? encontrado.valor : idOrObj;
   };
@@ -229,7 +252,6 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
   const mostrarNodos = nodosUnicos.length > 0;
   const isClosed = (ticket.status || '').toUpperCase() === 'CERRADO';
 
- 
   return (
     <AnimatePresence>
       {open && (

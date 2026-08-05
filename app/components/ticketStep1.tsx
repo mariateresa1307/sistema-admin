@@ -35,12 +35,20 @@ export const TicketStep1 = React.memo(
     onServiciosAfectadosChange,
   }: TicketStep1Props) => {
     const [openServicioModal, setOpenServicioModal] = useState(false);
+
+    // ✅ Blindaje de arrays + fallback a []
+    const tipoClienteArray = Array.isArray(data?.tipoCliente) ? data.tipoCliente : [];
+    const categoriaRedArray = Array.isArray(data?.categoriaRed) ? data.categoriaRed : [];
+    const subcategoriasArray = Array.isArray(data?.subcategorias) ? data.subcategorias : [];
+    const detalleArray = Array.isArray(data?.detalle) ? data.detalle : [];
+    const ciudadesOptionsArray = Array.isArray(data?.ciudadesOptions) ? data.ciudadesOptions : [];
+    const localidadesOptionsArray = Array.isArray(data?.localidadesOptions) ? data.localidadesOptions : [];
+
     const showTipoClienteInput = form.tipoIncidencia !== TIPO_INCIDENCIA.FALLA_MASIVA;
-    const selectedTipoCliente = data.tipoCliente.find((tc) => tc._id === form.tipoCliente);
+    const selectedTipoCliente = tipoClienteArray.find((tc) => tc._id === form.tipoCliente);
     const isResidencial = selectedTipoCliente?.valor === TIPO_CLIENTE.RESIDENCIAL;
-    
-    // Verifica si el ticket está cerrado
     const isClosed = form.estatus === TICKET_STATUS.CERRADO || form.estatus === 'CERRADO';
+    const isLoading = data?.loading;
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const { name, value, type } = e.target;
@@ -113,13 +121,21 @@ export const TicketStep1 = React.memo(
             value={form.categoria ?? ''}
             onChange={(e) => onCategoriaChange(e.target.value)}
             size="small"
-            disabled={isClosed}
+            disabled={isClosed || isLoading}
           >
-            {data.categoriaRed.map((cat: SimpleConfigOpt) => (
-              <MenuItem key={cat._id} value={cat._id}>
-                {cat.valor}
-              </MenuItem>
-            ))}
+            {isLoading ? (
+              <MenuItem value="" disabled>Cargando...</MenuItem>
+            ) : !form.tipoIncidencia ? (
+              <MenuItem value="" disabled>Seleccione primero Tipo de Incidencia</MenuItem>
+            ) : categoriaRedArray.length === 0 ? (
+              <MenuItem value="" disabled>No hay categorías para este tipo</MenuItem>
+            ) : (
+              categoriaRedArray.map((cat: SimpleConfigOpt) => (
+                <MenuItem key={cat._id} value={cat._id}>
+                  {cat.valor}
+                </MenuItem>
+              ))
+            )}
           </TextField>
         </Grid>
 
@@ -133,13 +149,21 @@ export const TicketStep1 = React.memo(
             value={form.subcategoria ?? ''}
             onChange={(e) => onSubcategoriaChange(e.target.value)}
             size="small"
-            disabled={!form.categoria || isClosed}
+            disabled={!form.categoria || isClosed || isLoading}
           >
-            {data.subcategorias.map((p: SimpleConfigOpt) => (
-              <MenuItem key={p._id} value={p._id}>
-                {p.valor}
-              </MenuItem>
-            ))}
+            {isLoading ? (
+              <MenuItem value="" disabled>Cargando...</MenuItem>
+            ) : !form.categoria ? (
+              <MenuItem value="" disabled>Seleccione primero Categoría</MenuItem>
+            ) : subcategoriasArray.length === 0 ? (
+              <MenuItem value="" disabled>No hay subcategorías</MenuItem>
+            ) : (
+              subcategoriasArray.map((p: SimpleConfigOpt) => (
+                <MenuItem key={p._id} value={p._id}>
+                  {p.valor}
+                </MenuItem>
+              ))
+            )}
           </TextField>
         </Grid>
 
@@ -154,13 +178,21 @@ export const TicketStep1 = React.memo(
             value={form.detalle ?? ''}
             onChange={handleChange}
             size="small"
-            disabled={!form.categoria || isClosed}
+            disabled={!form.categoria || isClosed || isLoading}
           >
-            {data.detalle.map((v: SimpleConfigOpt) => (
-              <MenuItem key={v._id} value={v._id}>
-                {v.valor}
-              </MenuItem>
-            ))}
+            {isLoading ? (
+              <MenuItem value="" disabled>Cargando...</MenuItem>
+            ) : !form.subcategoria ? (
+              <MenuItem value="" disabled>Seleccione primero Subcategoría</MenuItem>
+            ) : detalleArray.length === 0 ? (
+              <MenuItem value="" disabled>No hay detalles</MenuItem>
+            ) : (
+              detalleArray.map((v: SimpleConfigOpt) => (
+                <MenuItem key={v._id} value={v._id}>
+                  {v.valor}
+                </MenuItem>
+              ))
+            )}
           </TextField>
         </Grid>
 
@@ -179,18 +211,23 @@ export const TicketStep1 = React.memo(
                 onServiciosAfectadosChange([]); 
               }}
               size="small"
-              disabled={isClosed}
+              disabled={isClosed || isLoading}
             >
-              {data.tipoCliente.map((tc) => (
-                <MenuItem key={tc._id} value={tc._id}>
-                  {tc.valor}
-                </MenuItem>
-              ))}
+              {isLoading ? (
+                <MenuItem value="" disabled>Cargando...</MenuItem>
+              ) : tipoClienteArray.length === 0 ? (
+                <MenuItem value="" disabled>No hay tipos de cliente</MenuItem>
+              ) : (
+                tipoClienteArray.map((tc) => (
+                  <MenuItem key={tc._id} value={tc._id}>
+                    {tc.valor}
+                  </MenuItem>
+                ))
+              )}
             </TextField>
           </Grid>
         )}
 
-       
         {/* Ciudad */}
         <Grid size={{ xs: 12, sm: 4 }}>
           <TextField
@@ -201,13 +238,19 @@ export const TicketStep1 = React.memo(
             value={form.ciudad ?? ''}
             onChange={(e) => onCiudadChange(e.target.value)}
             size="small"
-            disabled={isClosed}
+            disabled={isClosed || isLoading}
           >
-            {data.ciudadesOptions.map((c: any) => (
-              <MenuItem key={c._id || c.valor} value={c.valor}>
-                {c.valor}
-              </MenuItem>
-            ))}
+            {isLoading ? (
+              <MenuItem value="" disabled>Cargando...</MenuItem>
+            ) : ciudadesOptionsArray.length === 0 ? (
+              <MenuItem value="" disabled>No hay ciudades registradas</MenuItem>
+            ) : (
+              ciudadesOptionsArray.map((c: any) => (
+                <MenuItem key={c._id || c.valor} value={c.valor}>
+                  {c.valor}
+                </MenuItem>
+              ))
+            )}
           </TextField>
         </Grid>
 
@@ -235,20 +278,25 @@ export const TicketStep1 = React.memo(
                 value={form.localidad ?? ''}
                 onChange={handleChange}
                 size="small"
-                disabled={isClosed}
+                disabled={isClosed || isLoading}
               >
-                {data.localidadesOptions.map((loc: any) => (
-                  <MenuItem key={loc._id || loc.valor} value={loc.valor}>
-                    {loc.valor}
-                  </MenuItem>
-                ))}
+                {isLoading ? (
+                  <MenuItem value="" disabled>Cargando...</MenuItem>
+                ) : localidadesOptionsArray.length === 0 ? (
+                  <MenuItem value="" disabled>No hay localidades para esta ciudad</MenuItem>
+                ) : (
+                  localidadesOptionsArray.map((loc: any) => (
+                    <MenuItem key={loc._id || loc.valor} value={loc.valor}>
+                      {loc.valor}
+                    </MenuItem>
+                  ))
+                )}
               </TextField>
             </Grid>
           </>
         )}
 
-
-         {/* ✅ Servicios Afectados: SOLO se muestra si NO es Residencial Y "Afectación" es TRUE */}
+        {/* Servicios Afectados */}
         {showTipoClienteInput && !isResidencial && form.afectacion === true && (
           <Grid size={{ xs: 12, sm: 4 }}>
             <Autocomplete
@@ -263,21 +311,10 @@ export const TicketStep1 = React.memo(
               value={(() => {
                 if (!Array.isArray(form.serviciosAfectados)) return [];
                 const listaServicios = Array.isArray(data.serviciosAfectados) ? data.serviciosAfectados : [];
-
                 return form.serviciosAfectados.map((sa: any) => {
                   const idToFind = typeof sa === 'string' ? sa : String(sa._id || sa.id || '');
                   const servicioEncontrado = listaServicios.find((s) => String(s._id || s.id) === idToFind);
-                  
-                  if (servicioEncontrado) {
-                    return servicioEncontrado;
-                  }
-                  
-                  return { 
-                    _id: idToFind, 
-                    id: idToFind,
-                    name: `Cargando...`, 
-                    valor: `Cargando...`
-                  };
+                  return servicioEncontrado || { _id: idToFind, id: idToFind, name: `Cargando...`, valor: `Cargando...` };
                 });
               })()}
               onChange={(_, newValue) => onServiciosAfectadosChange(newValue)}
@@ -286,15 +323,10 @@ export const TicketStep1 = React.memo(
                 if (typeof option === 'string') return option;
                 return option.name || option.valor || option.nombre || option.descripcion || `ID: ${option._id || option.id}`;
               }}
-              disabled={isClosed}
+              disabled={isClosed || isLoading}
               ChipProps={{
                 size: 'small',
-                sx: {
-                  height: 24,
-                  m: 0.25,
-                  bgcolor: '#7f88ba',
-                  color: '#FFFFFF',
-                },
+                sx: { height: 24, m: 0.25, bgcolor: '#7f88ba', color: '#FFFFFF' },
               }}
               renderInput={(params) => (
                 <TextField
@@ -306,12 +338,7 @@ export const TicketStep1 = React.memo(
                     endAdornment: (
                       <>
                         {params.InputProps.endAdornment}
-                        <IconButton
-                          onClick={() => setOpenServicioModal(true)}
-                          size="small"
-                          sx={{ p: 0.5, color: '#121227' }}
-                          disabled={isClosed}
-                        />
+                        <IconButton onClick={() => setOpenServicioModal(true)} size="small" sx={{ p: 0.5, color: '#121227' }} disabled={isClosed} />
                       </>
                     ),
                   }}
@@ -329,65 +356,27 @@ export const TicketStep1 = React.memo(
           </Grid>
         )}
 
-
         {/* Campos para RESIDENCIAL */}
         {isResidencial && (
           <>
             <Grid size={{ xs: 12, sm: 4 }}>
-              <TextField
-                fullWidth
-                required
-                label="Nodo Afectado"
-                name="nodo"
-                value={form.nodo ?? ''}
-                onChange={handleChange}
-                size="small"
-                disabled={isClosed}
-              />
+              <TextField fullWidth required label="Nodo Afectado" name="nodo" value={form.nodo ?? ''} onChange={handleChange} size="small" disabled={isClosed} />
             </Grid>
             <Grid size={{ xs: 12, sm: 4 }}>
-              <TextField
-                fullWidth
-                required
-                label="Abonado"
-                name="abonado"
-                value={form.abonado ?? ''}
-                onChange={handleChange}
-                size="small"
-                disabled={isClosed}
-              />
+              <TextField fullWidth required label="Abonado" name="abonado" value={form.abonado ?? ''} onChange={handleChange} size="small" disabled={isClosed} />
             </Grid>
             <Grid size={{ xs: 12, sm: 4 }}>
-              <TextField
-                fullWidth
-                required
-                label="Nombre del Cliente"
-                name="nombreCliente"
-                value={form.nombreCliente ?? ''}
-                onChange={handleChange}
-                size="small"
-                disabled={isClosed}
-              />
+              <TextField fullWidth required label="Nombre del Cliente" name="nombreCliente" value={form.nombreCliente ?? ''} onChange={handleChange} size="small" disabled={isClosed} />
             </Grid>
           </>
         )}
 
         {/* Bitácora */}
         <Grid size={12}>
-          <TextField
-            fullWidth
-            label="Bitácora"
-            name="bitacora"
-            multiline
-            maxRows={4}
-            value={form.bitacora ?? ''}
-            onChange={handleChange}
-            size="small"
-            disabled={isClosed}
-          />
+          <TextField fullWidth label="Bitácora" name="bitacora" multiline maxRows={4} value={form.bitacora ?? ''} onChange={handleChange} size="small" disabled={isClosed} />
         </Grid>
 
-        {/* ✅ Afectación: Al desmarcar, limpiamos los servicios afectados para mantener la data limpia */}
+        {/* Afectación */}
         <Grid size={{ xs: 12, sm: 4 }}>
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
             <Switch
@@ -395,25 +384,16 @@ export const TicketStep1 = React.memo(
               checked={!!form.afectacion}
               onChange={(e) => {
                 handleChange(e);
-                // Si se desmarca la afectación, eliminamos los servicios seleccionados
-                if (!e.target.checked) {
-                  onServiciosAfectadosChange([]);
-                }
+                if (!e.target.checked) onServiciosAfectadosChange([]);
               }}
               inputProps={{ 'aria-label': 'Afectación' }}
               disabled={isClosed}
               sx={{
-                '& .MuiSwitch-switchBase.Mui-checked': {
-                  color: '#6BB1E2',
-                },
-                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                  backgroundColor: '#6BB1E2',
-                },
+                '& .MuiSwitch-switchBase.Mui-checked': { color: '#6BB1E2' },
+                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#6BB1E2' },
               }}
             />
-            <Typography sx={{ fontWeight: 500, color: '#121227' }}>
-              Afectación
-            </Typography>
+            <Typography sx={{ fontWeight: 500, color: '#121227' }}>Afectación</Typography>
           </Stack>
         </Grid>
       </Grid>

@@ -22,15 +22,13 @@ export const SubcategoriaFields = ({
   const [categorias, setCategorias] = React.useState<MiscellaneousItem[]>([]);
   const [loadingCategorias, setLoadingCategorias] = React.useState(false);
 
-  // ✅ Cargar categorías usando extracción segura (maneja paginación)
   React.useEffect(() => {
     const cargarCategorias = async () => {
       if (isOpen) {
         setLoadingCategorias(true);
+
         try {
           const response = await getMiscellaneous({ categoria: "CATEGORIA_RED", limit: 9999 });
-          
-          // ✅ EXTRACCIÓN SEGURA: Maneja tanto array directo como objeto paginado { data: [...], total: X }
           const rawData = response?.data;
           const categoriasData = Array.isArray(rawData?.data) 
             ? rawData.data 
@@ -38,8 +36,11 @@ export const SubcategoriaFields = ({
             
           const categoriasActivas = categoriasData.filter((c: MiscellaneousItem) => c.activo !== false);
           setCategorias(categoriasActivas);
-        } catch (error) {
+
+        } 
+        catch (error) {
           console.error("Error al cargar categorías:", error);
+
         } finally {
           setLoadingCategorias(false);
         }
@@ -48,7 +49,6 @@ export const SubcategoriaFields = ({
     cargarCategorias();
   }, [isOpen]);
 
-  // Inicializar categoría seleccionada al editar
   React.useEffect(() => {
     if (isOpen) {
       if (initialData?.padreId) {
@@ -59,12 +59,10 @@ export const SubcategoriaFields = ({
     }
   }, [initialData, isOpen]);
 
-  // Notificar al padre cuando cambia la categoría
   React.useEffect(() => {
     onCategoriaChange(categoriaSeleccionada);
   }, [categoriaSeleccionada, onCategoriaChange]);
 
-  // Registrar función de validación en el padre
   React.useEffect(() => {
     onValidate(() => {
       if (!categoriaSeleccionada) {

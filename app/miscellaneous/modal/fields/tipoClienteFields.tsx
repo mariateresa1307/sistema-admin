@@ -18,7 +18,6 @@ export const TipoClienteFields = ({
 }: TipoClienteFieldsProps) => {
   const [nivelSeleccionado, setNivelSeleccionado] = React.useState("");
 
-  // Inicializar valor al editar
   React.useEffect(() => {
     if (isOpen) {
       if (initialData?.nivelSeveridad) {
@@ -29,7 +28,6 @@ export const TipoClienteFields = ({
     }
   }, [initialData, isOpen]);
 
-  // Notificar al padre cuando cambia el nivel y registrar validación
   React.useEffect(() => {
     onNivelSeveridadChange(nivelSeleccionado);
     
@@ -40,7 +38,6 @@ export const TipoClienteFields = ({
     onValidate(validate);
   }, [nivelSeleccionado, onNivelSeveridadChange, onValidate]);
 
-  // Función para seleccionar un nivel (reemplaza la selección anterior)
   const handleSelectNivel = (nivelValue: string) => {
     setNivelSeleccionado(nivelValue);
   };
@@ -80,7 +77,7 @@ export const TipoClienteFields = ({
       <Box sx={{ 
         display: 'flex', 
         flexWrap: 'wrap', 
-        gap: 2, // ✅ Espacio más generoso entre chips
+        gap: 2, //  Espacio entre chips
         p: 2.5,
         border: '1px solid #e2e8f0',
         borderRadius: 2,
@@ -89,10 +86,9 @@ export const TipoClienteFields = ({
         alignItems: 'center'
       }}>
         {NIVEL_SEVERIDAD.map((nivel) => {
-          // Soporta tanto objetos {value, label} como strings directos
+          
           const value = typeof nivel === 'string' ? nivel : nivel.value;
           const label = typeof nivel === 'string' ? nivel : nivel.label;
-          
           const isSelected = nivelSeleccionado === value;
           const colors = getNivelColor(value, isSelected);
           

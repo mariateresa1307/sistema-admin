@@ -85,7 +85,7 @@ export default function AdminPage() {
         detail: { action: card.actionFilter }
       }));
     } else if (id === 'historial') {
-      // Limpiar filtro al hacer clic en "Acciones del Día"
+    
       window.dispatchEvent(new CustomEvent('audit-filter-action', {
         detail: { action: null }
       }));

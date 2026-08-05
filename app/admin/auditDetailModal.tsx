@@ -1,9 +1,6 @@
-// app/admin/auditDetailModal.tsx
 'use client';
 import React, { useMemo } from 'react';
-import {
-  Modal, Paper, Box, Typography, IconButton, Divider, Chip, Tooltip, Grid
-} from '@mui/material';
+import { Modal, Paper, Box, Typography, IconButton, Divider, Chip, Grid } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
 import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
@@ -32,7 +29,6 @@ interface AuditDetailModalProps {
   log: AuditLog | null;
 }
 
-// ✅ Configuración visual por tipo de acción
 const ACTION_CONFIG: Record<string, {
   label: string;
   color: string;
@@ -165,6 +161,14 @@ const extractIpFromLog = (log: AuditLog): string | null => {
 
   return null;
 };
+
+const extractRecordNameFromOldValue = (oldValue: any): string => {
+  if (!oldValue) return '—';
+  
+  const name = oldValue.valor || oldValue.name || oldValue.nombre || oldValue.title || oldValue.label;
+  return name || '—';
+};
+
 const JsonViewer = ({ data, title, showLabel = true }: { data: any; title: string; showLabel?: boolean }) => {
   if (!data) {
     return (
@@ -215,13 +219,10 @@ const JsonViewer = ({ data, title, showLabel = true }: { data: any; title: strin
 };
 
 export const AuditDetailModal = ({ open, onClose, log }: AuditDetailModalProps) => {
-
-   React.useEffect(() => {
+  React.useEffect(() => {
     if (log) {
       console.log('🔍 [AuditDetailModal] Log completo:', log);
-      console.log(' [AuditDetailModal] moduleId:', log.module);
-      console.log('🔍 [AuditDetailModal] module:', (log as any).module);
-      console.log('🔍 [AuditDetailModal] Todos los campos:', Object.keys(log));
+      console.log(' [AuditDetailModal] oldValue:', log.oldValue);
     }
   }, [log]);
 
@@ -238,9 +239,17 @@ export const AuditDetailModal = ({ open, onClose, log }: AuditDetailModalProps) 
     return date ? dayjs(date) : null;
   }, [log]);
 
+  const deletedRecordName = useMemo(() => {
+    if (log?.action === 'DELETE') {
+      return extractRecordNameFromOldValue(oldValueParsed);
+    }
+    return null;
+  }, [log?.action, oldValueParsed]);
+
   if (!log) return null;
 
   const IconComponent = config.icon;
+  
   const renderChangesSection = () => {
     if (!log.action) return null;
 
@@ -330,6 +339,35 @@ export const AuditDetailModal = ({ open, onClose, log }: AuditDetailModalProps) 
     return null;
   };
 
+  const getActionDividerConfig = (action: string) => {
+    switch (action.toUpperCase()) {
+      case 'DELETE':
+        return {
+          label: 'Datos Eliminados',
+          icon: <DeleteIcon sx={{ fontSize: 16 }} />,
+          bgcolor: '#ffebee',
+          color: '#c62828',
+        };
+      case 'CREATE':
+        return {
+          label: 'Datos Creados',
+          icon: <AddCircleIcon sx={{ fontSize: 16 }} />,
+          bgcolor: '#e3f2fd',
+          color: '#1565c0',
+        };
+      case 'UPDATE':
+      default:
+        return {
+          label: 'Cambios Realizados',
+          icon: <CompareArrowsIcon sx={{ fontSize: 16 }} />,
+          bgcolor: '#fff3e0',
+          color: '#ef6c00',
+        };
+    }
+  };
+
+  const dividerConfig = getActionDividerConfig(log.action);
+
   return (
     <AnimatePresence>
       {open && log && (
@@ -411,6 +449,9 @@ export const AuditDetailModal = ({ open, onClose, log }: AuditDetailModalProps) 
 
               <Divider sx={{ mb: 3, borderColor: '#f1f5f9' }} />
 
+            
+             
+
               {/* Información principal */}
               <Grid container spacing={3}>
                 {/* Fecha y Hora */}
@@ -489,7 +530,7 @@ export const AuditDetailModal = ({ open, onClose, log }: AuditDetailModalProps) 
                     </Typography>
                   </Box>
                   <Chip
-                        label={formatModuleName(log.module || (log as any).module || (log as any).moduleId)}
+                    label={formatModuleName(log.module || (log as any).module || (log as any).moduleId)}
                     size="small"
                     sx={{
                       bgcolor: '#e8eaf6',
@@ -542,42 +583,46 @@ export const AuditDetailModal = ({ open, onClose, log }: AuditDetailModalProps) 
                   </Grid>
                 )}
 
-                {/* User Agent */}
-                {log.userAgent && (
-                    <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid #f1f5f9' }}>
-
-                  <Grid size={12}>
-                    <Typography
-                      variant="caption"
-                      sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700, letterSpacing: '0.5px', display: 'block', mb: 0.5 }}
-                      >
-                      Navegador / Dispositivo
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: '#64748b', fontSize: '0.8rem' }}>
-                      {log.userAgent}
-                    </Typography>
-                  </Grid>
-                      </Box>
-                )}
-
-                {(oldValueParsed || newValueParsed) && (
+             
+              {(oldValueParsed || newValueParsed) && (
                   <>
                     <Grid size={12}>
                       <Divider sx={{ my: 2 }}>
                         <Chip
-                          icon={<CompareArrowsIcon sx={{ fontSize: 16 }} />}
-                          label="Cambios Realizados"
+                          icon={dividerConfig.icon}
+                          label={dividerConfig.label}
                           size="small"
-                          sx={{ fontWeight: 700, bgcolor: '#fff3e0', color: '#ef6c00' }}
+                          sx={{ 
+                            fontWeight: 700, 
+                            bgcolor: dividerConfig.bgcolor, 
+                            color: dividerConfig.color 
+                          }}
                         />
                       </Divider>
                     </Grid>
                     {renderChangesSection()}
                   </>
                 )}
-              </Grid>
 
-            
+
+                   {/* User Agent */}
+                {log.userAgent && (
+                  <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid #f1f5f9' }}>
+                    <Grid size={12}>
+                      <Typography
+                        variant="caption"
+                        sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700, letterSpacing: '0.5px', display: 'block', mb: 0.5 }}
+                      >
+                        Navegador / Dispositivo
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: '#64748b', fontSize: '0.8rem' }}>
+                        {log.userAgent}
+                      </Typography>
+                    </Grid>
+                  </Box>
+                )}
+
+              </Grid>
             </Paper>
           </motion.div>
         </Modal>

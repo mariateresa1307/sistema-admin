@@ -19,11 +19,10 @@ export const DetalleFields = ({
   onSubcategoriaChange,
   onValidate,
 }: DetalleFieldsProps) => {
-  const [subcategoriaSeleccionada, setSubcategoriaSeleccionada] = React.useState("");
 
-  // Agrupar subcategorías por categoría
+  const [subcategoriaSeleccionada, setSubcategoriaSeleccionada] = React.useState("");
   const subcategoriasPorCategoria = React.useMemo(() => {
-    const agrupadas: Record<string, MiscellaneousItem[]> = {};
+  const agrupadas: Record<string, MiscellaneousItem[]> = {};
 
     subcategorias.forEach((sub) => {
       const catNombre = sub.padreNombre || "Sin categoría";
@@ -36,7 +35,7 @@ export const DetalleFields = ({
     return agrupadas;
   }, [subcategorias]);
 
-  // Crear array plano de elementos para el Select (sin Fragment)
+
   const selectChildren = React.useMemo(() => {
     const children: React.ReactNode[] = [
       <MenuItem key="placeholder" value="" disabled>
@@ -47,7 +46,7 @@ export const DetalleFields = ({
     ];
 
     Object.entries(subcategoriasPorCategoria).forEach(([catNombre, subs]) => {
-      // Agregar header del grupo con ListSubheader
+
       children.push(
         <ListSubheader
           key={`header-${catNombre}`}
@@ -100,7 +99,6 @@ export const DetalleFields = ({
     return children;
   }, [subcategoriasPorCategoria]);
 
-  // Inicializar valor al editar
   React.useEffect(() => {
     if (isOpen) {
       if (initialData?.padreId) {
@@ -111,12 +109,10 @@ export const DetalleFields = ({
     }
   }, [initialData, isOpen]);
 
-  // Notificar al padre cuando cambia la subcategoría
   React.useEffect(() => {
     onSubcategoriaChange(subcategoriaSeleccionada);
   }, [subcategoriaSeleccionada, onSubcategoriaChange]);
 
-  // Registrar función de validación
   React.useEffect(() => {
     onValidate(() => {
       return !!subcategoriaSeleccionada;
@@ -187,7 +183,6 @@ export const DetalleFields = ({
             },
           }}
         >
-          {/* ✅ Solo renderizar el array plano, sin duplicados ni Fragments */}
           {selectChildren}
         </TextField>
       )}

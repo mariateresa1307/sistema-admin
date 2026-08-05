@@ -222,21 +222,23 @@ export default function MiscellaneousPage() {
     await deleteItem(subcategoria);
   };
 
+  const estados = useMemo(() => getEstados(), [getEstados]);
+
   const handleSearch = useCallback((params: { field?: string; value?: string } | null) => {
     setSearchValue(params?.value || undefined);
     setPaginationModel({ page: 0, pageSize: 10 });
   }, []);
 
   const filteredRows = useMemo(() => {
-  const rowsFiltradas = rows;
-    
- if (currentCategoria === 'CIUDAD') {
-      rowsFiltradas.map(ciudad => {
+    let rowsFiltradas = rows;
+
+    if (currentCategoria === 'CIUDAD') {
+      rowsFiltradas = rowsFiltradas.map(ciudad => {
         const estadoId = ciudad.padreId || ciudad.estadoId;
         const estadoPadre = estados.find(
           est => (est._id || est.id) === estadoId && est.activo !== false
         );
-        
+
         return {
           ...ciudad,
           padreNombre: estadoPadre?.valor || ciudad.padreNombre || 'Sin estado'
@@ -248,10 +250,10 @@ export default function MiscellaneousPage() {
       return rowsFiltradas.map(causa => {
         const causaId = causa._id || causa.id;
 
-         const solucionesAsociadas = soluciones.filter(
+        const solucionesAsociadas = soluciones.filter(
           sol => (sol.causaId === causaId || sol.padreId === causaId) && sol.activo !== false
         );
-        
+
         return {
           ...causa,
           solucionesAsociadas: solucionesAsociadas
@@ -272,11 +274,9 @@ export default function MiscellaneousPage() {
         };
       });
     }
-    
-    return rowsFiltradas;
-  }, [rows, currentCategoria, soluciones, causasRaiz]);
 
-  const estados = useMemo(() => getEstados(), [getEstados]);
+    return rowsFiltradas;
+  }, [rows, currentCategoria, soluciones, causasRaiz, estados]);
 
   const localidadesParaDetalle = useMemo(() => {
     if (!selectedItem?._id || selectedItem.categoria !== 'CIUDAD') return [];

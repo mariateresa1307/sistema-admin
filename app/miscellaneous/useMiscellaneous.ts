@@ -12,7 +12,6 @@ export type MiscellaneousItem = {
   activo?: boolean;
   createdAt?: string;
   updatedAt?: string;
-  // Campos específicos para compatibilidad
   ciudadId?: string;
   categoriaId?: string;
   subcategoriaId?: string;
@@ -26,7 +25,6 @@ export type NotificationType = {
   severity: 'success' | 'error';
 };
 
-// ✅ NUEVA INTERFAZ: Acepta objeto con parámetros de paginado y búsqueda
 interface UseMiscellaneousProps {
   categoria: string;
   page?: number;
@@ -41,7 +39,7 @@ export const useMiscellaneous = ({
   searchValue 
 }: UseMiscellaneousProps) => {
   const [rows, setRows] = useState<MiscellaneousItem[]>([]);
-  const [totalItems, setTotalItems] = useState(0); // ✅ Cambiado de totalCount a totalItems
+  const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(true);
   const [notification, setNotification] = useState<NotificationType>({
     open: false,
@@ -63,7 +61,6 @@ export const useMiscellaneous = ({
     setNotification(prev => ({ ...prev, open: false }));
   }, []);
 
-  // ✅ ACTUALIZADO: Envía page, limit y valor al backend
   const fetchItems = useCallback(async () => {
     setLoading(true);
     try {
@@ -74,7 +71,6 @@ export const useMiscellaneous = ({
         valor: searchValue 
       });
       
-      // ✅ Manejo robusto de respuesta paginada o array directo
       const data = response.data?.data || (Array.isArray(response.data) ? response.data : []);
       const total = response.data?.total || data.length;
       
@@ -104,10 +100,7 @@ export const useMiscellaneous = ({
   const fetchRelatedData = useCallback(async () => {
     const promises: Promise<any>[] = [];
 
-    // Siempre cargar estados
     promises.push(fetchByCategoria('ESTADO').then(setEstados));
-
-    // Cargar datos según la categoría actual
     switch (categoria) {
       case 'CIUDAD':
         promises.push(fetchByCategoria('LOCALIDAD').then(setLocalidades));
@@ -173,7 +166,6 @@ export const useMiscellaneous = ({
     }
   }, [fetchItems, fetchRelatedData, showNotification]);
 
-  // ✅ Filtrado compatible con campos nuevos y antiguos
   const getEstados = useCallback(() => {
     return estados.filter(item => item.activo !== false);
   }, [estados]);
@@ -202,7 +194,7 @@ export const useMiscellaneous = ({
 
   return {
     rows,
-    totalItems, // ✅ Devuelto correctamente
+    totalItems, 
     loading,
     notification,
     closeNotification,

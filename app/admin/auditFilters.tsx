@@ -1,13 +1,9 @@
 'use client';
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import {
-  Box, Typography, Card, CardContent, Grid, TextField, MenuItem, Button,
-  Stack, CircularProgress, Alert, Chip,
-} from '@mui/material';
-import {
-  FilterList as FilterIcon, RestartAlt as ResetIcon, Download as DownloadIcon,
-  Search as SearchIcon,
-} from '@mui/icons-material';
+import  { useState, useEffect, useCallback, useMemo } from 'react';
+import { Typography, Card, CardContent, Grid, TextField, MenuItem, Button,
+  Stack, CircularProgress, Alert, Chip,} from '@mui/material';
+import {  FilterList as FilterIcon, RestartAlt as ResetIcon, Download as DownloadIcon,
+  Search as SearchIcon} from '@mui/icons-material';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs, { Dayjs } from 'dayjs';
@@ -92,12 +88,11 @@ export default function AuditFilters() {
     setPagination((prev) => ({ ...prev, page: 1 }));
   }, []);
 
-  // ✅ NUEVO: Manejar cambio de registros por página
   const handleRowsPerPageChange = useCallback((newLimit: number) => {
     setPagination((prev) => ({ 
       ...prev, 
       limit: newLimit,
-      page: 1 // Resetear a página 1 al cambiar el límite
+      page: 1 
     }));
   }, []);
 
@@ -113,7 +108,7 @@ export default function AuditFilters() {
     if (filters.endDate) params.append('endDate', dayjs(filters.endDate).endOf('day').toISOString());
 
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
-    const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/audit/export?${params.toString()}`;
+    const url = `${process.env.NEXT_PUBLIC_API_URL}`; //|| 'http://localhost:4000'}/audit/export?${params.toString()}`;
 
     fetch(url, { headers: { Authorization: `Bearer ${token}` } })
       .then((res) => res.blob())

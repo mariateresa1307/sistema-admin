@@ -113,7 +113,6 @@ export const MiscellaneousModal = ({
     : TITULOS[categoria]?.nuevo || "Nuevo Elemento"
   );
 
-  // ✅ CORREGIDO: SOLO asigna el campo específico. NO asigna padreId ni padreNombre para evitar rechazo del DTO.
   const construirPayloadConRelacion = (
     basePayload: any,
     padreSeleccionado: string,
@@ -123,8 +122,6 @@ export const MiscellaneousModal = ({
     const payload = { ...basePayload };
     
     if (padreSeleccionado) {
-      // ✅ Solo asignamos el campo específico (ej: estadoId, categoriaId, ciudadId)
-      // El backend se encarga de usar este campo para validar y guardar la relación.
       payload[campoId] = padreSeleccionado;
     }
     
@@ -169,14 +166,13 @@ export const MiscellaneousModal = ({
           break;
       }
 
-      // ✅ ELIMINACIÓN AGRESIVA: Aseguramos que estos campos NO se envíen al backend
       delete payload.padre; 
       delete payload._id;
       delete payload.id;
       delete payload.createdAt; 
       delete payload.updatedAt; 
-      delete payload.padreId;       // <--- CLAVE: Evita el error de validación
-      delete payload.padreNombre;   // <--- CLAVE: Evita el error de validación
+      delete payload.padreId;       
+      delete payload.padreNombre; 
 
       const isEditMode = Boolean(initialData?._id || initialData?.id);
       const id = initialData?._id || initialData?.id;

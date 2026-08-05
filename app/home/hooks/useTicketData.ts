@@ -30,7 +30,7 @@ export interface UseTicketDataReturn {
   loadSubcategorias: (categoriaId: string) => Promise<void>;
   loadDetalle: (subcategoriaId: string) => Promise<void>;
   loadTipoCliente: () => Promise<void>;
-  loadLocalidades: (ciudad: string) => Promise<void>;
+  loadLocalidades: (ciudadIdOrName: string) => void;
   loadSolucionesCaso: (causaRaizId: string) => Promise<void>;
   loadServiciosAfectados: (tipoClienteInput: string | ConfiguracionInterface) => Promise<void>;
   loadCausasRaiz: () => Promise<void>;
@@ -44,6 +44,12 @@ export interface UseTicketDataReturn {
   clearCategoriaRed: () => void;
 }
 
+// ✅ FUNCIÓN CLAVE: Extrae el array correctamente, ya sea que venga paginado o directo
+const extractData = (res: any) => {
+  const data = res?.data;
+  return Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
+};
+
 export const useTicketData = (open: boolean): UseTicketDataReturn => {
   const [operadores, setOperadores] = useState<Operador[]>([]);
   const [categoriaRed, setCategoriaRed] = useState<ConfiguracionInterface[]>([]);
@@ -54,6 +60,7 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
   const [solucionesCaso, setSolucionesCaso] = useState<ConfiguracionInterface[]>([]);
   const [ciudadesOptions, setCiudadesOptions] = useState<any[]>([]);
   const [localidadesOptions, setLocalidadesOptions] = useState<any[]>([]);
+  const [todasLasLocalidades, setTodasLasLocalidades] = useState<any[]>([]); // ✅ Para filtrado en frontend
   const [serviciosAfectados, setServiciosAfectados] = useState<any[]>([]);
   const [grupoDestino, setGrupoDestino] = useState<ConfiguracionInterface[]>([]);
   const [loading, setLoading] = useState(false);
@@ -65,12 +72,14 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
     setError(null);
 
     try {
-      const [operadoresRes, ciudadesRes, causasRes, grupoDestinoRes, tipoClienteRes] = await Promise.all([
+      console.log('🔄 [useTicketData] Iniciando carga de datos iniciales...');
+      const [operadoresRes, ciudadesRes, causasRes, grupoDestinoRes, tipoClienteRes, localidadesRes] = await Promise.all([
         getUsers(undefined, { isActive: true }),
-        getMiscellaneous({ categoria: 'CIUDAD' }),
-        getMiscellaneous({ categoria: CATEGORIA.CAUSA_RAIZ }),
-        getMiscellaneous({ categoria: 'GRUPO_DESTINO' }),
-        getMiscellaneous({ categoria: 'TIPO_CLIENTE' }),
+        getMiscellaneous({ categoria: 'CIUDAD', limit: 999 }),
+        getMiscellaneous({ categoria: CATEGORIA.CAUSA_RAIZ, limit: 999 }),
+        getMiscellaneous({ categoria: 'GRUPO_DESTINO', limit: 999 }),
+        getMiscellaneous({ categoria: 'TIPO_CLIENTE', limit: 999 }),
+        getMiscellaneous({ categoria: 'LOCALIDAD', limit: 999 }),
       ]);
 
       setOperadores((operadoresRes.data || []).map((u: any) => ({
@@ -79,10 +88,22 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
         primerApellido: u.primerApellido,
         username: u.username,
       })));
-      setCiudadesOptions(ciudadesRes.data || []);
-      setCausasRaiz(causasRes.data || []);
-      setGrupoDestino(grupoDestinoRes.data || []);
-      setTipoCliente(tipoClienteRes.data || []);
+      
+      const ciudadesData = extractData(ciudadesRes);
+      const tipoClienteData = extractData(tipoClienteRes);
+      const localidadesData = extractData(localidadesRes);
+      
+      setCiudadesOptions(ciudadesData);
+      setCausasRaiz(extractData(causasRes));
+      setGrupoDestino(extractData(grupoDestinoRes));
+      setTipoCliente(tipoClienteData);
+      setTodasLasLocalidades(localidadesData); // ✅ Guardamos todas para filtrar localmente
+      
+      console.log('✅ [useTicketData] Carga exitosa:', {
+        ciudades: ciudadesData.length,
+        tipoCliente: tipoClienteData.length,
+        localidades: localidadesData.length,
+      });
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Error desconocido');
       setError(error);
@@ -99,9 +120,12 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
     }
     setLoading(true);
     try {
-      const res = await getMiscellaneous({ categoria: 'CATEGORIA_RED', tipoIncidencia });
-      setCategoriaRed(res.data || []);
-      return res.data || [];
+      console.log(`🔄 [useTicketData] Cargando categorías para: ${tipoIncidencia}`);
+      const res = await getMiscellaneous({ categoria: 'CATEGORIA_RED', tipoIncidencia, limit: 999 });
+      const data = extractData(res);
+      setCategoriaRed(data);
+      console.log(`✅ [useTicketData] Categorías cargadas: ${data.length}`);
+      return data;
     } catch (err) {
       console.error('❌ [useTicketData] Error cargando categorías:', err);
       setCategoriaRed([]);
@@ -111,24 +135,31 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
     }
   }, []);
 
-  const loadLocalidades = useCallback(async (ciudad: string) => {
-    if (!ciudad) {
+  // ✅ CORREGIDO: Filtrado local robusto usando ciudadId o padreId
+  const loadLocalidades = useCallback((ciudadIdOrName: string) => {
+    if (!ciudadIdOrName) {
       setLocalidadesOptions([]);
       return;
     }
-    try {
-      const res = await getMiscellaneous({ categoria: 'LOCALIDAD', padreNombre: ciudad });
-      setLocalidadesOptions(res.data || []);
-    } catch (error) {
-      console.error('Error cargando localidades:', error);
-      setLocalidadesOptions([]);
-    }
-  }, []);
+    
+    console.log(`🔍 [useTicketData] Filtrando localidades para: ${ciudadIdOrName}`);
+    
+    const filtradas = todasLasLocalidades.filter((loc: any) => {
+      const locCiudadId = String(loc.ciudadId || loc.padreId || '');
+      const searchId = String(ciudadIdOrName);
+      
+      return locCiudadId === searchId || 
+             String(loc.padreNombre || '').toLowerCase() === String(ciudadIdOrName).toLowerCase();
+    });
+    
+    console.log(`✅ [useTicketData] Localidades encontradas: ${filtradas.length}`);
+    setLocalidadesOptions(filtradas);
+  }, [todasLasLocalidades]);
 
   const loadSubcategorias = useCallback(async (categoriaId: string) => {
     try {
-      const res = await getMiscellaneous({ categoria: 'SUBCATEGORIA', padreId: categoriaId });
-      setSubcategorias(res.data || []);
+      const res = await getMiscellaneous({ categoria: 'SUBCATEGORIA', padreId: categoriaId, limit: 999 });
+      setSubcategorias(extractData(res));
     } catch (error) {
       console.error('Error cargando subcategorías:', error);
       setSubcategorias([]);
@@ -137,8 +168,8 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
 
   const loadDetalle = useCallback(async (subcategoriaId: string) => {
     try {
-      const res = await getMiscellaneous({ categoria: 'DETALLE', padreId: subcategoriaId });
-      setDetalle(res.data || []);
+      const res = await getMiscellaneous({ categoria: 'DETALLE', padreId: subcategoriaId, limit: 999 });
+      setDetalle(extractData(res));
     } catch (error) {
       console.error('Error cargando detalles:', error);
       setDetalle([]);
@@ -147,8 +178,8 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
 
   const loadTipoCliente = useCallback(async () => {
     try {
-      const res = await getMiscellaneous({ categoria: 'TIPO_CLIENTE' });
-      setTipoCliente(res.data || []);
+      const res = await getMiscellaneous({ categoria: 'TIPO_CLIENTE', limit: 999 });
+      setTipoCliente(extractData(res));
     } catch (error) {
       console.error('Error cargando tipos de cliente:', error);
       setTipoCliente([]);
@@ -161,15 +192,14 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
       return;
     }
     try {
-      const res = await getMiscellaneous({ categoria: CATEGORIA.SOLUCION_CASO, padreId: causaRaizId });
-      setSolucionesCaso(res.data || []);
+      const res = await getMiscellaneous({ categoria: CATEGORIA.SOLUCION_CASO, padreId: causaRaizId, limit: 999 });
+      setSolucionesCaso(extractData(res));
     } catch (error) {
       console.error('Error cargando soluciones:', error);
       setSolucionesCaso([]);
     }
   }, []);
 
-  // ✅ CORREGIDO: Delega el filtrado 100% al Backend. Solo envía el ID.
   const loadServiciosAfectados = useCallback(async (tipoClienteInput: string | ConfiguracionInterface) => {
     if (!tipoClienteInput) {
       setServiciosAfectados([]);
@@ -178,7 +208,6 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
 
     setLoading(true);
     try {
-      // 1. Extraer el ID limpiamente
       let idAEnviar = '';
       if (typeof tipoClienteInput === 'object' && tipoClienteInput !== null) {
         idAEnviar = tipoClienteInput._id;
@@ -191,12 +220,9 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
         return;
       }
 
-      console.log('📡 [useTicketData] Solicitando servicios a la BD para tipoCliente ID:', idAEnviar);
-
-      // 2. Petición limpia al backend. El backend debe filtrar por este ID.
+      console.log('📡 [useTicketData] Solicitando servicios para tipoCliente ID:', idAEnviar);
       const res = await getService({ tipoCliente: idAEnviar });
 
-      // 3. Normalizar la respuesta (maneja diferentes estructuras de respuesta de Axios)
       const dataServicios: any[] = Array.isArray(res)
         ? res
         : Array.isArray(res?.data)
@@ -205,9 +231,7 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
         ? res.data.data
         : [];
 
-      console.log('✅ [useTicketData] Servicios recibidos del backend:', dataServicios.length);
-      
-      // 4. Guardar directamente lo que devuelve la BD (sin filtrar en el frontend)
+      console.log('✅ [useTicketData] Servicios recibidos:', dataServicios.length);
       setServiciosAfectados(dataServicios);
     } catch (error) {
       console.error('❌ [useTicketData] Error al obtener servicios:', error);
@@ -219,8 +243,8 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
 
   const loadCausasRaiz = useCallback(async () => {
     try {
-      const response = await getMiscellaneous({ categoria: CATEGORIA.CAUSA_RAIZ });
-      setCausasRaiz(response.data || []);
+      const response = await getMiscellaneous({ categoria: CATEGORIA.CAUSA_RAIZ, limit: 999 });
+      setCausasRaiz(extractData(response));
     } catch (error) {
       console.error('Error cargando causas raíz:', error);
     }
@@ -228,8 +252,8 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
 
   const loadGrupoDestino = useCallback(async () => {
     try {
-      const response = await getMiscellaneous({ categoria: 'GRUPO_DESTINO' });
-      setGrupoDestino(response.data || []);
+      const response = await getMiscellaneous({ categoria: 'GRUPO_DESTINO', limit: 999 });
+      setGrupoDestino(extractData(response));
     } catch (error) {
       console.error('Error cargando grupo destino:', error);
     }
