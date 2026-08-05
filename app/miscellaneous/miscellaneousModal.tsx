@@ -8,6 +8,7 @@ import { DetalleFields } from "./modal/fields/detalleFields";
 import { SolucionCasoFields } from "./modal/fields/solucionCasoFields";
 import { TipoClienteFields } from "./modal/fields/tipoClienteFields";
 import { getMiscellaneous, createMiscellaneous, updateMiscellaneous } from "@/lib/api";
+import { Snackbar, Alert } from "@mui/material"; 
 
 interface MiscellaneousModalProps {
   isOpen: boolean;
@@ -17,12 +18,11 @@ interface MiscellaneousModalProps {
   categoria: string;
 }
 
-
 const CATEGORIA_DEPENDENCIAS: Record<string, { categoria: string; stateKey: string; label: string; campoId: string }> = {
   CIUDAD: { categoria: "ESTADO", stateKey: "estados", label: "estado", campoId: "estadoId" },
   SUBCATEGORIA: { categoria: "CATEGORIA_RED", stateKey: "categorias", label: "categoría", campoId: "categoriaId" },
   DETALLE: { categoria: "SUBCATEGORIA", stateKey: "subcategorias", label: "subcategoría", campoId: "subcategoriaId" },
-  LOCALIDAD: { categoria: "CIUDAD", stateKey: "ciudades", label: "ciudad", campoId: "ciudadId" },
+  LOCALIDAD: { categoria: "CIUDAD", stateKey: "ciudades", label: "ciudad", campoId: "padreId" }, 
   SOLUCION_CASO: { categoria: "CAUSA_RAIZ", stateKey: "causasRaiz", label: "causa raíz", campoId: "causaId" },
 };
 
@@ -57,16 +57,20 @@ export const MiscellaneousModal = ({
   const [ciudades, setCiudades] = React.useState<MiscellaneousItem[]>([]);
   const [causasRaiz, setCausasRaiz] = React.useState<MiscellaneousItem[]>([]);
   const [validateFn, setValidateFn] = React.useState<() => boolean>(() => () => true);
+
   const cargarDependencia = async (categoriaDep: string): Promise<MiscellaneousItem[]> => {
     try {
-      const response = await getMiscellaneous({ categoria: categoriaDep });
-      return (response.data || []).filter((item: MiscellaneousItem) => item.activo !== false);
+      const response = await getMiscellaneous({ categoria: categoriaDep, limit: 9999 });
+      const rawData = response?.data;
+      const items = Array.isArray(rawData?.data) 
+        ? rawData.data 
+        : (Array.isArray(rawData) ? rawData : []);
+      return items.filter((item: MiscellaneousItem) => item.activo !== false);
     } catch (error) {
       console.error(`Error al cargar ${categoriaDep}:`, error);
       return [];
     }
   };
-
 
   const resetearEstados = () => {
     setEstadoSeleccionado("");
@@ -84,10 +88,8 @@ export const MiscellaneousModal = ({
     setValidateFn(() => () => true);
   };
 
-
   React.useEffect(() => {
     if (!isOpen) return;
-
     resetearEstados();
 
     const dependencia = CATEGORIA_DEPENDENCIAS[categoria];
@@ -95,7 +97,6 @@ export const MiscellaneousModal = ({
 
     const cargarDatos = async () => {
       const datos = await cargarDependencia(dependencia.categoria);
-      
       switch (categoria) {
         case "CIUDAD": setEstados(datos); break;
         case "SUBCATEGORIA": setCategorias(datos); break;
@@ -104,15 +105,15 @@ export const MiscellaneousModal = ({
         case "SOLUCION_CASO": setCausasRaiz(datos); break;
       }
     };
-
     cargarDatos();
   }, [categoria, isOpen]);
 
-  const modalTitle = title || (initialData 
+  const modalTitle = title || (initialData
     ? TITULOS[categoria]?.editar || "Editar Elemento"
     : TITULOS[categoria]?.nuevo || "Nuevo Elemento"
   );
 
+  // ✅ CORREGIDO: SOLO asigna el campo específico. NO asigna padreId ni padreNombre para evitar rechazo del DTO.
   const construirPayloadConRelacion = (
     basePayload: any,
     padreSeleccionado: string,
@@ -120,25 +121,24 @@ export const MiscellaneousModal = ({
     campoId: string
   ): any => {
     const payload = { ...basePayload };
-
+    
     if (padreSeleccionado) {
-      const padre = listaPadres.find((p) => (p._id || p.id) === padreSeleccionado);
-      if (padre) {
-        payload[campoId] = padre._id || padre.id;
-      }
+      // ✅ Solo asignamos el campo específico (ej: estadoId, categoriaId, ciudadId)
+      // El backend se encarga de usar este campo para validar y guardar la relación.
+      payload[campoId] = padreSeleccionado;
     }
-
+    
     return payload;
   };
 
-  
   const handleSave = async (basePayload: any): Promise<boolean> => {
     try {
       let payload = { ...basePayload };
 
- if (!payload.categoria || payload.categoria === 'null' || payload.categoria === null) {
-      payload.categoria = categoria;
-    }
+      if (!payload.categoria || payload.categoria === 'null' || payload.categoria === null) {
+        payload.categoria = categoria;
+      }
+
       switch (categoria) {
         case "CIUDAD":
           payload = construirPayloadConRelacion(payload, estadoSeleccionado, estados, "estadoId");
@@ -150,7 +150,7 @@ export const MiscellaneousModal = ({
           payload = construirPayloadConRelacion(payload, subcategoriaSeleccionada, subcategorias, "subcategoriaId");
           break;
         case "LOCALIDAD":
-          payload = construirPayloadConRelacion(payload, ciudadSeleccionada, ciudades, "ciudadId");
+          payload = construirPayloadConRelacion(payload, ciudadSeleccionada, ciudades, "padreId");
           break;
         case "SOLUCION_CASO":
           payload = construirPayloadConRelacion(payload, causaRaizSeleccionada, causasRaiz, "causaId");
@@ -169,49 +169,50 @@ export const MiscellaneousModal = ({
           break;
       }
 
-     
-      delete payload.padreId;
-      delete payload.padreNombre;
-      delete payload.padre;
+      // ✅ ELIMINACIÓN AGRESIVA: Aseguramos que estos campos NO se envíen al backend
+      delete payload.padre; 
       delete payload._id;
       delete payload.id;
+      delete payload.createdAt; 
+      delete payload.updatedAt; 
+      delete payload.padreId;       // <--- CLAVE: Evita el error de validación
+      delete payload.padreNombre;   // <--- CLAVE: Evita el error de validación
 
-    const isEditMode = Boolean(initialData?._id || initialData?.id);
-    const id = initialData?._id || initialData?.id;
-    
-    const response = isEditMode && id
-      ? await updateMiscellaneous(id, payload)
-      : await createMiscellaneous(payload);
+      const isEditMode = Boolean(initialData?._id || initialData?.id);
+      const id = initialData?._id || initialData?.id;
+
+      const response = isEditMode && id
+        ? await updateMiscellaneous(id, payload)
+        : await createMiscellaneous(payload);
 
       return Boolean(response?.data);
     } catch (error: any) {
-     
+      console.error("❌ Error al guardar:", error);
+      const errorMsg = error?.response?.data?.message || error?.message || "Error desconocido";
+      console.error("🔴 Detalle del error:", errorMsg);
       return false;
     }
   };
 
-
   const renderExtraFields = () => {
     const commonProps = { isOpen, initialData, onValidate: setValidateFn };
-
     switch (categoria) {
-      case "CIUDAD":
+      case "CIUDAD": 
         return <CiudadFields {...commonProps} onEstadoChange={setEstadoSeleccionado} />;
-      case "SUBCATEGORIA":
+      case "SUBCATEGORIA": 
         return <SubcategoriaFields {...commonProps} onCategoriaChange={setCategoriaSeleccionada} />;
-      case "CATEGORIA_RED":
+      case "CATEGORIA_RED": 
         return <CategoriaRedFields isOpen={isOpen} initialData={initialData} onTipoIncidenciaChange={setTipoIncidencia} />;
-      case "DETALLE":
+      case "DETALLE": 
         return <DetalleFields {...commonProps} subcategorias={subcategorias} onSubcategoriaChange={setSubcategoriaSeleccionada} />;
-      case "SOLUCION_CASO":
+      case "SOLUCION_CASO": 
         return <SolucionCasoFields {...commonProps} causasRaiz={causasRaiz} onCausaRaizChange={setCausaRaizSeleccionada} />;
-      case "TIPO_CLIENTE":
+      case "TIPO_CLIENTE": 
         return <TipoClienteFields {...commonProps} onNivelSeveridadChange={setNivelSeveridadSeleccionado} />;
-      default:
+      default: 
         return null;
     }
   };
-
 
   const validate = () => {
     if (typeof validateFn === 'function' && !validateFn()) {

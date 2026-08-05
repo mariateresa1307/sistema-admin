@@ -131,4 +131,3 @@ export const TicketHeader = React.memo(({ severidad, isEditMode = false, numeroT
 
 TicketHeader.displayName = 'TicketHeader';
 
-

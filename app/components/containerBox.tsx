@@ -41,4 +41,3 @@ export const ContainerBox = (props: Props) => {
   );
 };
 
-

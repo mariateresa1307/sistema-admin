@@ -24,20 +24,25 @@ export const CiudadFields = ({
   const [estados, setEstados] = React.useState<MiscellaneousItem[]>([]);
   const [loadingEstados, setLoadingEstados] = React.useState(false);
 
-  // ✅ Cargar estados usando getMiscellaneous (CORREGIDO)
+  // ✅ Cargar estados usando getMiscellaneous con extracción segura
   React.useEffect(() => {
     const cargarEstados = async () => {
       if (isOpen) {
         setLoadingEstados(true);
         try {
-          // ✅ USAR getMiscellaneous en lugar de fetch
-          const response = await getMiscellaneous({ categoria: "ESTADO" });
-          // ✅ response.data contiene el array (axios envuelve la respuesta)
-          const estadosData = Array.isArray(response.data) ? response.data : [];
+          const response = await getMiscellaneous({ categoria: "ESTADO", limit: 9999 });
+          
+          // ✅ EXTRACCIÓN SEGURA: Maneja tanto array directo como objeto paginado { data: [...], total: X }
+          const rawData = response?.data;
+          const estadosData = Array.isArray(rawData?.data) 
+            ? rawData.data 
+            : (Array.isArray(rawData) ? rawData : []);
+            
           const estadosActivos = estadosData.filter((e: MiscellaneousItem) => e.activo !== false);
+          
           setEstados(estadosActivos);
         } catch (error) {
-          console.error("Error al cargar estados:", error);
+          console.error("❌ Error al cargar estados:", error);
         } finally {
           setLoadingEstados(false);
         }
@@ -50,7 +55,7 @@ export const CiudadFields = ({
   React.useEffect(() => {
     if (isOpen) {
       if (initialData?.padreId) {
-        setEstadoSeleccionado(initialData.padreId);
+        setEstadoSeleccionado(String(initialData.padreId));
       } else {
         setEstadoSeleccionado("");
       }
@@ -64,10 +69,7 @@ export const CiudadFields = ({
   // Registrar función de validación en el padre
   React.useEffect(() => {
     onValidate(() => {
-      if (!estadoSeleccionado) {
-        return false;
-      }
-      return true;
+      return !!estadoSeleccionado;
     });
   }, [estadoSeleccionado, onValidate]);
 

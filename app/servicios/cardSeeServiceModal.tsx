@@ -328,7 +328,7 @@ export const CardSeeServiceModal = ({
                     </Typography>
                   </Box>
                   <Box sx={{ display: "flex", gap: 1 }}>
-                    {onEditClick && (
+                    {onEditClick && isActivo && (
                       <Tooltip title="Editar">
                         <IconButton onClick={onEditClick} size="small" sx={{ color: "#1976d2" }}>
                           <EditIcon />

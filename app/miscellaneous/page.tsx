@@ -27,7 +27,6 @@ import FmdGoodIcon from '@mui/icons-material/FmdGood';
 import WarningIcon from '@mui/icons-material/Warning';
 import ProtectedRoute from "../components/protectedRoute";
 import DashboardLayout from "../components/dashboardLayout";
-// ✅ AGREGAR: Importar getMiscellaneous del API client
 import { getMiscellaneous } from "@/lib/api";
 
 type TabConfig = {
@@ -53,6 +52,11 @@ export default function MiscellaneousPage() {
   const [tabValue, setTabValue] = useState(0);
   const currentCategoria = TABS_CONFIG[tabValue].categoria;
 
+  // ✅ Estados de paginado server-side (patrón RBSPage)
+  const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 10 });
+  const [searchValue, setSearchValue] = useState<string | undefined>(undefined);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
   // Estados de UI
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -71,9 +75,10 @@ export default function MiscellaneousPage() {
   const [soluciones, setSoluciones] = useState<MiscellaneousItem[]>([]);
   const [causasRaiz, setCausasRaiz] = useState<MiscellaneousItem[]>([]);
 
-  // Hook personalizado
+  // ✅ Hook personalizado con paginado server-side
   const {
     rows,
+    totalItems,
     loading,
     notification,
     closeNotification,
@@ -86,28 +91,29 @@ export default function MiscellaneousPage() {
     getSubcategoriasByCategoria,
     localidades,
     ciudades, 
-  } = useMiscellaneous(currentCategoria);
+  } = useMiscellaneous({
+    categoria: currentCategoria,
+    page: paginationModel.page + 1, // Backend usa page 1-based
+    pageSize: paginationModel.pageSize,
+    searchValue,
+  });
 
-  // ✅ Cargar soluciones y causas raíz cuando sea necesario (CORREGIDO)
+  // ✅ Cargar soluciones y causas raíz cuando sea necesario
   useEffect(() => {
-    // Cargar soluciones del caso
     const loadSoluciones = async () => {
       try {
-        // ✅ USAR getMiscellaneous en lugar de fetch directo
-        const response = await getMiscellaneous({ categoria: 'SOLUCION_CASO' });
-        const solucionesData = Array.isArray(response.data) ? response.data : [];
+        const response = await getMiscellaneous({ categoria: 'SOLUCION_CASO', limit: 9999 });
+        const solucionesData = response.data?.data || response.data || [];
         setSoluciones(solucionesData.filter((s: MiscellaneousItem) => s.activo !== false));
       } catch (error) {
         console.error("Error al cargar soluciones:", error);
       }
     };
 
-    // Cargar causas raíz
     const loadCausasRaiz = async () => {
       try {
-        // ✅ USAR getMiscellaneous en lugar de fetch directo
-        const response = await getMiscellaneous({ categoria: 'CAUSA_RAIZ' });
-        const causasData = Array.isArray(response.data) ? response.data : [];
+        const response = await getMiscellaneous({ categoria: 'CAUSA_RAIZ', limit: 9999 });
+        const causasData = response.data?.data || response.data || [];
         setCausasRaiz(causasData.filter((c: MiscellaneousItem) => c.activo !== false));
       } catch (error) {
         console.error("Error al cargar causas raíz:", error);
@@ -116,12 +122,14 @@ export default function MiscellaneousPage() {
 
     loadSoluciones();
     loadCausasRaiz();
-  }, []); // Se ejecuta solo al montar el componente
+  }, []);
 
   // Handlers
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
     setSelectedItem(null);
+    setPaginationModel({ page: 0, pageSize: 10 }); // Reset paginado al cambiar tab
+    setSearchValue(undefined); // Reset búsqueda al cambiar tab
   };
 
   const handleCellClick = (params: GridCellParams) => {
@@ -232,16 +240,23 @@ export default function MiscellaneousPage() {
     await deleteItem(subcategoria);
   };
 
-  // Datos filtrados
+  // ✅ Manejo de búsqueda (patrón RBSPage)
+  const handleSearch = useCallback((params: { field?: string; value?: string } | null) => {
+    setSearchValue(params?.value || undefined);
+    setPaginationModel({ page: 0, pageSize: 10 });
+  }, []);
+
+  // ✅ Datos filtrados y enriquecidos (CAUSA_RAIZ y SOLUCION_CASO)
   const filteredRows = useMemo(() => {
-    const rowsFiltradas = rows.filter(r => r.categoria === currentCategoria);
+    const rowsFiltradas = rows;
     
-    // Si es CAUSA_RAIZ, agregar las soluciones asociadas a cada causa
-    if (currentCategoria === 'CAUSA_RAIZ') {
+
+   if (currentCategoria === 'CIUDAD') {
       return rowsFiltradas.map(causa => {
-        const causaId = causa._id || causa.id;
-        const solucionesAsociadas = soluciones.filter(
-          sol => sol.padreId === causaId && sol.activo !== false
+        const causaId = ciudades.find(c => c._id === causa.padreId)?._id;
+
+         const solucionesAsociadas = soluciones.filter(
+          sol => (sol.causaId === causaId || sol.padreId === causaId) && sol.activo !== false
         );
         
         return {
@@ -251,24 +266,39 @@ export default function MiscellaneousPage() {
       });
     }
 
- if (currentCategoria === 'SOLUCION_CASO') {
-    return rowsFiltradas.map(solucion => {
-      const causaId = solucion.padreId;
-      const causaRaizAsociada = causasRaiz.find(
-        causa => (causa._id || causa.id) === causaId && causa.activo !== false
-      );
+    // Si es CAUSA_RAIZ, agregar las soluciones asociadas a cada causa
+    if (currentCategoria === 'CAUSA_RAIZ') {
+      return rowsFiltradas.map(causa => {
+        const causaId = causa._id || causa.id;
 
-      return {
-        ...solucion,
-        causaRaizAsociada: causaRaizAsociada || null
-      };
-    });
-  }
+         const solucionesAsociadas = soluciones.filter(
+          sol => (sol.causaId === causaId || sol.padreId === causaId) && sol.activo !== false
+        );
+        
+        return {
+          ...causa,
+          solucionesAsociadas: solucionesAsociadas
+        };
+      });
+    }
 
+    if (currentCategoria === 'SOLUCION_CASO') {
+      return rowsFiltradas.map(solucion => {
+          const causaId = solucion.causaId || solucion.padreId;
+        
+        const causaRaizAsociada = causasRaiz.find(
+          causa => (causa._id || causa.id) === causaId && causa.activo !== false
+        );
 
+        return {
+          ...solucion,
+          causaRaizAsociada: causaRaizAsociada || null
+        };
+      });
+    }
     
     return rowsFiltradas;
-  }, [rows, currentCategoria, soluciones]);
+  }, [rows, currentCategoria, soluciones, causasRaiz]);
 
   const estados = useMemo(() => getEstados(), [getEstados]);
 
@@ -361,17 +391,23 @@ export default function MiscellaneousPage() {
           </Box>
         )}
 
-        {/* Tabla */}
+        {/* ✅ Tabla con paginado server-side (patrón RBSPage) */}
         <MiscellaneousTable
           rows={filteredRows}
+          localidades={localidades}
           loading={loading}
           currentCategoria={currentCategoria}
-          localidades={localidades}
           onCellClick={handleCellClick}
           onEdit={handleEdit}
           onDelete={handleDelete}
           onOpenLocalidades={handleOpenLocalidades}
           onOpenSubcategorias={handleOpenSubcategorias}
+          onSearch={handleSearch}
+          paginationMode="server"
+          rowCount={totalItems}
+          paginationModel={paginationModel}
+          onPaginationModelChange={(newModel) => setPaginationModel(newModel)}
+          pageSizeOptions={[10, 25, 50]}
         />
       </ContainerBox>
 
