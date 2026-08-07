@@ -338,7 +338,7 @@ export const TicketStep1 = React.memo(
                     endAdornment: (
                       <>
                         {params.InputProps.endAdornment}
-                        <IconButton onClick={() => setOpenServicioModal(true)} size="small" sx={{ p: 0.5, color: '#121227' }} disabled={isClosed} />
+                     
                       </>
                     ),
                   }}

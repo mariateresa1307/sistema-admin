@@ -9,7 +9,6 @@ import { TICKET_STATUS } from "app/utils/constants";
 
 const corporateFont = 'Calibri, Arial, sans-serif';
 
-// ✅ PALETA ARMONIZADA - Fondos suaves con texto oscuro
 const getColorByTipoIncidencia = (tipoIncidencia: string): { bgcolor: string; color: string } => {
   const tipoUpper = (tipoIncidencia || '').toUpperCase();
   
@@ -25,7 +24,6 @@ const getColorByTipoIncidencia = (tipoIncidencia: string): { bgcolor: string; co
   return { bgcolor: '#f8fafc', color: '#64748b' };
 };
 
-// ✅ PALETA ARMONIZADA PARA TIPO DE CLIENTE
 const getColorByTipoCliente = (tipoCliente: string): { bgcolor: string; color: string } => {
   const tipoUpper = (tipoCliente || '').toUpperCase();
   
@@ -44,7 +42,6 @@ const getColorByTipoCliente = (tipoCliente: string): { bgcolor: string; color: s
   return { bgcolor: '#f1f5f9', color: '#64748b' };
 };
 
-// ✅ Helper para extraer el valor de tipoCliente
 const getTipoClienteValor = (value: any): string => {
   if (!value) return 'Sin especificar';
   if (typeof value === 'object' && value !== null) {
@@ -134,7 +131,6 @@ export default function ClosedTicketsTab({
         const tipoClienteValor = getTipoClienteValor(params.value);
         const incidentType = params.row.incidentType || '';
 
-        // REGLA 1: Si el Tipo de Cliente tiene un valor válido → Mostrarlo.
         if (tipoClienteValor !== 'Sin especificar') {
           const colors = getColorByTipoCliente(tipoClienteValor);
           return (
@@ -155,7 +151,6 @@ export default function ClosedTicketsTab({
           );
         }
 
-        // REGLA 2: Si el Tipo de Cliente es "Sin especificar" Y el Tipo de Incidencia es DIFERENTE a "FALLA PUNTUAL" → Mostrar Tipo de Incidencia.
         if (!incidentType.toUpperCase().includes('PUNTUAL')) {
           const colors = getColorByTipoIncidencia(incidentType);
           return (
@@ -176,7 +171,6 @@ export default function ClosedTicketsTab({
           );
         }
 
-        // FALLBACK NATURAL: Si es FALLA PUNTUAL sin tipo de cliente, muestra "Sin especificar"
         return (
           <Chip
             label="Sin especificar"

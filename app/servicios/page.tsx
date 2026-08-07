@@ -8,7 +8,7 @@ import { CardSeeServiceModal } from "./cardSeeServiceModal";
 import { GridCellParams, GridColDef } from "@mui/x-data-grid";
 import { Chip, Tabs, Tab, Box } from "@mui/material";
 import { Service } from "app/utils/types";
-import { getService } from "@/lib/api";
+import { getService, getMiscellaneous } from "@/lib/api";
 
 export default function RBSPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -24,6 +24,55 @@ export default function RBSPage() {
   
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
+  // ✅ Mapas de lookup para evitar consultas N+1
+  const [proveedoresMap, setProveedoresMap] = useState<Map<string, string>>(new Map());
+  const [tipoClienteMap, setTipoClienteMap] = useState<Map<string, string>>(new Map());
+
+  // ✅ Función auxiliar de normalización
+  const normalizeToArray = (response: any): any[] => {
+    if (!response?.data) return [];
+    if (Array.isArray(response.data)) return response.data;
+    if (Array.isArray(response.data.data)) return response.data.data;
+    if (Array.isArray(response.data.results)) return response.data.results;
+    return [];
+  };
+
+  // ✅ Cargar mapas de lookup una sola vez
+  useEffect(() => {
+    const loadLookupMaps = async () => {
+      try {
+        const [resProveedores, resTipoCliente] = await Promise.all([
+          getMiscellaneous({ categoria: "PROVEEDOR", limit: 9999 }),
+          getMiscellaneous({ categoria: "TIPO_CLIENTE", limit: 9999 }),
+        ]);
+
+        const proveedores = normalizeToArray(resProveedores);
+        const tipoClientes = normalizeToArray(resTipoCliente);
+
+        const proveedoresMapTemp = new Map<string, string>();
+        proveedores.forEach((p: any) => {
+          if (p._id && p.valor) {
+            proveedoresMapTemp.set(String(p._id), p.valor);
+          }
+        });
+
+        const tipoClienteMapTemp = new Map<string, string>();
+        tipoClientes.forEach((tc: any) => {
+          if (tc._id && tc.valor) {
+            tipoClienteMapTemp.set(String(tc._id), tc.valor);
+          }
+        });
+
+        setProveedoresMap(proveedoresMapTemp);
+        setTipoClienteMap(tipoClienteMapTemp);
+      } catch (error) {
+        console.error("❌ [RBSPage] Error cargando mapas de lookup:", error);
+      }
+    };
+
+    loadLookupMaps();
+  }, []);
+
   const fetchServices = useCallback(async () => {
     setLoading(true);
     try {
@@ -32,17 +81,15 @@ export default function RBSPage() {
       let excludeTipo = undefined;
       let tipoServicioParam = undefined;
 
-
       if (tabValue === 0) {
         excludeTipo = "IU";
       } else if (tabValue === 1) {
         tipoServicioParam = "IU"; 
       }
 
-      // 2️⃣ Lógica del Filtro del CustomDataGrid (Sobreescribe la lógica por defecto si el usuario eligió algo)
       if (searchParams?.field === 'tipoServicio' && searchParams.value) {
         tipoServicioParam = searchParams.value;
-        excludeTipo = undefined; // Si el usuario eligió un tipo específico, respetamos su elección y no excluimos nada
+        excludeTipo = undefined;
       }
 
       const apiParams: any = {
@@ -53,7 +100,6 @@ export default function RBSPage() {
       if (tipoServicioParam) apiParams.tipoServicio = tipoServicioParam;
       if (excludeTipo) apiParams.excludeTipo = excludeTipo;
 
-      // 3️⃣ Otros filtros (Status o Búsqueda general)
       if (searchParams?.field === 'status' && searchParams.value) {
         apiParams.status = searchParams.value;
       } else if (searchParams?.field && searchParams.field !== 'tipoServicio' && searchParams.field !== 'status' && searchParams.value) {
@@ -78,7 +124,7 @@ export default function RBSPage() {
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
-    setSearchParams(null); // Limpia filtros al cambiar de pestaña
+    setSearchParams(null);
     setPaginationModel({ page: 0, pageSize: 10 });
   };
 
@@ -87,16 +133,35 @@ export default function RBSPage() {
     setPaginationModel({ page: 0, pageSize: 10 });
   }, []);
 
-  const renderDetalles = (row: Service) => {
+  // ✅ Helper para obtener nombre de proveedor
+  const getProveedorNombre = useCallback((id: string | undefined): string => {
+    if (!id) return "—";
+    return proveedoresMap.get(String(id)) || `ID: ${String(id).substring(0, 8)}...`;
+  }, [proveedoresMap]);
+
+  // ✅ Helper para obtener nombre de tipo de cliente
+  const getTipoClienteNombre = useCallback((value: string | { _id?: string; valor?: string } | undefined): string => {
+    if (!value) return "—";
+    if (typeof value === "object" && value !== null) {
+      if (value.valor) return value.valor;
+      if (value._id) return tipoClienteMap.get(String(value._id)) || `ID: ${String(value._id).substring(0, 8)}...`;
+    }
+    if (typeof value === "string") {
+      return tipoClienteMap.get(value) || `ID: ${value.substring(0, 8)}...`;
+    }
+    return "—";
+  }, [tipoClienteMap]);
+
+  const renderDetalles = useCallback((row: Service) => {
     switch (row.tipoServicio) {
       case "METROLAN": return `VLAN: ${row.vlan} | NodoA: ${row.nodoA || "-"}`;
       case "RBS": return `ID RBS: ${row.idRBS} | Serial: ${row.serialONT || "-"}`;
-      case "IU": return `ID: ${row.id_circuito} | Proveedor: ${row.tipoCliente || "-"}`;
+      case "IU": return `ID: ${row.id_circuito} | Proveedor: ${getTipoClienteNombre(row.tipoCliente)}`;
       case "DOG": return `Circuito: ${row.id_circuito} | Contrato: ${row.contrato || "-"}`;
       case "REDES COMPARTIDAS": return `VLAN: ${row.vlan} | Equipo: ${row.nodoA || "-"}`;
       default: return "N/A";
     }
-  };
+  }, [getTipoClienteNombre]);
 
   const serviciosColumns = useMemo((): GridColDef[] => [
     { field: "tipoServicio", headerName: "Tipo", width: 140 },
@@ -116,13 +181,19 @@ export default function RBSPage() {
         );
       },
     },
-  ], []);
+  ], [renderDetalles]);
 
   const enlacesColumns = useMemo((): GridColDef[] => [
     { field: "tipoServicio", headerName: "Tipo", width: 100 },
     { field: "name", headerName: "Nombre del Enlace", flex: 1 },
     { field: "id_circuito", headerName: "ID Circuito", width: 150 },
-    { field: "proveedorDelServicioCompartido", headerName: "Proveedor", width: 150 },
+    { 
+      field: "proveedorDelServicioCompartido", 
+      headerName: "Proveedor", 
+      width: 200,
+      // ✅ Render cell para mostrar nombre en lugar de ID
+      renderCell: (params) => getProveedorNombre(params.value),
+    },
     { field: "city", headerName: "Ciudad", width: 140 },
     {
       field: "status", headerName: "Estado", width: 120,
@@ -137,7 +208,7 @@ export default function RBSPage() {
         );
       },
     },
-  ], []);
+  ], [getProveedorNombre]);
 
   return (
     <>

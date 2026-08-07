@@ -7,53 +7,41 @@ import { getTickets } from "@/lib/api";
 import { Pagination, Tickets } from "app/utils/types";
 import { TICKET_STATUS } from "app/utils/constants";
 
-const corporateFont = 'Calibri, Arial, sans-serif';
+//const corporateFont = 'Calibri, Arial, sans-serif';
 
-// ✅ PALETA ARMONIZADA - Fondos suaves con texto oscuro (menos agresivo visualmente)
 const getColorByTipoIncidencia = (tipoIncidencia: string): { bgcolor: string; color: string } => {
   const tipoUpper = (tipoIncidencia || '').toUpperCase();
-  
-  // FALLA MASIVA: Rojo suave pero que siga destacando (es crítica)
+
   if (tipoUpper.includes('MASIVA')) {
-    return { bgcolor: '#fee2e2', color: '#991b1b' }; // Rojo pastel con texto rojo oscuro
+    return { bgcolor: '#fee2e2', color: '#991b1b' };
   }
-  // MANTENIMIENTO / VENTANA DE MANTENIMIENTO
   if (tipoUpper.includes('MANTENIMIENTO') || tipoUpper.includes('VENTANA')) {
-    return { bgcolor: '#dbeafe', color: '#1e40af' }; // Azul pastel con texto azul oscuro
+    return { bgcolor: '#dbeafe', color: '#1e40af' };
   }
-  // FALLA PUNTUAL (la más común, debe ser la más suave)
   if (tipoUpper.includes('PUNTUAL')) {
-    return { bgcolor: '#f1f5f9', color: '#475569' }; // Gris azulado muy suave
+    return { bgcolor: '#f1f5f9', color: '#475569' };
   }
-  // Por defecto
   return { bgcolor: '#f8fafc', color: '#64748b' };
 };
 
-// ✅ PALETA ARMONIZADA PARA TIPO DE CLIENTE
 const getColorByTipoCliente = (tipoCliente: string): { bgcolor: string; color: string } => {
   const tipoUpper = (tipoCliente || '').toUpperCase();
-  
-  // RESIDENCIAL
+
   if (tipoUpper.includes('RESIDENCIAL')) {
-    return { bgcolor: '#dcfce7', color: '#166534' }; // Verde pastel suave
+    return { bgcolor: '#dcfce7', color: '#166534' };
   }
-  // CARRIER
   if (tipoUpper.includes('CARRIER')) {
-    return { bgcolor: '#ffedd5', color: '#9a3412' }; // Naranja pastel suave
+    return { bgcolor: '#ffedd5', color: '#9a3412' };
   }
-  // BANCA
   if (tipoUpper.includes('BANCA')) {
-    return { bgcolor: '#f3e8ff', color: '#6b21a8' }; // Morado/lavanda pastel
+    return { bgcolor: '#f3e8ff', color: '#6b21a8' };
   }
-  // CORPORATIVO
   if (tipoUpper.includes('CORPORATIVO')) {
-    return { bgcolor: '#e0f2fe', color: '#075985' }; // Azul cielo pastel
+    return { bgcolor: '#e0f2fe', color: '#075985' };
   }
-  // Sin especificar
-  return { bgcolor: '#f1f5f9', color: '#64748b' }; // Gris suave
+  return { bgcolor: '#f1f5f9', color: '#64748b' };
 };
 
-// ✅ Helper para extraer el valor de tipoCliente
 const getTipoClienteValor = (value: any): string => {
   if (!value) return 'Sin especificar';
   if (typeof value === 'object' && value !== null) {
@@ -68,25 +56,14 @@ const getTipoClienteValor = (value: any): string => {
   return 'Sin especificar';
 };
 
-// ✅ FUNCIÓN DE ORDENAMIENTO PERSONALIZADO - CORREGIDA
 const getTicketPriority = (ticket: any): number => {
   const status = ticket.status;
   const incidentType = (ticket.incidentType || '').toUpperCase();
   const tipoClienteValor = getTipoClienteValor(ticket.tipoCliente).toUpperCase();
-
-  // 1. EN GESTIÓN - Siempre primero, sin importar el tipo
   if (status === TICKET_STATUS.EN_GESTION) return 1;
-  
-  // 2. FALLA MASIVA (aunque estén ACTIVOS)
   if (incidentType.includes('MASIVA')) return 2;
-  
-  // 3. CARRIER
   if (tipoClienteValor.includes('CARRIER')) return 3;
-  
-  // 4. CORPORATIVO
   if (tipoClienteValor.includes('CORPORATIVO')) return 4;
-  
-  // 5. RESIDENCIAL (y cualquier otro)
   return 5;
 };
 
@@ -99,7 +76,6 @@ const columns: GridColDef[] = [
       const tipoClienteValor = getTipoClienteValor(params.value);
       const incidentType = params.row.incidentType || '';
 
-      // REGLA 1: Si el Tipo de Cliente tiene un valor válido → Mostrarlo.
       if (tipoClienteValor !== 'Sin especificar') {
         const colors = getColorByTipoCliente(tipoClienteValor);
         return (
@@ -120,7 +96,6 @@ const columns: GridColDef[] = [
         );
       }
 
-      // REGLA 2: Si el Tipo de Cliente es "Sin especificar" Y el Tipo de Incidencia es DIFERENTE a "FALLA PUNTUAL" → Mostrar Tipo de Incidencia.
       if (!incidentType.toUpperCase().includes('PUNTUAL')) {
         const colors = getColorByTipoIncidencia(incidentType);
         return (
@@ -141,7 +116,6 @@ const columns: GridColDef[] = [
         );
       }
 
-      // FALLBACK NATURAL: Si es FALLA PUNTUAL sin tipo de cliente, muestra "Sin especificar"
       return (
         <Chip
           label="Sin especificar"
@@ -163,11 +137,11 @@ const columns: GridColDef[] = [
   { field: "caseNumber", headerName: "Tickets", flex: 1, minWidth: 120 },
   { field: "subject", headerName: "Asunto de Caso", flex: 2, minWidth: 250 },
   {
-    field: "status", 
-    headerName: "Estado", 
-    flex: 1, 
-    minWidth: 140, 
-    align: "center", 
+    field: "status",
+    headerName: "Estado",
+    flex: 1,
+    minWidth: 140,
+    align: "center",
     headerAlign: "center",
     renderCell: (params) => {
       const valor = params.value;
@@ -179,42 +153,43 @@ const columns: GridColDef[] = [
       };
       const config = Translations[valor] || Translations["default"];
       return (
-        <Chip 
-          label={config.labelText} 
-          size="small" 
-          sx={{ 
-            bgcolor: config.bgcolor, 
-            color: config.color, 
+        <Chip
+          label={config.labelText}
+          size="small"
+          sx={{
+            bgcolor: config.bgcolor,
+            color: config.color,
             border: `1px solid ${config.border}`,
-            fontWeight: "bold", 
-            borderRadius: "6px", 
-            px: 0.5, 
-            fontFamily: corporateFont,
+            fontWeight: "bold",
+            borderRadius: "6px",
+            px: 0.5,
+            //fontFamily: corporateFont,
             boxShadow: 'none',
-          }} 
+          }}
         />
       );
     },
   },
 ];
 
-export default function ActiveTicketsTab({ 
-  onCellClick, 
-  onCountChange 
-}: { 
+export default function ActiveTicketsTab({
+  onCellClick,
+  onCountChange
+}: {
   onCellClick: (params: GridCellParams) => void;
   onCountChange: (count: number) => void;
 }) {
   const [tickets, setTickets] = useState<Pagination<Tickets[]> | null>(null);
   const [page, setPage] = useState({ page: 0, pageSize: 10 });
   const [searchParams, setSearchParams] = useState<SearchParams>({ field: "caseNumber", value: "" });
-  
+
   const fetchTickets = useCallback(async () => {
     try {
-      const params: Record<string, string | number> = {
+     
+      const params: Record<string, any> = {
         page: page.page + 1,
         limit: page.pageSize,
-        excludeStatus: TICKET_STATUS.CERRADO,
+        status: `${TICKET_STATUS.ACTIVO},${TICKET_STATUS.EN_GESTION}`,
       };
 
       if (searchParams.value) {
@@ -222,12 +197,13 @@ export default function ActiveTicketsTab({
       }
 
       const response = await getTickets(params);
-      let filteredData = response.data?.data || [];
-      const currentTotal = response.data?.total || 0;
+      const data = response.data?.data || [];
+      
+      // Filtramos por seguridad en el frontend también (por si el backend no filtró bien)
+      const filteredData = data.filter((t: any) => 
+        t.status === TICKET_STATUS.ACTIVO || t.status === TICKET_STATUS.EN_GESTION
+      );
 
-      filteredData = filteredData.filter((t: any) => t.status !== TICKET_STATUS.CERRADO);
-
-      // ✅ APLICAR EL ORDENAMIENTO CORREGIDO
       filteredData.sort((a: any, b: any) => {
         const priorityA = getTicketPriority(a);
         const priorityB = getTicketPriority(b);
@@ -235,15 +211,23 @@ export default function ActiveTicketsTab({
         return priorityA - priorityB;
       });
 
-      setTickets({ ...response.data, data: filteredData, total: currentTotal });
-      onCountChange(currentTotal);
+      // ✅ CORRECCIÓN: Usar el total que devuelve el backend (que ahora debería ser correcto 
+      // porque le pedimos solo esos estados). Si el backend no lo calcula bien, usamos la longitud del array como fallback.
+     // const correctCount = response.data?.total !== undefined ? response.data.total : filteredData.length;
+  const correctCount = response.data?.total || 0;
+
+  console.log('📊 [DEBUG] Backend Total:', correctCount, '| Frontend Filtered Length:', filteredData.length);
+
+      setTickets({ ...response.data, data: filteredData, total: correctCount });
+      onCountChange(correctCount);
     } catch (error) {
       console.error('❌ Error fetching tickets:', error);
+      onCountChange(0);
     }
   }, [page.page, page.pageSize, searchParams.field, searchParams.value, onCountChange]);
 
-  useEffect(() => { 
-    fetchTickets(); 
+  useEffect(() => {
+    fetchTickets();
   }, [fetchTickets]);
 
   const handleSearch = useCallback((params: SearchParams) => {
@@ -261,15 +245,15 @@ export default function ActiveTicketsTab({
   return (
     <Box sx={{ "& .MuiDataGrid-row": { cursor: "pointer", transition: "background-color 0.15s ease" }, "& .MuiDataGrid-row:hover": { bgcolor: "#f8fafc" } }}>
       <CustomDataGrid
-        rows={tickets?.data || []} 
-        columns={columns} 
+        rows={tickets?.data || []}
+        columns={columns}
         onCellClick={onCellClick}
-        paginationModel={page} 
-        onPaginationModelChange={handlePagination} 
+        paginationModel={page}
+        onPaginationModelChange={handlePagination}
         pageSizeOptions={[10, 50, 100]}
-        paginationMode="server" 
-        rowCount={tickets?.total || 0} 
-        onSearch={handleSearch} 
+        paginationMode="server"
+        rowCount={tickets?.total || 0}
+        onSearch={handleSearch}
         debounceMs={400}
       />
     </Box>

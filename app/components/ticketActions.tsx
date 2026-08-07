@@ -59,7 +59,6 @@ export const TicketActions = ({
           <Button
             variant="outlined"
             onClick={onBack}
-            disabled={isClosed}
             sx={{
               borderRadius: '8px',
               textTransform: 'none',

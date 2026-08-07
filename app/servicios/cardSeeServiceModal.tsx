@@ -10,8 +10,8 @@ import DoneAllIcon from "@mui/icons-material/DoneAll";
 import SettingsEthernetIcon from "@mui/icons-material/SettingsEthernet";
 import PhotoCamera from "@mui/icons-material/PhotoCamera";
 import ZoomInIcon from "@mui/icons-material/ZoomIn";
-import CalendarMonthIcon from "@mui/icons-material/CalendarMonth"; // ✅ NUEVO
-import UpdateIcon from "@mui/icons-material/Update";              // ✅ NUEVO
+import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
+import UpdateIcon from "@mui/icons-material/Update";
 import { getMiscellaneous, deleteService } from "@/lib/api";
 import { ConfirmDialog } from "../components/confirmDialog";
 
@@ -36,8 +36,8 @@ interface ServiceData {
   instalado?: boolean;
   proveedorDelServicioCompartido?: string;
   diagramaRed?: string;
-  createdAt?: string | Date; // ✅ NUEVO
-  updatedAt?: string | Date; // ✅ NUEVO
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
 }
 
 interface CardSeeServiceModalProps {
@@ -65,6 +65,23 @@ export const CardSeeServiceModal = ({
     onConfirm: () => {},
     type: "warning" as "warning" | "info" | "success",
   });
+
+  // ✅ FUNCIÓN AUXILIAR: Normaliza respuestas de API para garantizar array
+  const normalizeToArray = (response: any): any[] => {
+    if (!response?.data) return [];
+    
+    // Si response.data ya es el array directamente
+    if (Array.isArray(response.data)) return response.data;
+    
+    // Si response.data tiene estructura paginada { data: [...], total: X }
+    if (Array.isArray(response.data.data)) return response.data.data;
+    
+    // Si response.data tiene estructura { results: [...] }
+    if (Array.isArray(response.data.results)) return response.data.results;
+    
+    // Fallback: array vacío
+    return [];
+  };
 
   useEffect(() => {
     if (!open || !service?.tipoCliente) {
@@ -102,8 +119,14 @@ export const CardSeeServiceModal = ({
         }
 
         const response = await getMiscellaneous({ categoria: "TIPO_CLIENTE" });
-        const tipoClientes = response.data || [];
-        const tipoEncontrado = tipoClientes.find(
+        
+        // ✅ NORMALIZAR RESPUESTA: Garantizar que siempre sea array
+        const tipoClientes = normalizeToArray(response);
+        
+        // ✅ GUARD DEFENSIVO antes de usar .find()
+        const listaSegura = Array.isArray(tipoClientes) ? tipoClientes : [];
+        
+        const tipoEncontrado = listaSegura.find(
           (tc: any) => String(tc._id) === tipoClienteId,
         );
 

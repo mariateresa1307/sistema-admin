@@ -6,6 +6,7 @@ import { Chip, Box } from "@mui/material";
 import { getTickets } from "@/lib/api";
 import { Pagination, Tickets } from "app/utils/types";
 import { TICKET_STATUS } from "app/utils/constants";
+import { log } from "node:console";
 
 const corporateFont = 'Calibri, Arial, sans-serif';
 
@@ -198,7 +199,11 @@ export default function AssignedTicketsTab({
     },
     { field: "caseNumber", headerName: "Tickets", flex: 1, minWidth: 120 },
     { field: "subject", headerName: "Asunto de Caso", flex: 2, minWidth: 250 },
-    { field: "primerNombre", headerName: "Responsable", flex: 1.5, minWidth: 200, valueGetter: (value, row) => `${row?.primerNombre || ""} ${row?.primerApellido || ""}`.trim() },
+    { field: "primerNombre",
+       headerName: "Responsable", 
+       flex: 1.5, minWidth: 200, 
+       valueGetter: (value, row) => `${row?.primerNombre || ""} ${row?.primerApellido || ""}`.trim() },
+       
     {
       field: "status", 
       headerName: "Estado", 

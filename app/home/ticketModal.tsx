@@ -126,7 +126,13 @@ export default function TicketModal({ open, onClose, onSave, ticketToEdit }: Tic
         }
         if (categoria) await ticketData.loadSubcategorias(categoria);
         if (subcategoria) await ticketData.loadDetalle(subcategoria);
-        if (ciudad) await ticketData.loadLocalidades(ciudad);
+        
+        // ✅ CORRECCIÓN CLAVE PARA LOCALIDAD:
+        if (ciudad) {
+          console.log('🏙️ [initEditMode] Cargando localidades para la ciudad:', ciudad);
+          // Pasamos el valor de 'ciudad' (que puede ser ID o Nombre) a loadLocalidades
+          await ticketData.loadLocalidades(ciudad);
+        }
 
         if (causaRaiz) {
           await ticketData.loadCausasRaiz();
@@ -148,9 +154,7 @@ export default function TicketModal({ open, onClose, onSave, ticketToEdit }: Tic
     return () => {
       isMounted = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, ticketToEdit?._id]);
-
   useEffect(() => {
     if (ticketForm.isEditMode) return;
     if (ticketForm.activeStep > 0 && !ticketForm.preSaved && !isSaving.current) {

@@ -135,21 +135,24 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
     }
   }, []);
 
-  // ✅ CORREGIDO: Filtrado local robusto usando ciudadId o padreId
   const loadLocalidades = useCallback((ciudadIdOrName: string) => {
     if (!ciudadIdOrName) {
       setLocalidadesOptions([]);
       return;
     }
     
-    console.log(`🔍 [useTicketData] Filtrando localidades para: ${ciudadIdOrName}`);
+   console.log(`🔍 [useTicketData] Filtrando localidades para: "${ciudadIdOrName}"`);
+    console.log(`📦 [useTicketData] Total localidades en memoria: ${todasLasLocalidades.length}`);
+    const searchVal = String(ciudadIdOrName).toLowerCase().trim();
     
     const filtradas = todasLasLocalidades.filter((loc: any) => {
-      const locCiudadId = String(loc.ciudadId || loc.padreId || '');
-      const searchId = String(ciudadIdOrName);
+      const locCiudadId = String(loc.ciudadId || loc.padreId || '').toLowerCase();
+      const locCiudadNombre = String(loc.padreNombre || '').toLowerCase();
       
-      return locCiudadId === searchId || 
-             String(loc.padreNombre || '').toLowerCase() === String(ciudadIdOrName).toLowerCase();
+      // Coincide si el ID coincide, O si el nombre coincide exactamente o lo incluye
+      return locCiudadId === searchVal || 
+             locCiudadNombre === searchVal ||
+             locCiudadNombre.includes(searchVal);
     });
     
     console.log(`✅ [useTicketData] Localidades encontradas: ${filtradas.length}`);

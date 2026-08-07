@@ -30,7 +30,6 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
   const [proveedoresList, setProveedoresList] = React.useState<ConfiguracionInterface[]>([]);
   const [ultimaMillaList, setUltimaMillaList] = React.useState<ConfiguracionInterface[]>([]);
   const [isMiscLoaded, setIsMiscLoaded] = React.useState(false);
-  
   const [ciudadSeleccionada, setCiudadSeleccionada] = React.useState<string>("");
   const [tipoClienteSeleccionado, setTipoClienteSeleccionado] = React.useState<string>('');
   const [productoSeleccionado, setProductoSeleccionado] = React.useState<string>('');
@@ -42,6 +41,14 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
   const triggerNotification = React.useCallback((message: string, severity: 'success' | 'error') => {
     setNotification({ open: true, message, severity });
   }, []);
+
+  const normalizeToArray = (response: any): ConfiguracionInterface[] => {
+    if (!response?.data) return [];
+    if (Array.isArray(response.data)) return response.data;
+    if (Array.isArray(response.data.data)) return response.data.data;
+    if (Array.isArray(response.data.results)) return response.data.results;
+    return [];
+  };
 
   // Carga de listas de Miscellaneous 
   React.useEffect(() => {
@@ -58,14 +65,21 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
         ]);
 
         if (isMounted) {
-          setCiudades(resCiudades?.data || []);
-          setTipoClienteList(resTiposCliente?.data || []);
-          setProveedoresList(resProveedores?.data || []);
-          setUltimaMillaList(resUltimaMilla?.data || []);
+          setCiudades(normalizeToArray(resCiudades));
+          setTipoClienteList(normalizeToArray(resTiposCliente));
+          setProveedoresList(normalizeToArray(resProveedores));
+          setUltimaMillaList(normalizeToArray(resUltimaMilla));
           setIsMiscLoaded(true);
         }
       } catch (error) {
         console.error("Error cargando datos:", error);
+        if (isMounted) {
+          setCiudades([]);
+          setTipoClienteList([]);
+          setProveedoresList([]);
+          setUltimaMillaList([]);
+          setIsMiscLoaded(true);
+        }
       }
     };
 
@@ -73,9 +87,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
     return () => { isMounted = false; };
   }, [isOpen, isMiscLoaded]);
 
-  //  Inicialización y Limpieza del Formulario
   React.useEffect(() => {
-    // A. Limpieza total al cerrar o al preparar modo "Nuevo"
     if (!isOpen || !initialData || !initialData._id) {
       setTipoServicio("RBS");
       setCiudadSeleccionada("");
@@ -91,7 +103,6 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
       return;
     }
 
-    //  Carga de datos en modo "Edición"
     const currentTipo = initialData.tipoServicio || "RBS";
     setTipoServicio(currentTipo);
 
@@ -106,7 +117,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
     setProductoSeleccionado(initialData.producto || "");
     setVlanValue(initialData.vlan ? String(initialData.vlan) : "");
     setContratoValue(initialData.contrato !== null && initialData.contrato !== undefined ? String(initialData.contrato) : "");
-    setIpNetuno(initialData.ipNetuno || ""); // ✅ Carga correcta de IP Netuno
+    setIpNetuno(initialData.ipNetuno || "");
     
     setImagePreview(initialData.diagramaRed || null);
     setShowImageSection(Boolean(initialData.diagramaRed));
@@ -205,7 +216,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
       tipoCliente: tipoClienteSeleccionado || undefined,
       diagramaRed: imagePreview || undefined,
       ipNetuno: ipNetuno.trim() || undefined, 
-      producto: tipoServicio === "Redes Compartidas" ? (productoSeleccionado || undefined) : undefined,
+      producto: tipoServicio === "REDES COMPARTIDAS" ? (productoSeleccionado || undefined) : undefined,
       id_circuito: data.id_circuito || undefined,
       id_netuno: data.id_netuno || undefined,
       idRBS: data.idRBS || undefined,
@@ -261,25 +272,28 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
   const listaBase = isMetrolan ? ultimaMillaList : proveedoresList;
 
   const opcionesParaRenderizar = React.useMemo(() => {
+    const base = Array.isArray(listaBase) ? listaBase : [];
     if (proveedorNotFound && proveedorOUMId) {
-      const yaExiste = listaBase.some((item: any) => String(item._id) === proveedorOUMId);
+      const yaExiste = base.some((item: any) => String(item._id) === proveedorOUMId);
       if (!yaExiste) {
         return [
-          ...listaBase,
+          ...base,
           { _id: proveedorOUMId, valor: `ID: ${proveedorOUMId.substring(0, 8)}...`, esFallback: true }
         ];
       }
     }
-    return listaBase;
+    return base;
   }, [listaBase, proveedorNotFound, proveedorOUMId]);
 
-  const safeCiudadValue = React.useMemo(() =>
-    ciudades.some(c => c.valor === ciudadSeleccionada) ? ciudadSeleccionada : ""
-  , [ciudades, ciudadSeleccionada]);
+  const safeCiudadValue = React.useMemo(() => {
+    const lista = Array.isArray(ciudades) ? ciudades : [];
+    return lista.some(c => c.valor === ciudadSeleccionada) ? ciudadSeleccionada : "";
+  }, [ciudades, ciudadSeleccionada]);
 
-  const safeTipoClienteValue = React.useMemo(() =>
-    tipoClienteList.some(c => String(c._id) === tipoClienteSeleccionado) ? tipoClienteSeleccionado : ""
-  , [tipoClienteList, tipoClienteSeleccionado]);
+  const safeTipoClienteValue = React.useMemo(() => {
+    const lista = Array.isArray(tipoClienteList) ? tipoClienteList : [];
+    return lista.some(c => String(c._id) === tipoClienteSeleccionado) ? tipoClienteSeleccionado : "";
+  }, [tipoClienteList, tipoClienteSeleccionado]);
 
   return (
     <>
@@ -350,7 +364,10 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
                 <Typography sx={labelStyle}>Ciudad</Typography>
                 <TextField select fullWidth name="city" value={safeCiudadValue} onChange={(e) => setCiudadSeleccionada(e.target.value)} size="small">
                   <MenuItem value=""><em>Seleccione una ciudad</em></MenuItem>
-                  {ciudades.map((c) => <MenuItem key={c._id || c.valor} value={c.valor}>{c.valor}</MenuItem>)}
+                  {/* ✅ GUARD DEFENSIVO: Garantizar que ciudades sea array */}
+                  {(Array.isArray(ciudades) ? ciudades : []).map((c) => (
+                    <MenuItem key={c._id || c.valor} value={c.valor}>{c.valor}</MenuItem>
+                  ))}
                 </TextField>
               </Grid>
 
@@ -384,7 +401,8 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
                 <Typography sx={labelStyle}>Tipo de cliente</Typography>
                 <TextField select fullWidth name="tipoCliente" value={safeTipoClienteValue} onChange={(e) => setTipoClienteSeleccionado(e.target.value)} size="small">
                   <MenuItem value=""><em>Ninguno</em></MenuItem>
-                  {tipoClienteList.map((c) => (
+                  
+                  {(Array.isArray(tipoClienteList) ? tipoClienteList : []).map((c) => (
                     <MenuItem key={c._id} value={String(c._id)}>{c.valor}</MenuItem>
                   ))}
                 </TextField>
@@ -411,7 +429,6 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
                   <Grid size={6}><TextField name="nodoA" label="Nodo A y Puerto" fullWidth defaultValue={initialData?.nodoA ?? ""} size="small" /></Grid>
                   <Grid size={6}><TextField name="nodoB" label="Nodo B" fullWidth defaultValue={initialData?.nodoB ?? ""} size="small" /></Grid>
                   <Grid size={6}><TextField name="oltnode" label="Nodo OLT" fullWidth defaultValue={initialData?.nodoOLT ?? ""} size="small" /></Grid>
-                 {/* <Grid size={6}><TextField name="vlan" label="VLAN" fullWidth value={vlanValue} onChange={handleVlanChange} size="small" inputProps={{ maxLength: 20 }} /></Grid>*/}
                 </>
               )}
 

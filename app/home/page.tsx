@@ -32,12 +32,10 @@ export default function HomePage() {
   const [activeTab, setActiveTab] = useState(0);
   const [tabCounts, setTabCounts] = useState<number[]>([0, 0, 0]);
   const { refreshHomeData } = useHomeRefresh();
-  
   const [selectedTicket, setSelectedTicket] = useState<TicketRecord | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [ticketToEdit, setTicketToEdit] = useState<Tickets | null>(null);
-
   const currentUserId = useMemo(() => {
     if (typeof window === 'undefined') return null;
     try {
@@ -66,12 +64,10 @@ export default function HomePage() {
     refreshHomeData();
   }, [refreshHomeData]);
 
-  // ✅ AQUÍ ESTÁ LA MAGIA: Actualización instantánea sin fetch
   const handleSaveTicket = useCallback((updatedTicketData?: any) => {
     setIsDialogOpen(false);
     setTicketToEdit(null);
     
-    // Si el modal de detalle está abierto, actualizamos su estado con la respuesta fresca del backend
     if (isDetailOpen && updatedTicketData) {
       setSelectedTicket(updatedTicketData as TicketRecord);
     }

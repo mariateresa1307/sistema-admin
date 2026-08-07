@@ -19,7 +19,6 @@ import CheckIcon from '@mui/icons-material/Check';
 import { TicketRecord, formatTTZoho } from "app/utils/ticketHelpers";
 import { getNivelSeveridadConfig } from "app/utils/auxiliares";
 import { getUsers, getMiscellaneous } from "@/lib/api";
-import { Height } from "@mui/icons-material";
 
 type OperatorInfo = {
   _id?: string;
@@ -96,24 +95,6 @@ const formatOperatorName = (operador: OperatorField): string => {
   return nombre || operador.username || operador.email || '-';
 };
 
-const getNodoLabel = (nodoInfo: NodoInfo): string => {
-  switch (nodoInfo.origen) {
-    case 'nodoOLT': return `NODO OLT: ${nodoInfo.valor}`;
-    case 'nodoA': return `NODO A: ${nodoInfo.valor}`;
-    case 'nodoB': return `NODO B: ${nodoInfo.valor}`;
-    default: return nodoInfo.valor;
-  }
-};
-
-const getNodoColorByOrigen = (origen: string): { bgcolor: string; color: string; border: string } => {
-  switch (origen) {
-    case 'nodoOLT': return { bgcolor: '#e0f2fe', color: '#075985', border: '#bae6fd' };
-    case 'nodoA': return { bgcolor: '#fafbfc', color: '#9a3412', border: '#f4f7fa' };
-    case 'nodoB': return { bgcolor: '#f3e8ff', color: '#6b21a8', border: '#e9d5ff' };
-    default: return { bgcolor: '#dcfce7', color: '#166534', border: '#bbf7d0' };
-  }
-};
-
 const SectionCard = ({ title, icon, children, noBorder = false }: { title: string; icon: React.ReactNode; children: React.ReactNode; noBorder?: boolean }) => (
   <Box sx={{ mb: 2, pb: 2, borderBottom: noBorder ? 'none' : '1px solid #f1f5f9' }}>
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 1.25 }}>
@@ -135,7 +116,6 @@ const InfoItem = ({ label, value, icon }: { label: string; value: React.ReactNod
   </Box>
 );
 
-// ✅ FUNCIÓN AUXILIAR: Extrae array de respuesta paginada o directa
 const extractData = (response: any): any[] => {
   if (!response) return [];
   if (Array.isArray(response)) return response;
@@ -160,57 +140,55 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
       setOperadores(data.filter((u: any) => u.isActive !== false).map((u: any) => ({
         _id: u._id, primerNombre: u.primerNombre, primerApellido: u.primerApellido, username: u.username, email: u.email,
       })));
-      
-      // ✅ EXTRAER correctamente los arrays de las respuestas paginadas
+
       setCausasRaizList(extractData(causasRes));
       setSolucionesCasoList(extractData(solucionesRes));
-      
-      console.log(' [TicketDetailModal] Datos cargados:', {
-        causasRaiz: extractData(causasRes).length,
-        solucionesCaso: extractData(solucionesRes).length,
-      });
     }).catch((err) => console.error("❌ Error al obtener datos para el modal:", err));
   }, [open]);
 
-  useEffect(() => {
-    if (ticket  && open ) {
-      console.log(' [Ticket Data]',
-         { createdAt: ticket.createdAt,
-           updatedAt: ticket.updatedAt, 
-           fullTicket: ticket });
-    }
-  }, [ticket, open]);
-
+  // ✅ LÓGICA CORREGIDA: Recopila TODOS los nodos existentes (OLT, A, B) sin excluirse entre sí.
   const nodosUnicos = useMemo((): NodoInfo[] => {
     if (!ticket) return [];
-    if (ticket.nodo && String(ticket.nodo).trim() !== '') return [{ valor: String(ticket.nodo).trim(), origen: 'nodo' }];
-    if (!Array.isArray(ticket.serviciosAfectados) || ticket.serviciosAfectados.length === 0) return [];
+    const todosLosNodos: NodoInfo[] = [];
 
-    const serviciosValidos = ticket.serviciosAfectados.filter((s: any) => s !== null && s !== undefined && typeof s === 'object');
-    if (serviciosValidos.length === 0) return [];
-
-    const nodoOLTValidos = serviciosValidos.filter((s: any) => s.nodoOLT && String(s.nodoOLT).trim() !== '').map((s: any) => ({ valor: String(s.nodoOLT).trim(), origen: 'nodoOLT' as const }));
-    if (nodoOLTValidos.length > 0) {
-      const seen = new Set<string>();
-      return nodoOLTValidos.filter(n => { if (seen.has(n.valor)) return false; seen.add(n.valor); return true; });
+    // 1. Nodo directo del ticket
+    if (ticket.nodo && String(ticket.nodo).trim() !== '') {
+      todosLosNodos.push({ valor: String(ticket.nodo).trim(), origen: 'nodo' });
     }
 
-    const nodoAyB: NodoInfo[] = [];
-    serviciosValidos.forEach((s: any) => {
-      if (s.nodoA && String(s.nodoA).trim() !== '') nodoAyB.push({ valor: String(s.nodoA).trim(), origen: 'nodoA' });
-      if (s.nodoB && String(s.nodoB).trim() !== '') nodoAyB.push({ valor: String(s.nodoB).trim(), origen: 'nodoB' });
+    // 2. Procesar todos los servicios afectados
+    if (Array.isArray(ticket.serviciosAfectados) && ticket.serviciosAfectados.length > 0) {
+      const serviciosValidos = ticket.serviciosAfectados.filter(
+        (s: any) => s !== null && s !== undefined && typeof s === 'object'
+      );
+
+      serviciosValidos.forEach((s: any) => {
+        // Agregar OLT si existe
+        if (s.nodoOLT && String(s.nodoOLT).trim() !== '') {
+          todosLosNodos.push({ valor: String(s.nodoOLT).trim(), origen: 'nodoOLT' });
+        }
+        // Agregar A si existe (INDEPENDIENTEMENTE de si hay OLT)
+        if (s.nodoA && String(s.nodoA).trim() !== '') {
+          todosLosNodos.push({ valor: String(s.nodoA).trim(), origen: 'nodoA' });
+        }
+        // Agregar B si existe (INDEPENDIENTEMENTE de si hay OLT)
+        if (s.nodoB && String(s.nodoB).trim() !== '') {
+          todosLosNodos.push({ valor: String(s.nodoB).trim(), origen: 'nodoB' });
+        }
+        // Fallback a nodo genérico solo si no hay ninguno de los anteriores
+        if (!s.nodoOLT && !s.nodoA && !s.nodoB && s.nodo && String(s.nodo).trim() !== '') {
+          todosLosNodos.push({ valor: String(s.nodo).trim(), origen: 'nodo' });
+        }
+      });
+    }
+
+    // Eliminar duplicados manteniendo el orden
+    const seen = new Set<string>();
+    return todosLosNodos.filter(n => {
+      if (seen.has(n.valor)) return false;
+      seen.add(n.valor);
+      return true;
     });
-    if (nodoAyB.length > 0) {
-      const seen = new Set<string>();
-      return nodoAyB.filter(n => { if (seen.has(n.valor)) return false; seen.add(n.valor); return true; });
-    }
-
-    const nodoDeServicios = serviciosValidos.filter((s: any) => s.nodo && String(s.nodo).trim() !== '').map((s: any) => ({ valor: String(s.nodo).trim(), origen: 'nodo' as const }));
-    if (nodoDeServicios.length > 0) {
-      const seen = new Set<string>();
-      return nodoDeServicios.filter(n => { if (seen.has(n.valor)) return false; seen.add(n.valor); return true; });
-    }
-    return [];
   }, [ticket?.nodo, ticket?.serviciosAfectados]);
 
   if (!ticket) return null;
@@ -232,13 +210,12 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
   const getValorFromId = (idOrObj: any, lista: any[]) => {
     if (!idOrObj) return 'Sin especificar';
     if (typeof idOrObj === 'object' && idOrObj !== null) return idOrObj.valor || idOrObj.name || idOrObj.nombre || idOrObj._id || 'Sin especificar';
-    
-    // ✅ VERIFICAR que lista sea un array antes de usar .find()
+
     if (!Array.isArray(lista)) {
       console.warn('⚠️ [getValorFromId] lista no es un array:', lista);
       return idOrObj;
     }
-    
+
     const encontrado = lista.find((item: any) => String(item._id) === String(idOrObj));
     return encontrado ? encontrado.valor : idOrObj;
   };
@@ -272,31 +249,29 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
             >
               <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '6px', bgcolor: theme.primary }} />
 
-              {/* ✅ HEADER MEJORADO: Título y Case Number en la misma línea */}
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexShrink: 0, flexWrap: 'wrap', gap: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                   <Box sx={{ bgcolor: theme.light, p: 0.75, borderRadius: '8px', display: 'flex', alignItems: 'center' }}>
                     <ConfirmationNumberIcon sx={{ color: theme.dark, fontSize: '1.1rem' }} />
                   </Box>
-                  
+
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
                     <Typography sx={{ fontWeight: 700, color: '#0f172a', fontSize: '1rem' }}>
                       Ficha Técnica del Caso
                     </Typography>
-                    
-                    {/* Case Number destacado sutilmente al lado */}
-                    <Box sx={{ 
-                      display: 'inline-flex', 
-                      alignItems: 'center', 
-                      px: 1.25, 
-                      py: 0.3, 
-                      borderRadius: '6px', 
+
+                    <Box sx={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      px: 1.25,
+                      py: 0.3,
+                      borderRadius: '6px',
                       bgcolor: theme.light,
                       border: `1px solid ${theme.border}`,
                     }}>
-                      <Typography sx={{ 
-                        fontWeight: 700, 
-                        color: theme.dark, 
+                      <Typography sx={{
+                        fontWeight: 700,
+                        color: theme.dark,
                         fontSize: '0.85rem',
                         letterSpacing: '0.03em'
                       }}>
@@ -320,21 +295,17 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
 
               <Divider sx={{ mb: 2, borderColor: '#e2e8f0', flexShrink: 0 }} />
 
-              {/* Contenido Scrollable */}
               <Box sx={{ overflowY: 'auto', flex: 1, minHeight: 0, pr: 0.5 }}>
 
-                {/* Asunto */}
                 <Box sx={{ mb: 2.5, pb: 2, borderBottom: '1px solid #f1f5f9' }}>
                   <Typography sx={{ textTransform: 'uppercase', color: '#94a3b8', fontWeight: 600, fontSize: '0.65rem', letterSpacing: '0.5px', mb: 0.5 }}>Asunto de Caso</Typography>
                   <Typography sx={{ fontWeight: 600, color: '#0f172a', lineHeight: 1.4, fontSize: '1rem' }}>{ticket.subject}</Typography>
                 </Box>
 
-                {/* Grid Principal de 2 Columnas */}
                 <Grid container spacing={2.5}>
 
                   {/* COLUMNA IZQUIERDA */}
                   <Grid size={{ xs: 12, md: 6 }}>
-
                     <SectionCard title="Información General" icon={<ConfirmationNumberIcon sx={{ fontSize: '0.95rem' }} />}>
                       <Grid container spacing={1.5}>
                         <Grid size={6}>
@@ -348,10 +319,7 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
                         </Grid>
                         {ticket.ttZoho && (
                           <Grid size={6}>
-                            <InfoItem label="TT Zoho" value={
-                              <Typography sx={{ fontWeight: 600, color: '#1e293b', fontSize: '0.85rem' }}>
-                                {formatTTZoho(ticket.ttZoho)} 
-                                </Typography>} />
+                            <InfoItem label="TT Zoho" value={<Typography sx={{ fontWeight: 600, color: '#1e293b', fontSize: '0.85rem' }}>{formatTTZoho(ticket.ttZoho)}</Typography>} />
                           </Grid>
                         )}
                         {ticket.ttClienteProveedor && (
@@ -376,87 +344,15 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
                     <SectionCard title="Análisis y Solución" icon={<BuildIcon sx={{ fontSize: '0.95rem' }} />} noBorder>
                       <Grid container spacing={1.5}>
                         <Grid size={12}>
-                          <InfoItem label="Causa Raíz" icon={<ReportProblemIcon sx={{ fontSize: 12, color: '#f59e0b' }} />} value={<Typography sx={{ fontWeight: 600, color: tieneCausaRaiz ? '#c62828' : '#94a3b8', fontSize: '0.85rem' }}>{causaRaizValor}</Typography>} />
+                          <InfoItem label="Causa Raíz" icon={<ReportProblemIcon sx={{ fontSize: 15, color: '#dc5353' }} />} value={<Typography sx={{ fontWeight: 'bold', color: tieneCausaRaiz ? '#0a0909' : '#94a3b8', fontSize: '13px' }}>{causaRaizValor}</Typography>} />
                         </Grid>
                         <Grid size={12}>
-                          <InfoItem label="Solución" icon={<CheckIcon sx={{ fontSize: 12, color: '#2e7d32' }} />} value={<Typography sx={{ fontWeight: 600, color: tieneSolucion ? '#2e7d32' : '#94a3b8', fontSize: '0.85rem' }}>{solucionCasoValor}</Typography>} />
+                          <InfoItem label="Solución" icon={<CheckIcon sx={{ fontSize: 15, color: '#2e7d32' }} />} value={<Typography sx={{ fontWeight: 'bold', color: tieneSolucion ? '#0a0909' : '#94a3b8', fontSize: '13px' }}>{solucionCasoValor}</Typography>} />
                         </Grid>
                       </Grid>
                     </SectionCard>
-                  </Grid>
 
-                  {/* COLUMNA DERECHA */}
-                  <Grid size={{ xs: 12, md: 6 }}>
-
-                    <SectionCard title="Infraestructura" icon={<NetworkCheckIcon sx={{ fontSize: '0.95rem' }} />}>
-                      <Grid container spacing={1.5}>
-                        <Grid size={12}>
-                          <InfoItem label="Severidad" value={<Chip label={`${nivelSeveridadConfig.icon ? nivelSeveridadConfig.icon + ' ' : ''}${nivelSeveridadConfig.label}`} size="small" sx={{ fontWeight: 600, borderRadius: '6px', fontSize: '0.7rem', height: '22px', bgcolor: nivelSeveridadConfig.bgcolor, color: nivelSeveridadConfig.color }} />} />
-                        </Grid>
-                        <Grid size={12}>
-                          <InfoItem label="Tipo de Incidencia" value={
-                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.3 }}>
-                              {incidentTypes.length > 0 ? incidentTypes.map((tipo) => (<Chip key={tipo} label={tipo} size="small" sx={{ bgcolor: getColorByTipoIncidencia(tipo), color: 'white', fontWeight: 600, borderRadius: '6px', fontSize: '0.68rem', height: '22px' }} />)) : <Typography sx={{ fontWeight: 500, color: '#94a3b8', fontSize: '0.8rem' }}>-</Typography>}
-                            </Box>
-                          } />
-                        </Grid>
-                        
-                        {/* ✅ NODOS AFECTADOS - Layout mejorado con A y B separados */}
-                        {ticket.afectacion === true && mostrarNodos && (
-                          <Grid size={12}>
-                            <Typography sx={{ color: '#94a3b8', fontWeight: 500, fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.5px', mb: 0.75 }}>
-                              Nodos Afectados
-                            </Typography>
-                            <Grid container spacing={1.5}>
-                              {/* Columna Izquierda - Nodos A */}
-                              <Grid size={6}>
-                                <Box sx={{ p: 1.25, bgcolor: '#fff7ed', borderRadius: '8px', border: '1px solid #fed7aa', minHeight: '60px' }}>
-                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.75 }}>
-                                    <Box sx={{ width: 20, height: 20, borderRadius: '50%', bgcolor: '#f97316', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700 }}>A</Box>
-                                    <Typography sx={{ color: '#c2410c', fontWeight: 600, fontSize: '0.7rem', textTransform: 'uppercase' }}>Origen</Typography>
-                                  </Box>
-                                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                                    {nodosUnicos.filter(n => n.origen === 'nodoA').map((nodoInfo, index) => (
-                                      <Chip key={index} label={nodoInfo.valor} size="small" sx={{ bgcolor: '#ffedd5', color: '#9a3412', fontWeight: 600, borderRadius: '6px', fontSize: '0.7rem', height: '24px', border: '1px solid #fed7aa', justifyContent: 'flex-start', '& .MuiChip-label': { pl: 1, pr: 1 } }} />
-                                    ))}
-                                    {nodosUnicos.filter(n => n.origen === 'nodoA').length === 0 && (
-                                      <Typography sx={{ color: '#94a3b8', fontSize: '0.75rem', fontStyle: 'italic' }}>Sin nodos A</Typography>
-                                    )}
-                                  </Box>
-                                </Box>
-                              </Grid>
-
-                              {/* Columna Derecha - Nodos B */}
-                              <Grid size={6}>
-                                <Box sx={{ p: 1.25, bgcolor: '#faf5ff', borderRadius: '8px', border: '1px solid #e9d5ff', minHeight: '60px' }}>
-                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.75 }}>
-                                    <Box sx={{ width: 20, height: 20, borderRadius: '50%', bgcolor: '#9333ea', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700 }}>B</Box>
-                                    <Typography sx={{ color: '#6b21a8', fontWeight: 600, fontSize: '0.7rem', textTransform: 'uppercase' }}>Destino</Typography>
-                                  </Box>
-                                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                                    {nodosUnicos.filter(n => n.origen === 'nodoB').map((nodoInfo, index) => (
-                                      <Chip key={index} label={nodoInfo.valor} size="small" sx={{ bgcolor: '#f3e8ff', color: '#6b21a8', fontWeight: 600, borderRadius: '6px', fontSize: '0.7rem', height: '24px', border: '1px solid #e9d5ff', justifyContent: 'flex-start', '& .MuiChip-label': { pl: 1, pr: 1 } }} />
-                                    ))}
-                                    {nodosUnicos.filter(n => n.origen === 'nodoB').length === 0 && (
-                                      <Typography sx={{ color: '#94a3b8', fontSize: '0.75rem', fontStyle: 'italic' }}>Sin nodos B</Typography>
-                                    )}
-                                  </Box>
-                                </Box>
-                              </Grid>
-                            </Grid>
-                          </Grid>
-                        )}
-                      </Grid>
-                    </SectionCard>
-
-                    <SectionCard title={isClosed ? 'Detalles' : 'Bitácora'} icon={<DescriptionIcon sx={{ fontSize: '0.95rem', color: isClosed ? '#c62828' : '#64748b' }} />}>
-                      <Box sx={{ p: 1.25, bgcolor: isClosed ? '#f8fafc' : '#fafbfc', borderRadius: '6px', border: `1px solid ${isClosed ? '#e2e8f0' : '#f1f5f9'}`, maxHeight: '100px', overflowY: 'auto' }}>
-                        <Typography sx={{ color: isClosed ? '#334155' : '#475569', lineHeight: 1.5, whiteSpace: 'pre-wrap', fontSize: '0.8rem' }}>
-                          {isClosed ? (ticket.description || 'Sin detalles') : (ticket.bitacora || '-')}
-                        </Typography>
-                      </Box>
-                    </SectionCard>
-
+                    <Divider sx={{ mb: 2, borderColor: '#f5f6f7', flexShrink: 0 }} />
                     <SectionCard title="Operadores" icon={<PersonIcon sx={{ fontSize: '0.95rem' }} />} noBorder>
                       <Grid container spacing={1.5}>
                         {ticket.operatorResponsable && (
@@ -482,9 +378,115 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
                       </Grid>
                     </SectionCard>
                   </Grid>
+
+                  {/* COLUMNA DERECHA */}
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <SectionCard title="Infraestructura" icon={<NetworkCheckIcon sx={{ fontSize: '0.95rem' }} />}>
+                      <Grid container spacing={1.5}>
+                        <Grid size={12}>
+                          <InfoItem label="Severidad" value={<Chip label={`${nivelSeveridadConfig.icon ? nivelSeveridadConfig.icon + ' ' : ''}${nivelSeveridadConfig.label}`} size="small" sx={{ fontWeight: 600, borderRadius: '6px', fontSize: '0.7rem', height: '22px', bgcolor: nivelSeveridadConfig.bgcolor, color: nivelSeveridadConfig.color }} />} />
+                        </Grid>
+                        <Grid size={12}>
+                          <InfoItem label="Tipo de Incidencia" value={
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.3 }}>
+                              {incidentTypes.length > 0 ? incidentTypes.map((tipo) => (<Chip key={tipo} label={tipo} size="small" sx={{ bgcolor: getColorByTipoIncidencia(tipo), color: 'white', fontWeight: 600, borderRadius: '6px', fontSize: '0.68rem', height: '22px' }} />)) : <Typography sx={{ fontWeight: 500, color: '#94a3b8', fontSize: '0.8rem' }}>-</Typography>}
+                            </Box>
+                          } />
+                        </Grid>
+
+                        {/* ✅ NODOS AFECTADOS: Renderizado independiente por tipo de nodo */}
+                        {ticket.afectacion === true && mostrarNodos && (
+                          <Grid size={12}>
+                            <Typography sx={{ color: '#94a3b8', fontWeight: 500, fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.5px', mb: 1 }}>
+                              Nodos Afectados
+                            </Typography>
+                            <Grid container spacing={1.5}>
+
+                              {/* SECCIÓN OLT (Se muestra si existe al menos un nodo OLT) */}
+                              {nodosUnicos.some(n => n.origen === 'nodoOLT') && (
+                                <Grid size={12}>
+                                  <Box sx={{ p: 1.25, bgcolor: '#fafbfc', borderRadius: '8px', border: '1px solid #f5f8fb', minHeight: '60px' }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.75 }}>
+                                      <Box sx={{ width: 24, height: 24, borderRadius: '50%', bgcolor: '#0284c7', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 700 }}>OLT</Box>
+                                      <Typography sx={{ color: '#075985', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase' }}>Nodo OLT</Typography>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                      {nodosUnicos.filter(n => n.origen === 'nodoOLT').map((nodoInfo, index) => (
+                                        <Chip key={index} label={nodoInfo.valor} size="small" sx={{ bgcolor: '#ffffff', color: '#000', fontWeight: 600, borderRadius: '6px', fontSize: '0.75rem', height: '26px', border: '1px solid #fafbfc', justifyContent: 'flex-start', '& .MuiChip-label': { pl: 1, pr: 1 } }} />
+                                      ))}
+                                    </Box>
+                                  </Box>
+                                </Grid>
+                              )}
+
+                              {/* SECCIÓN NODO A (Se muestra si existe al menos un nodo A) */}
+                              {nodosUnicos.some(n => n.origen === 'nodoA') && (
+                                <Grid size={12}>
+                                  <Box sx={{ p: 1.25, bgcolor: '#fafbfc', borderRadius: '8px', border: '1px solid #fafbfc', minHeight: '60px' }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.75 }}>
+                                      <Box sx={{ width: 20, height: 20, borderRadius: '50%', bgcolor: '#67a6d9', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700 }}>A</Box>
+                                      <Typography sx={{ color: '#566375', fontWeight: 600, fontSize: '0.7rem', textTransform: 'uppercase' }}>Nodo A (Origen)</Typography>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                      {nodosUnicos.filter(n => n.origen === 'nodoA').map((nodoInfo, index) => (
+                                        <Chip key={index} label={nodoInfo.valor} size="small" sx={{ bgcolor: '#fafbfc', color: '#000', fontWeight: 600, borderRadius: '6px', fontSize: '0.7rem', height: '24px', border: '1px solid #fafbfc', justifyContent: 'flex-start', '& .MuiChip-label': { pl: 1, pr: 1 } }} />
+                                      ))}
+                                    </Box>
+                                  </Box>
+                                </Grid>
+                              )}
+
+                              {/* SECCIÓN NODO B (Se muestra si existe al menos un nodo B) */}
+                              {nodosUnicos.some(n => n.origen === 'nodoB') && (
+                                <Grid size={6}>
+                                  <Box sx={{ p: 1.25, bgcolor: '#fafbfc', borderRadius: '8px', border: '1px solid #e9eef3', minHeight: '60px' }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.75 }}>
+                                      <Box sx={{ width: 20, height: 20, borderRadius: '50%', bgcolor: '#322ba4', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700 }}>B</Box>
+                                      <Typography sx={{ color: '#566375', fontWeight: 600, fontSize: '0.7rem', textTransform: 'uppercase' }}>Nodo B (Destino)</Typography>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                      {nodosUnicos.filter(n => n.origen === 'nodoB').map((nodoInfo, index) => (
+                                        <Chip key={index} label={nodoInfo.valor} size="small" sx={{ bgcolor: '#f3e8ff', color: '#6b21a8', fontWeight: 600, borderRadius: '6px', fontSize: '0.7rem', height: '24px', border: '1px solid #e9d5ff', justifyContent: 'flex-start', '& .MuiChip-label': { pl: 1, pr: 1 } }} />
+                                      ))}
+                                    </Box>
+                                  </Box>
+                                </Grid>
+                              )}
+
+                              {/* SECCIÓN NODO GENÉRICO (Fallback si no hay A, B ni OLT) */}
+                              {nodosUnicos.some(n => n.origen === 'nodo') && (
+                                <Grid size={12}>
+                                  <Box sx={{ p: 1.25, bgcolor: '#dcfce7', borderRadius: '8px', border: '1px solid #bbf7d0', minHeight: '60px' }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.75 }}>
+                                      <Box sx={{ width: 20, height: 20, borderRadius: '50%', bgcolor: '#166534', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700 }}>N</Box>
+                                      <Typography sx={{ color: '#166534', fontWeight: 600, fontSize: '0.7rem', textTransform: 'uppercase' }}>Nodo General</Typography>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                      {nodosUnicos.filter(n => n.origen === 'nodo').map((nodoInfo, index) => (
+                                        <Chip key={index} label={nodoInfo.valor} size="small" sx={{ bgcolor: '#ffffff', color: '#166534', fontWeight: 600, borderRadius: '6px', fontSize: '0.7rem', height: '24px', border: '1px solid #bbf7d0', justifyContent: 'flex-start', '& .MuiChip-label': { pl: 1, pr: 1 } }} />
+                                      ))}
+                                    </Box>
+                                  </Box>
+                                </Grid>
+                              )}
+
+                            </Grid>
+                          </Grid>
+                        )}
+                      </Grid>
+                    </SectionCard>
+
+                    <SectionCard title={isClosed ? 'Detalles' : 'Bitácora'} icon={<DescriptionIcon sx={{ fontSize: '0.95rem', color: isClosed ? '#c62828' : '#64748b' }} />} noBorder>
+                      <Box sx={{ p: 1.25, bgcolor: isClosed ? '#f8fafc' : '#fafbfc', borderRadius: '6px', border: `1px solid ${isClosed ? '#e2e8f0' : '#f1f5f9'}`, maxHeight: '200px', overflowY: 'auto' }}>
+                        <Typography sx={{ color: isClosed ? '#334155' : '#475569', lineHeight: 1.5, whiteSpace: 'pre-wrap', fontSize: '0.8rem' }}>
+                          {isClosed ? (ticket.description || 'Sin detalles') : (ticket.bitacora || '-')}
+                        </Typography>
+                      </Box>
+                    </SectionCard>
+                  </Grid>
                 </Grid>
 
-                {/* SECCIÓN DE REGISTRO (Fuera del grid de 2 columnas para que ocupe todo el ancho inferior) */}
+                <Divider sx={{ mb: 2, borderColor: '#f5f6f7', flexShrink: 0 }} />
                 <Box sx={{ mt: 1 }}>
                   <SectionCard title="Registro" icon={<AccessTimeIcon sx={{ fontSize: '0.95rem' }} />} noBorder>
                     <Grid container spacing={1.5}>
