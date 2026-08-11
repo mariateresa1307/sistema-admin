@@ -292,18 +292,21 @@ export const AuditDetailModal = ({ open, onClose, log }: AuditDetailModalProps) 
     if (action === 'UPDATE') {
       return (
         <>
-          <Grid size={12}>
-            <Box sx={{ textAlign: 'center' }}>
-              <Chip
-                icon={<CompareArrowsIcon sx={{ fontSize: 16 }} />}
-                label={`${changedKeys.size} campo${changedKeys.size === 1 ? '' : 's'} modificado${changedKeys.size === 1 ? '' : 's'}`}
-                size="small"
-                sx={{ bgcolor: '#fff3e0', color: '#ef6c00', fontWeight: 700, fontSize: '0.72rem' }}
-              />
-              <Typography variant="caption" sx={{ color: '#94a3b8', fontStyle: 'italic', display: 'block', mt: 0.5 }}>
-                Los campos resaltados fueron modificados
-              </Typography>
-            </Box>
+            <Grid size={12}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: '#94a3b8',
+                fontStyle: 'italic',
+                display: 'block',
+                textAlign: 'center',
+                mb: 1,
+              }}
+            >
+              {changedKeys.size > 0
+                ? 'Los campos resaltados fueron modificados'
+                : 'No se detectaron diferencias entre el valor anterior y el actual'}
+            </Typography>
           </Grid>
 
           <Grid size={{ xs: 12, md: 6 }}>
@@ -486,7 +489,7 @@ export const AuditDetailModal = ({ open, onClose, log }: AuditDetailModalProps) 
     return null;
   };
 
-  const getActionDividerConfig = (action: string) => {
+  const getActionDividerConfig = (action: string,  changesCount = 0) => {
     switch (action.toUpperCase()) {
       case 'DELETE':
         return { label: 'Datos Eliminados', icon: <DeleteIcon sx={{ fontSize: 16 }} />, bgcolor: '#ffebee', color: '#c62828' };
@@ -494,11 +497,17 @@ export const AuditDetailModal = ({ open, onClose, log }: AuditDetailModalProps) 
         return { label: 'Datos Creados', icon: <AddCircleIcon sx={{ fontSize: 16 }} />, bgcolor: '#e3f2fd', color: '#1565c0' };
       case 'UPDATE':
       default:
-        return { label: 'Cambios Realizados', icon: <CompareArrowsIcon sx={{ fontSize: 16 }} />, bgcolor: '#fff3e0', color: '#ef6c00' };
+        return { label:  changesCount > 0
+              ? `${changesCount} ${changesCount === 1 ? 'Cambio Realizado' : 'Cambios Realizados'}`
+              : 'Sin Cambios Detectados', 
+              icon: <CompareArrowsIcon sx={{ fontSize: 16 }} />,
+              bgcolor: changesCount > 0 ? '#fff3e0' : '#f1f5f9',
+              color: changesCount > 0 ? '#ef6c00' : '#64748b'
+            };
     }
   };
 
-  const dividerConfig = getActionDividerConfig(log.action);
+   const dividerConfig = getActionDividerConfig(log.action, changedKeys.size);
 
   return (
     <AnimatePresence>
@@ -624,7 +633,12 @@ export const AuditDetailModal = ({ open, onClose, log }: AuditDetailModalProps) 
                   <>
                     <Grid size={12}>
                       <Divider sx={{ my: 2 }}>
-                        <Chip icon={dividerConfig.icon} label={dividerConfig.label} size="small" sx={{ fontWeight: 700, bgcolor: dividerConfig.bgcolor, color: dividerConfig.color }} />
+                        <Chip 
+                        icon={dividerConfig.icon} 
+                        label={dividerConfig.label} 
+                        size="small" 
+                        sx={{ fontWeight: 700, bgcolor: dividerConfig.bgcolor, color: dividerConfig.color }}
+                         />
                       </Divider>
                     </Grid>
                     {renderChangesSection()}

@@ -33,6 +33,7 @@ export interface UseTicketDataReturn {
   loadLocalidades: (ciudadIdOrName: string) => void;
   loadSolucionesCaso: (causaRaizId: string) => Promise<void>;
   loadServiciosAfectados: (tipoClienteInput: string | ConfiguracionInterface) => Promise<void>;
+  loadAllServicios: () => Promise<void>; // ✅ NUEVA FUNCIÓN
   loadCausasRaiz: () => Promise<void>;
   loadGrupoDestino: () => Promise<void>;
 
@@ -44,7 +45,6 @@ export interface UseTicketDataReturn {
   clearCategoriaRed: () => void;
 }
 
-// ✅ FUNCIÓN CLAVE: Extrae el array correctamente, ya sea que venga paginado o directo
 const extractData = (res: any) => {
   const data = res?.data;
   return Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
@@ -60,7 +60,7 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
   const [solucionesCaso, setSolucionesCaso] = useState<ConfiguracionInterface[]>([]);
   const [ciudadesOptions, setCiudadesOptions] = useState<any[]>([]);
   const [localidadesOptions, setLocalidadesOptions] = useState<any[]>([]);
-  const [todasLasLocalidades, setTodasLasLocalidades] = useState<any[]>([]); // ✅ Para filtrado en frontend
+  const [todasLasLocalidades, setTodasLasLocalidades] = useState<any[]>([]);
   const [serviciosAfectados, setServiciosAfectados] = useState<any[]>([]);
   const [grupoDestino, setGrupoDestino] = useState<ConfiguracionInterface[]>([]);
   const [loading, setLoading] = useState(false);
@@ -72,7 +72,6 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
     setError(null);
 
     try {
-      console.log('🔄 [useTicketData] Iniciando carga de datos iniciales...');
       const [operadoresRes, ciudadesRes, causasRes, grupoDestinoRes, tipoClienteRes, localidadesRes] = await Promise.all([
         getUsers(undefined, { isActive: true }),
         getMiscellaneous({ categoria: 'CIUDAD', limit: 999 }),
@@ -89,21 +88,11 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
         username: u.username,
       })));
       
-      const ciudadesData = extractData(ciudadesRes);
-      const tipoClienteData = extractData(tipoClienteRes);
-      const localidadesData = extractData(localidadesRes);
-      
-      setCiudadesOptions(ciudadesData);
+      setCiudadesOptions(extractData(ciudadesRes));
       setCausasRaiz(extractData(causasRes));
       setGrupoDestino(extractData(grupoDestinoRes));
-      setTipoCliente(tipoClienteData);
-      setTodasLasLocalidades(localidadesData); // ✅ Guardamos todas para filtrar localmente
-      
-      console.log('✅ [useTicketData] Carga exitosa:', {
-        ciudades: ciudadesData.length,
-        tipoCliente: tipoClienteData.length,
-        localidades: localidadesData.length,
-      });
+      setTipoCliente(extractData(tipoClienteRes));
+      setTodasLasLocalidades(extractData(localidadesRes));
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Error desconocido');
       setError(error);
@@ -120,11 +109,9 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
     }
     setLoading(true);
     try {
-      console.log(`🔄 [useTicketData] Cargando categorías para: ${tipoIncidencia}`);
       const res = await getMiscellaneous({ categoria: 'CATEGORIA_RED', tipoIncidencia, limit: 999 });
       const data = extractData(res);
       setCategoriaRed(data);
-      console.log(`✅ [useTicketData] Categorías cargadas: ${data.length}`);
       return data;
     } catch (err) {
       console.error('❌ [useTicketData] Error cargando categorías:', err);
@@ -141,21 +128,13 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
       return;
     }
     
-   console.log(`🔍 [useTicketData] Filtrando localidades para: "${ciudadIdOrName}"`);
-    console.log(`📦 [useTicketData] Total localidades en memoria: ${todasLasLocalidades.length}`);
     const searchVal = String(ciudadIdOrName).toLowerCase().trim();
-    
     const filtradas = todasLasLocalidades.filter((loc: any) => {
       const locCiudadId = String(loc.ciudadId || loc.padreId || '').toLowerCase();
       const locCiudadNombre = String(loc.padreNombre || '').toLowerCase();
-      
-      // Coincide si el ID coincide, O si el nombre coincide exactamente o lo incluye
-      return locCiudadId === searchVal || 
-             locCiudadNombre === searchVal ||
-             locCiudadNombre.includes(searchVal);
+      return locCiudadId === searchVal || locCiudadNombre === searchVal || locCiudadNombre.includes(searchVal);
     });
     
-    console.log(`✅ [useTicketData] Localidades encontradas: ${filtradas.length}`);
     setLocalidadesOptions(filtradas);
   }, [todasLasLocalidades]);
 
@@ -223,9 +202,7 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
         return;
       }
 
-      console.log('📡 [useTicketData] Solicitando servicios para tipoCliente ID:', idAEnviar);
-      const res = await getService({ tipoCliente: idAEnviar });
-
+      const res = await getService({ tipoCliente: idAEnviar, limit: 9999 });
       const dataServicios: any[] = Array.isArray(res)
         ? res
         : Array.isArray(res?.data)
@@ -234,10 +211,34 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
         ? res.data.data
         : [];
 
-      console.log('✅ [useTicketData] Servicios recibidos:', dataServicios.length);
       setServiciosAfectados(dataServicios);
     } catch (error) {
       console.error('❌ [useTicketData] Error al obtener servicios:', error);
+      setServiciosAfectados([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // ✅ NUEVA FUNCIÓN: Carga TODOS los servicios sin filtrar por tipo de cliente
+  const loadAllServicios = useCallback(async () => {
+    setLoading(true);
+    try {
+      console.log('📡 [useTicketData] Solicitando TODOS los servicios (Falla Masiva)...');
+      const res = await getService({ limit: 9999 });
+      
+      const dataServicios: any[] = Array.isArray(res)
+        ? res
+        : Array.isArray(res?.data)
+        ? res.data
+        : Array.isArray(res?.data?.data)
+        ? res.data.data
+        : [];
+
+      console.log('✅ [useTicketData] Todos los servicios recibidos:', dataServicios.length);
+      setServiciosAfectados(dataServicios);
+    } catch (error) {
+      console.error('❌ [useTicketData] Error al obtener todos los servicios:', error);
       setServiciosAfectados([]);
     } finally {
       setLoading(false);
@@ -291,6 +292,7 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
     loadLocalidades,
     loadSolucionesCaso,
     loadServiciosAfectados,
+    loadAllServicios, // ✅ Exportada
     loadCausasRaiz,
     loadGrupoDestino,
     clearSubcategorias,

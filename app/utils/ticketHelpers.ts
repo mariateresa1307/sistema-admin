@@ -50,6 +50,8 @@ export interface TicketRecord {
   description?: string;
   status?: string;
   email?: string;
+  fechaCreacion?: string;
+  fechaAsignacionOpA?: string;
   createdAt?: Date;
   updatedAt?: Date;
 }

@@ -111,6 +111,7 @@ export const getTickets = (params: any) => api.get('/tickets', { params });
 export const getTicketsStats =  () => api.get('/tickets/stats');
 export const closeTicket = (id: string) => api.put(`/tickets/${id}/close`);
 export const reopenTicket = (id: string) => api.put(`/tickets/${id}/reopen`);
+export const getIncidenciasReport = (params: { mes: string; tipoServicio?: string }) => api.get('/tickets/reporte-incidencias', { params });
 
 // ENDPOINTS DE MISCELLANEOUS
 export const getMiscellaneous = (params: any) => api.get('/miscellaneous', { params });
@@ -123,6 +124,8 @@ export const getMiscellaneousWithParent = (id: string) => api.get(`/miscellaneou
 export const getAuditLogs = (params?: any) => api.get('/audit', { params });
 export const getAuditStats = (params?: any) => api.get('/audit/stats', { params });
 export const createAuditLog = (data: any) => api.post('/audit/log', data);
+export const exportAuditExcel = (params?: any) => api.get('/audit/export', {params,responseType: 'blob' });
+
 
 // ENDPOINTS DE REPORTES
 export const getReportPreview = (params: any) => api.get('/reports/preview', { params });

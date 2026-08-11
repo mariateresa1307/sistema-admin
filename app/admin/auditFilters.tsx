@@ -1,13 +1,13 @@
 'use client';
-import  { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Typography, Card, CardContent, Grid, TextField, MenuItem, Button,
-  Stack, CircularProgress, Alert, Chip,} from '@mui/material';
-import {  FilterList as FilterIcon, RestartAlt as ResetIcon, Download as DownloadIcon,
-  Search as SearchIcon} from '@mui/icons-material';
+  Stack, CircularProgress, Alert, Chip } from '@mui/material';
+import { FilterList as FilterIcon, RestartAlt as ResetIcon, Download as DownloadIcon,
+  Search as SearchIcon } from '@mui/icons-material';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs, { Dayjs } from 'dayjs';
-import { getAuditLogs, getUsers } from '@/lib/api';
+import { getAuditLogs, getUsers, exportAuditExcel } from '@/lib/api';
 import { AuditLog } from '@/lib/types/audit';
 import AuditTable from './auditTable';
 
@@ -100,26 +100,40 @@ export default function AuditFilters() {
     setPagination((prev) => ({ ...prev, page: newPage }));
   }, []);
 
-  const handleExport = useCallback(() => {
-    const params = new URLSearchParams();
-    if (filters.userId) params.append('userId', filters.userId);
-    if (filters.action) params.append('action', filters.action);
-    if (filters.startDate) params.append('startDate', dayjs(filters.startDate).startOf('day').toISOString());
-    if (filters.endDate) params.append('endDate', dayjs(filters.endDate).endOf('day').toISOString());
+  // ✅ FIX: handleExport corregido - usa exportAuditExcel con responseType: 'blob'
+  const handleExport = useCallback(async () => {
+    try {
+      // Construir los mismos filtros que usa loadLogs
+      const params: any = {};
+      if (filters.userId) params.userId = filters.userId;
+      if (filters.action) params.action = filters.action;
+      if (filters.startDate) params.startDate = dayjs(filters.startDate).startOf('day').toISOString();
+      if (filters.endDate) params.endDate = dayjs(filters.endDate).endOf('day').toISOString();
 
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
-    const url = `${process.env.NEXT_PUBLIC_API_URL}`; //|| 'http://localhost:4000'}/audit/export?${params.toString()}`;
+      // ✅ Usar la función con responseType: 'blob'
+      const response = await exportAuditExcel(params);
 
-    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
-      .then((res) => res.blob())
-      .then((blob) => {
-        const link = document.createElement('a');
-        link.href = window.URL.createObjectURL(blob);
-        link.download = `auditoria-${dayjs().format('YYYY-MM-DD')}.xlsx`;
-        link.click();
-        window.URL.revokeObjectURL(link.href);
-      })
-      .catch(() => setError('Error al exportar'));
+      // Garantizar que sea Blob (axios puede devolver ArrayBuffer según configuración)
+      const blob =
+        response.data instanceof Blob
+          ? response.data
+          : new Blob([response.data], {
+              type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            });
+
+      // Descargar
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `auditoria-${dayjs().format('YYYY-MM-DD')}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('❌ [AuditFilters] Error exportando:', err);
+      setError('Error al exportar el reporte de auditoría');
+    }
   }, [filters]);
 
   const hasActiveFilters = useMemo(

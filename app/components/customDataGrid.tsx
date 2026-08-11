@@ -48,16 +48,27 @@ export default function CustomDataGrid({
     }
   }, [rawColumns]);
 
-  // ✅ CREAR ARRAY ORDENADO SOLO PARA EL DROPDOWN (Ticket primero)
+  // ✅ DETECTAR SI ES EL MÓDULO DE SERVICIOS
+  const isServiciosModule = useMemo(() => columns.some(col => col.field === 'tipoServicio'), [columns]);
+
+  // ✅ CREAR ARRAY ORDENADO PARA EL DROPDOWN (Inyectando 'Nodos' si es servicios)
   const dropdownOptions = useMemo(() => {
     if (!Array.isArray(columns) || columns.length === 0) return [];
     
     const caseNumberCol = columns.find(col => col.field === 'caseNumber');
     const otherCols = columns.filter(col => col.field !== 'caseNumber');
     
-    // Si existe caseNumber, la ponemos primera en el dropdown, luego el resto
-    return caseNumberCol ? [caseNumberCol, ...otherCols] : columns;
-  }, [columns]);
+    let options = caseNumberCol ? [caseNumberCol, ...otherCols] : columns;
+
+    // ✅ INYECTAR OPCIÓN 'NODOS' AL INICIO DEL DROPDOWN SI ES SERVICIOS
+    if (isServiciosModule) {
+      if (!options.some(opt => opt.field === 'nodos')) {
+        options = [{ field: 'nodos', headerName: 'Nodos' }, ...options];
+      }
+    }
+    
+    return options;
+  }, [columns, isServiciosModule]);
 
   const [isMounted, setIsMounted] = useState(false);
   const [searchField, setSearchField] = useState<string>(
@@ -72,7 +83,6 @@ export default function CustomDataGrid({
   const isApiSearch = Boolean(onSearch);
   const skipInitialSearch = useRef(true);
 
-  const isServiciosModule = useMemo(() => columns.some(col => col.field === 'tipoServicio'), [columns]);
   const isUserStatusField = useMemo(() => searchField === 'isActive', [searchField]);
   const isStatusField = useMemo(() => searchField === 'status', [searchField]);
   const isTipoServicioField = useMemo(() => searchField === 'tipoServicio', [searchField]);
@@ -117,7 +127,7 @@ export default function CustomDataGrid({
     return () => clearTimeout(timer);
   }, [searchTerm, searchField, handleSearch, debounceMs]);
 
-  //  Envío al servidor (Padre)
+  // Envío al servidor (Padre)
   useEffect(() => {
     if (!onSearch) return;
     if (skipInitialSearch.current) { 
@@ -192,7 +202,7 @@ export default function CustomDataGrid({
           size="small" 
           sx={{ minWidth: 150 }}
         >
-          {/* ✅ USAR dropdownOptions (con Ticket primero) SOLO en el dropdown */}
+          {/* ✅ USAR dropdownOptions (con Nodos inyectado si aplica) */}
           {dropdownOptions.map((col) => (
             <MenuItem key={col.field} value={col.field}>{col.headerName || col.field}</MenuItem>
           ))}
@@ -241,7 +251,7 @@ export default function CustomDataGrid({
             fullWidth 
             value={searchTerm} 
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder={`Buscar ${searchField}...`} 
+            placeholder={`Buscar ${searchField === 'nodos' ? 'Nodo (A, B u OLT)' : searchField}...`} 
             size="small"
             InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment> }}
             sx={{ maxWidth: 500 }}
@@ -252,7 +262,7 @@ export default function CustomDataGrid({
       <DataGrid
         getRowId={(row) => String(row._id || row.id)}
         rows={displayRows}
-        columns={columns} // ✅ La tabla usa columns ORIGINAL (sin reordenar)
+        columns={columns}
         loading={loading || isSearching}
         paginationModel={paginationModel}
         onPaginationModelChange={onPaginationModelChange}

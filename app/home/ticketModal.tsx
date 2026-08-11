@@ -273,6 +273,16 @@ export default function TicketModal({ open, onClose, onSave, ticketToEdit }: Tic
     try {
       const finalData = ticketForm.prepareFinalData();
       await updateTicket(ticketForm.preSaved, mapFormToUpdatePayload(finalData));
+
+      window.dispatchEvent(new CustomEvent('app-notification', {
+        detail: {
+          message: ticketForm.isEditMode
+            ? 'Ticket actualizado exitosamente'
+            : 'Ticket guardado exitosamente',
+          severity: 'success',
+        },
+      }));
+      
       onSave(finalData);
       ticketForm.resetForm();
       onClose();
@@ -295,7 +305,7 @@ export default function TicketModal({ open, onClose, onSave, ticketToEdit }: Tic
     onClose();
   }, [ticketForm, onClose]);
 
-  // ✅ CORREGIDO: Ahora guarda los cambios ANTES de cerrar el ticket
+  //  guarda los cambios ANTES de cerrar el ticket
   const requestCloseTicket = useCallback(() => {
     if (!ticketForm.preSaved) return;
 

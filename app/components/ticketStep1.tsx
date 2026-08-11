@@ -1,12 +1,17 @@
 'use client';
-import React, { useState } from 'react';
-import { Grid, TextField, MenuItem, Autocomplete, IconButton, Switch, Typography, Stack} from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { Grid, TextField, MenuItem, Autocomplete, Switch, Typography, Stack, createFilterOptions } from '@mui/material';
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import { TIPO_INCIDENCIA, TIPO_CLIENTE, TICKET_STATUS } from 'app/utils/constants';
 import { TipoIncidenciaKey, SimpleConfigOpt } from '../utils/types';
 import { TicketFormData, ServicioAfectado } from '../utils/ticketHelpers';
 import { useTicketData } from '../home/hooks/useTicketData';
 import ElementoModal from '../components/elementoTicketModal';
+
+// ✅ Limita el desplegable a 15 opciones para rendimiento, pero permite búsqueda escrita directa
+const filterOptions = createFilterOptions({
+  limit: 15,
+});
 
 interface TicketStep1Props {
   form: TicketFormData;
@@ -36,19 +41,29 @@ export const TicketStep1 = React.memo(
   }: TicketStep1Props) => {
     const [openServicioModal, setOpenServicioModal] = useState(false);
 
-    // ✅ Blindaje de arrays + fallback a []
+    // ✅ Blindaje de arrays
     const tipoClienteArray = Array.isArray(data?.tipoCliente) ? data.tipoCliente : [];
     const categoriaRedArray = Array.isArray(data?.categoriaRed) ? data.categoriaRed : [];
     const subcategoriasArray = Array.isArray(data?.subcategorias) ? data.subcategorias : [];
     const detalleArray = Array.isArray(data?.detalle) ? data.detalle : [];
     const ciudadesOptionsArray = Array.isArray(data?.ciudadesOptions) ? data.ciudadesOptions : [];
     const localidadesOptionsArray = Array.isArray(data?.localidadesOptions) ? data.localidadesOptions : [];
+    const serviciosAfectadosArray = Array.isArray(data?.serviciosAfectados) ? (data.serviciosAfectados as ServicioAfectado[]) : [];
 
-    const showTipoClienteInput = form.tipoIncidencia !== TIPO_INCIDENCIA.FALLA_MASIVA;
+    const isFallaMasiva = form.tipoIncidencia === TIPO_INCIDENCIA.FALLA_MASIVA;
+    const showTipoClienteInput = !isFallaMasiva;
+    
     const selectedTipoCliente = tipoClienteArray.find((tc) => tc._id === form.tipoCliente);
     const isResidencial = selectedTipoCliente?.valor === TIPO_CLIENTE.RESIDENCIAL;
     const isClosed = form.estatus === TICKET_STATUS.CERRADO || form.estatus === 'CERRADO';
     const isLoading = data?.loading;
+
+    // ✅ EFECTO: Si es Falla Masiva Y hay afectación, cargar TODOS los servicios para poder buscarlos
+    useEffect(() => {
+      if (isFallaMasiva && form.afectacion === true && data.loadAllServicios) {
+        data.loadAllServicios();
+      }
+    }, [isFallaMasiva, form.afectacion, data.loadAllServicios]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const { name, value, type } = e.target;
@@ -296,32 +311,36 @@ export const TicketStep1 = React.memo(
           </>
         )}
 
-        {/* Servicios Afectados */}
-        {showTipoClienteInput && !isResidencial && form.afectacion === true && (
+        {/* ✅ Servicios Afectados: Se muestra si NO es residencial Y afectacion es true */}
+        {/* Esto cubre exactamente: "se muestra en falla masiva si afectacion es true" */}
+        {!isResidencial && form.afectacion === true && (
           <Grid size={{ xs: 12, sm: 4 }}>
             <Autocomplete
               multiple
               size="small"
-              options={Array.isArray(data.serviciosAfectados) ? data.serviciosAfectados : []}
+              options={serviciosAfectadosArray}
+              filterOptions={filterOptions}
               isOptionEqualToValue={(option, value) => {
-                const optId = typeof option === 'string' ? option : String(option._id || option.id);
-                const valId = typeof value === 'string' ? value : String(value?._id || value?.id);
+                const optId = typeof option === 'string' ? option : String((option as any)._id || (option as any).id);
+                const valId = typeof value === 'string' ? value : String((value as any)?._id || (value as any)?.id);
                 return optId === valId;
               }}
               value={(() => {
                 if (!Array.isArray(form.serviciosAfectados)) return [];
-                const listaServicios = Array.isArray(data.serviciosAfectados) ? data.serviciosAfectados : [];
                 return form.serviciosAfectados.map((sa: any) => {
                   const idToFind = typeof sa === 'string' ? sa : String(sa._id || sa.id || '');
-                  const servicioEncontrado = listaServicios.find((s) => String(s._id || s.id) === idToFind);
+                  const servicioEncontrado = serviciosAfectadosArray.find((s) => String((s as any)._id || (s as any).id) === idToFind);
                   return servicioEncontrado || { _id: idToFind, id: idToFind, name: `Cargando...`, valor: `Cargando...` };
                 });
               })()}
-              onChange={(_, newValue) => onServiciosAfectadosChange(newValue)}
-              getOptionKey={(option) => (typeof option === 'string' ? option : String(option._id || option.id))}
+              onChange={(_, newValue) => onServiciosAfectadosChange(newValue as ServicioAfectado[])}
+              getOptionKey={(option) => {
+                return typeof option === 'string' ? option : String((option as any)._id || (option as any).id);
+              }}
               getOptionLabel={(option) => {
                 if (typeof option === 'string') return option;
-                return option.name || option.valor || option.nombre || option.descripcion || `ID: ${option._id || option.id}`;
+                const opt = option as any;
+                return opt.name || opt.valor || opt.nombre || opt.descripcion || `ID: ${opt._id || opt.id}`;
               }}
               disabled={isClosed || isLoading}
               ChipProps={{
@@ -332,13 +351,13 @@ export const TicketStep1 = React.memo(
                 <TextField
                   {...params}
                   label="Servicios afectados"
+                  placeholder="Escribe para buscar..."
                   size="small"
                   InputProps={{
                     ...params.InputProps,
                     endAdornment: (
                       <>
                         {params.InputProps.endAdornment}
-                     
                       </>
                     ),
                   }}
@@ -350,7 +369,7 @@ export const TicketStep1 = React.memo(
               onClose={() => setOpenServicioModal(false)}
               onAdd={(nuevo) => {
                 if (typeof nuevo === 'string') return;
-                onServiciosAfectadosChange([...(form.serviciosAfectados || []), nuevo]);
+                onServiciosAfectadosChange([...(form.serviciosAfectados || []), nuevo as ServicioAfectado]);
               }}
             />
           </Grid>
@@ -376,7 +395,7 @@ export const TicketStep1 = React.memo(
           <TextField fullWidth label="Bitácora" name="bitacora" multiline maxRows={4} value={form.bitacora ?? ''} onChange={handleChange} size="small" disabled={isClosed} />
         </Grid>
 
-        {/* Afectación */}
+        {/* Afectación: Se muestra siempre, pero en Falla Masiva activa la carga de todos los servicios */}
         <Grid size={{ xs: 12, sm: 4 }}>
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
             <Switch

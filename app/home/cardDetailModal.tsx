@@ -16,6 +16,7 @@ import BuildIcon from '@mui/icons-material/Build';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import DescriptionIcon from '@mui/icons-material/Description';
 import CheckIcon from '@mui/icons-material/Check';
+import SettingsEthernet from '@mui/icons-material/SettingsEthernet';
 import { TicketRecord, formatTTZoho } from "app/utils/ticketHelpers";
 import { getNivelSeveridadConfig } from "app/utils/auxiliares";
 import { getUsers, getMiscellaneous } from "@/lib/api";
@@ -207,6 +208,7 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
   const operatorAsignadoName = formatOperatorName(ticket.operatorAsignado);
   const operatorResponsableName = formatOperatorName(ticket.operatorResponsable);
 
+
   const getValorFromId = (idOrObj: any, lista: any[]) => {
     if (!idOrObj) return 'Sin especificar';
     if (typeof idOrObj === 'object' && idOrObj !== null) return idOrObj.valor || idOrObj.name || idOrObj.nombre || idOrObj._id || 'Sin especificar';
@@ -315,7 +317,7 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
                           <InfoItem label="Afectación" value={<Chip label={ticket.afectacion === true ? 'Sí' : 'No'} size="small" sx={{ fontWeight: 600, borderRadius: '6px', fontSize: '0.7rem', height: '22px', bgcolor: ticket.afectacion === true ? '#e8f5e9' : '#ffebee', color: ticket.afectacion === true ? '#2e7d32' : '#c62828' }} />} />
                         </Grid>
                         <Grid size={6}>
-                          <InfoItem label="Localidad" icon={<LocationOnIcon sx={{ fontSize: 12 }} />} value={<Typography sx={{ fontWeight: 600, color: '#334155', fontSize: '0.85rem' }}>{ticket.localidad || '-'}</Typography>} />
+                          <InfoItem label="Localidad" icon={<LocationOnIcon sx={{ fontSize: 12 }} />} value={<Typography sx={{ fontWeight: 600, color: '#334155', fontSize: '12px' }}>{ticket.localidad || '-'}</Typography>} />
                         </Grid>
                         {ticket.ttZoho && (
                           <Grid size={6}>
@@ -344,10 +346,10 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
                     <SectionCard title="Análisis y Solución" icon={<BuildIcon sx={{ fontSize: '0.95rem' }} />} noBorder>
                       <Grid container spacing={1.5}>
                         <Grid size={12}>
-                          <InfoItem label="Causa Raíz" icon={<ReportProblemIcon sx={{ fontSize: 15, color: '#dc5353' }} />} value={<Typography sx={{ fontWeight: 'bold', color: tieneCausaRaiz ? '#0a0909' : '#94a3b8', fontSize: '13px' }}>{causaRaizValor}</Typography>} />
+                          <InfoItem label="Causa Raíz" icon={<ReportProblemIcon sx={{ fontSize: 15, color: '#dc5353' }} />} value={<Typography sx={{ fontWeight: 'bold', color: tieneCausaRaiz ? '#0a0909' : '#94a3b8', fontSize: '12px' }}>{causaRaizValor}</Typography>} />
                         </Grid>
                         <Grid size={12}>
-                          <InfoItem label="Solución" icon={<CheckIcon sx={{ fontSize: 15, color: '#2e7d32' }} />} value={<Typography sx={{ fontWeight: 'bold', color: tieneSolucion ? '#0a0909' : '#94a3b8', fontSize: '13px' }}>{solucionCasoValor}</Typography>} />
+                          <InfoItem label="Solución" icon={<CheckIcon sx={{ fontSize: 15, color: '#2e7d32' }} />} value={<Typography sx={{ fontWeight: 'bold', color: tieneSolucion ? '#0a0909' : '#94a3b8', fontSize: '12px' }}>{solucionCasoValor}</Typography>} />
                         </Grid>
                       </Grid>
                     </SectionCard>
@@ -355,28 +357,65 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
                     <Divider sx={{ mb: 2, borderColor: '#f5f6f7', flexShrink: 0 }} />
                     <SectionCard title="Operadores" icon={<PersonIcon sx={{ fontSize: '0.95rem' }} />} noBorder>
                       <Grid container spacing={1.5}>
+                        {/* Operador Responsable - Siempre se muestra */}
                         {ticket.operatorResponsable && (
-                          <Grid size={6}>
+                          <Grid size={ticket.operatorAsignado && ticket.operatorAsignado !== ticket.operatorResponsable ? 6 : 12}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <Box sx={{ bgcolor: '#f0fdf4', p: 0.6, borderRadius: '50%' }}><PersonIcon sx={{ color: '#059669', fontSize: '1rem' }} /></Box>
+                              <Box sx={{ bgcolor: '#f0fdf4', p: 0.6, borderRadius: '50%' }}>
+                                <PersonIcon sx={{ color: '#059669', fontSize: '1rem' }} />
+                              </Box>
                               <Box>
-                                <Typography sx={{ color: '#94a3b8', fontWeight: 500, fontSize: '0.6rem', textTransform: 'uppercase', display: 'block' }}>Responsable</Typography>
-                                <Typography sx={{ fontWeight: 600, color: '#1e293b', fontSize: '0.8rem' }}>{operatorResponsableName}</Typography>
+                                <Typography sx={{ color: '#94a3b8', fontWeight: 500, fontSize: '0.6rem', textTransform: 'uppercase', display: 'block' }}>
+                                  Responsable
+                                </Typography>
+                                <Typography sx={{ fontWeight: 600, color: '#1e293b', fontSize: '0.8rem' }}>
+                                  {operatorResponsableName}
+                                </Typography>
+                                {ticket.fechaCreacion && (
+                                  <Typography sx={{ fontSize: '0.7rem', color: '#64748b', mt: 0.2 }}>
+                                    {formatDateTime(ticket.fechaCreacion)}
+                                  </Typography>
+                                )}
                               </Box>
                             </Box>
                           </Grid>
                         )}
-                        <Grid size={ticket.operatorResponsable ? 6 : 12}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Box sx={{ bgcolor: '#eef2ff', p: 0.6, borderRadius: '50%' }}><PersonIcon sx={{ color: '#4f46e5', fontSize: '1rem' }} /></Box>
-                            <Box>
-                              <Typography sx={{ color: '#94a3b8', fontWeight: 500, fontSize: '0.6rem', textTransform: 'uppercase', display: 'block' }}>Asignado</Typography>
-                              <Typography sx={{ fontWeight: 600, color: '#1e293b', fontSize: '0.8rem' }}>{operatorAsignadoName}</Typography>
+
+                        {/* Operador Asignado - Solo si existe y es diferente del responsable */}
+                        {ticket.operatorAsignado && ticket.operatorAsignado !== ticket.operatorResponsable && (
+                          <Grid size={6}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Box sx={{ bgcolor: '#eef2ff', p: 0.6, borderRadius: '50%' }}>
+                                <PersonIcon sx={{ color: '#4f46e5', fontSize: '1rem' }} />
+                              </Box>
+                              <Box>
+                                <Typography sx={{ color: '#94a3b8', fontWeight: 500, fontSize: '0.6rem', textTransform: 'uppercase', display: 'block' }}>
+                                  Asignado
+                                </Typography>
+                                <Typography sx={{ fontWeight: 600, color: '#1e293b', fontSize: '0.8rem' }}>
+                                  {operatorAsignadoName}
+                                </Typography>
+                                {/* Fecha de asignación */}
+                                {ticket.fechaAsignacionOpA && (
+                                  <Typography sx={{ fontSize: '0.7rem', color: '#64748b', mt: 0.2 }}>
+                                    Asignado: {formatDateTime(ticket.fechaAsignacionOpA)}
+                                  </Typography>
+                                )}
+                              </Box>
                             </Box>
-                          </Box>
-                        </Grid>
+                          </Grid>
+                        )}
                       </Grid>
                     </SectionCard>
+
+                    <SectionCard title={isClosed ? 'Detalles' : 'Bitácora'} icon={<DescriptionIcon sx={{ fontSize: '0.95rem', color: isClosed ? '#c62828' : '#64748b' }} />} noBorder>
+                      <Box sx={{ p: 1.25, bgcolor: isClosed ? '#f8fafc' : '#fafbfc', borderRadius: '6px', border: `1px solid ${isClosed ? '#e2e8f0' : '#f1f5f9'}`, maxHeight: '200px', overflowY: 'auto' }}>
+                        <Typography sx={{ color: isClosed ? '#334155' : '#475569', lineHeight: 1.5, whiteSpace: 'pre-wrap', fontSize: '0.8rem' }}>
+                          {isClosed ? (ticket.description || 'Sin detalles') : (ticket.bitacora || '-')}
+                        </Typography>
+                      </Box>
+                    </SectionCard>
+
                   </Grid>
 
                   {/* COLUMNA DERECHA */}
@@ -476,13 +515,124 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
                       </Grid>
                     </SectionCard>
 
-                    <SectionCard title={isClosed ? 'Detalles' : 'Bitácora'} icon={<DescriptionIcon sx={{ fontSize: '0.95rem', color: isClosed ? '#c62828' : '#64748b' }} />} noBorder>
-                      <Box sx={{ p: 1.25, bgcolor: isClosed ? '#f8fafc' : '#fafbfc', borderRadius: '6px', border: `1px solid ${isClosed ? '#e2e8f0' : '#f1f5f9'}`, maxHeight: '200px', overflowY: 'auto' }}>
-                        <Typography sx={{ color: isClosed ? '#334155' : '#475569', lineHeight: 1.5, whiteSpace: 'pre-wrap', fontSize: '0.8rem' }}>
-                          {isClosed ? (ticket.description || 'Sin detalles') : (ticket.bitacora || '-')}
-                        </Typography>
-                      </Box>
-                    </SectionCard>
+                    {/*  SERVICIOS AFECTADOS */}
+                    {/* ✅ SECCIÓN: SERVICIOS AFECTADOS CON SCROLL */}
+                    {Array.isArray(ticket.serviciosAfectados) && ticket.serviciosAfectados.length > 0 && (
+                      <SectionCard title="Servicios Afectados" icon={<SettingsEthernet sx={{ fontSize: '0.95rem' }} />} noBorder>
+                        <Box
+                          sx={{
+                            maxHeight: '220px', // Altura máxima antes de activar el scroll
+                            overflowY: 'auto',
+                            pr: 0.5, // Espacio para que el scroll no tape el contenido
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 0.75,
+                            // ✅ Estilos personalizados para el scrollbar (Webkit)
+                            '&::-webkit-scrollbar': {
+                              width: '6px',
+                            },
+                            '&::-webkit-scrollbar-track': {
+                              background: '#f1f5f9',
+                              borderRadius: '3px',
+                            },
+                            '&::-webkit-scrollbar-thumb': {
+                              background: '#cbd5e1',
+                              borderRadius: '3px',
+                              '&:hover': {
+                                background: '#94a3b8',
+                              },
+                            },
+                          }}
+                        >
+                          {ticket.serviciosAfectados.map((servicio: any, index: number) => {
+                            const nombre = typeof servicio === 'object' ? (servicio.name || servicio.id_circuito || 'Servicio sin nombre') : String(servicio);
+                            const tipo = typeof servicio === 'object' ? (servicio.tipoServicio || 'N/A') : 'N/A';
+                            const circuito = typeof servicio === 'object' ? (servicio.id_circuito || '') : '';
+
+                            return (
+                              <Box
+                                key={typeof servicio === 'object' ? servicio._id : index}
+                                sx={{
+                                  p: 1.25,
+                                  bgcolor: '#ffffff',
+                                  borderRadius: '6px',
+                                  border: '1px solid #e2e8f0',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 1,
+                                  transition: 'all 0.2s ease',
+                                  '&:hover': {
+                                    borderColor: '#080769',
+                                    boxShadow: '0 1px 4px rgba(8, 7, 105, 0.08)'
+                                  }
+                                }}
+                              >
+                                <Box sx={{
+                                  width: 28,
+                                  height: 28,
+                                  borderRadius: '6px',
+                                  bgcolor: '#e0e7ff',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  flexShrink: 0
+                                }}>
+                                  <SettingsEthernet sx={{ fontSize: '0.9rem', color: '#080769' }} />
+                                </Box>
+
+                                <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 0.15 }}>
+                                  <Typography
+                                    sx={{
+                                      fontSize: '0.8rem',
+                                      fontWeight: 600,
+                                      color: '#0f172a',
+                                      lineHeight: 1.2,
+                                      whiteSpace: 'nowrap',
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis'
+                                    }}
+                                  >
+                                    {nombre}
+                                  </Typography>
+                                  {circuito && (
+                                    <Typography
+                                      sx={{
+                                        fontSize: '0.7rem',
+                                        color: '#64748b',
+                                        fontWeight: 500
+                                      }}
+                                    >
+                                      {circuito}
+                                    </Typography>
+                                  )}
+                                </Box>
+
+                                <Chip
+                                  label={tipo}
+                                  size="small"
+                                  sx={{
+                                    fontSize: '0.65rem',
+                                    fontWeight: 600,
+                                    height: '20px',
+                                    bgcolor: '#f8fafc',
+                                    color: '#475569',
+                                    border: '1px solid #e2e8f0',
+                                    flexShrink: 0,
+                                    '& .MuiChip-label': { px: 1 }
+                                  }}
+                                />
+                              </Box>
+                            );
+                          })}
+                        </Box>
+                      </SectionCard>
+                    )}
+
+
+
+
+
+
                   </Grid>
                 </Grid>
 

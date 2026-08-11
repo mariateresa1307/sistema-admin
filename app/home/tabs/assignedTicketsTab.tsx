@@ -6,69 +6,53 @@ import { Chip, Box } from "@mui/material";
 import { getTickets } from "@/lib/api";
 import { Pagination, Tickets } from "app/utils/types";
 import { TICKET_STATUS } from "app/utils/constants";
-import { log } from "node:console";
 
 const corporateFont = 'Calibri, Arial, sans-serif';
 
-// ✅ PALETA ARMONIZADA - Fondos suaves con texto oscuro
 const getColorByTipoIncidencia = (tipoIncidencia: string): { bgcolor: string; color: string } => {
   const tipoUpper = (tipoIncidencia || '').toUpperCase();
-  
-  if (tipoUpper.includes('MASIVA')) {
-    return { bgcolor: '#fee2e2', color: '#991b1b' };
-  }
-  if (tipoUpper.includes('MANTENIMIENTO') || tipoUpper.includes('VENTANA')) {
-    return { bgcolor: '#dbeafe', color: '#1e40af' };
-  }
-  if (tipoUpper.includes('PUNTUAL')) {
-    return { bgcolor: '#f1f5f9', color: '#475569' };
-  }
+  if (tipoUpper.includes('MASIVA')) return { bgcolor: '#fee2e2', color: '#991b1b' };
+  if (tipoUpper.includes('MANTENIMIENTO') || tipoUpper.includes('VENTANA')) return { bgcolor: '#dbeafe', color: '#1e40af' };
+  if (tipoUpper.includes('PUNTUAL')) return { bgcolor: '#f1f5f9', color: '#475569' };
   return { bgcolor: '#f8fafc', color: '#64748b' };
 };
 
-// ✅ PALETA ARMONIZADA PARA TIPO DE CLIENTE
 const getColorByTipoCliente = (tipoCliente: string): { bgcolor: string; color: string } => {
   const tipoUpper = (tipoCliente || '').toUpperCase();
-  
-  if (tipoUpper.includes('RESIDENCIAL')) {
-    return { bgcolor: '#dcfce7', color: '#166534' };
-  }
-  if (tipoUpper.includes('CARRIER')) {
-    return { bgcolor: '#ffedd5', color: '#9a3412' };
-  }
-  if (tipoUpper.includes('BANCA')) {
-    return { bgcolor: '#f3e8ff', color: '#6b21a8' };
-  }
-  if (tipoUpper.includes('CORPORATIVO')) {
-    return { bgcolor: '#e0f2fe', color: '#075985' };
-  }
+  if (tipoUpper.includes('RESIDENCIAL')) return { bgcolor: '#dcfce7', color: '#166534' };
+  if (tipoUpper.includes('CARRIER')) return { bgcolor: '#ffedd5', color: '#9a3412' };
+  if (tipoUpper.includes('BANCA')) return { bgcolor: '#f3e8ff', color: '#6b21a8' };
+  if (tipoUpper.includes('CORPORATIVO')) return { bgcolor: '#e0f2fe', color: '#075985' };
   return { bgcolor: '#f1f5f9', color: '#64748b' };
 };
 
-// ✅ Helper para extraer el valor de tipoCliente
 const getTipoClienteValor = (value: any): string => {
   if (!value) return 'Sin especificar';
   if (typeof value === 'object' && value !== null) {
     return value.valor || value.name || value.nombre || 'Sin especificar';
   }
   if (typeof value === 'string') {
-    if (value.length === 24 && /^[a-f0-9]+$/i.test(value)) {
-      return 'Sin especificar';
-    }
+    if (value.length === 24 && /^[a-f0-9]+$/i.test(value)) return 'Sin especificar';
     return value;
   }
   return 'Sin especificar';
 };
-
 const getTicketPriority = (ticket: any): number => {
+  const status = ticket.status;
   const incidentType = (ticket.incidentType || '').toUpperCase();
   const tipoClienteValor = getTipoClienteValor(ticket.tipoCliente).toUpperCase();
-
-  if (incidentType.includes('MASIVA')) return 1;
-  if (tipoClienteValor.includes('CARRIER')) return 2;
-  if (tipoClienteValor.includes('BANCA')) return 3;
+  if (status === TICKET_STATUS.EN_GESTION) return 1;
+  if (incidentType.includes('MASIVA')) return 2;
+  if (tipoClienteValor.includes('CARRIER')) return 3;
   if (tipoClienteValor.includes('CORPORATIVO')) return 4;
   return 5;
+};
+
+// ✅ Normaliza el ID del operador: objeto populado, ObjectId o string → string de 24 chars
+const extractUserId = (field: any): string => {
+  if (!field) return '';
+  if (typeof field === 'object' && field !== null) return String(field._id ?? '');
+  return String(field);
 };
 
 export default function AssignedTicketsTab({ 
@@ -87,27 +71,57 @@ export default function AssignedTicketsTab({
     if (!currentUserId) return;
     setLoading(true);
     try {
-      const params: Record<string, string | number> = {
+      // ✅ Trae TODOS los activos/en gestión (volumen manejable)
+      const response = await getTickets({
+        page: 1,
+        limit: 9999,
+        status: `${TICKET_STATUS.ACTIVO},${TICKET_STATUS.EN_GESTION}`,
+      });
+
+      const all: any[] = response.data?.data || [];
+
+      // ✅ 1) FILTRO GARANTIZADO: solo MIS casos (asignado o responsable),
+      //    inmune a ObjectId vs string porque normaliza con extractUserId
+      const mine = all.filter((t) => {
+        const asignado = extractUserId(t.operatorAsignado);
+        const responsable = extractUserId(t.operatorResponsable);
+        return asignado === currentUserId || responsable === currentUserId;
+      });
+
+      // ✅ 2) Búsqueda en cliente según el campo elegido
+      let searched = mine;
+      const term = searchParams.value?.trim().toLowerCase();
+      if (term) {
+        searched = mine.filter((t) => {
+          if (searchParams.field === 'caseNumber') {
+            return String(t.caseNumber ?? '').toLowerCase().includes(term);
+          }
+          if (searchParams.field === 'subject') {
+            return String(t.subject ?? '').toLowerCase().includes(term);
+          }
+          return [t.caseNumber, t.subject].some((f) =>
+            String(f ?? '').toLowerCase().includes(term)
+          );
+        });
+      }
+
+      // ✅ 3) Orden por prioridad (masiva > carrier > banca > corporativo)
+      searched.sort((a, b) => getTicketPriority(a) - getTicketPriority(b));
+
+      // ✅ 4) Paginación en cliente
+      const start = page.page * page.pageSize;
+      const pageData = searched.slice(start, start + page.pageSize);
+
+      setTickets({
+        data: pageData,
+        total: searched.length,
         page: page.page + 1,
         limit: page.pageSize,
-        status: TICKET_STATUS.ACTIVO,
-        operatorId: currentUserId,
-      };
-      if (searchParams.value) params[searchParams.field] = searchParams.value;
+        totalPages: Math.ceil(searched.length / page.pageSize),
+      } as any);
 
-      const response = await getTickets(params);
-        let filteredData = response.data?.data || [];
-      const currentTotal = response.data?.total || 0;
-
-       filteredData.sort((a: any, b: any) => {
-        const priorityA = getTicketPriority(a);
-        const priorityB = getTicketPriority(b);
-        if (priorityA === priorityB) return 0;
-        return priorityA - priorityB;
-      });
-      
-      setTickets(response.data);
-      onCountChange(currentTotal);
+      // ✅ El badge del tab muestra el total real de MIS casos
+      onCountChange(searched.length);
     } catch (error) {
       console.error('❌ Error fetching tickets:', error);
     } finally {
@@ -136,7 +150,6 @@ export default function AssignedTicketsTab({
         const tipoClienteValor = getTipoClienteValor(params.value);
         const incidentType = params.row.incidentType || '';
 
-        // REGLA 1: Si el Tipo de Cliente tiene un valor válido → Mostrarlo.
         if (tipoClienteValor !== 'Sin especificar') {
           const colors = getColorByTipoCliente(tipoClienteValor);
           return (
@@ -144,20 +157,14 @@ export default function AssignedTicketsTab({
               label={tipoClienteValor}
               size="small"
               sx={{
-                bgcolor: colors.bgcolor,
-                color: colors.color,
-                fontWeight: 600,
-                borderRadius: '6px',
-                fontSize: '0.72rem',
-                height: '26px',
-                border: `1px solid ${colors.bgcolor}`,
-                boxShadow: 'none',
+                bgcolor: colors.bgcolor, color: colors.color,
+                fontWeight: 600, borderRadius: '6px', fontSize: '0.72rem',
+                height: '26px', border: `1px solid ${colors.bgcolor}`, boxShadow: 'none',
               }}
             />
           );
         }
 
-        // REGLA 2: Si el Tipo de Cliente es "Sin especificar" Y el Tipo de Incidencia es DIFERENTE a "FALLA PUNTUAL" → Mostrar Tipo de Incidencia.
         if (!incidentType.toUpperCase().includes('PUNTUAL')) {
           const colors = getColorByTipoIncidencia(incidentType);
           return (
@@ -165,33 +172,22 @@ export default function AssignedTicketsTab({
               label={incidentType}
               size="small"
               sx={{
-                bgcolor: colors.bgcolor,
-                color: colors.color,
-                fontWeight: 600,
-                borderRadius: '6px',
-                fontSize: '0.72rem',
-                height: '26px',
-                border: `1px solid ${colors.bgcolor}`,
-                boxShadow: 'none',
+                bgcolor: colors.bgcolor, color: colors.color,
+                fontWeight: 600, borderRadius: '6px', fontSize: '0.72rem',
+                height: '26px', border: `1px solid ${colors.bgcolor}`, boxShadow: 'none',
               }}
             />
           );
         }
 
-        // FALLBACK NATURAL: Si es FALLA PUNTUAL sin tipo de cliente, muestra "Sin especificar"
         return (
           <Chip
             label="Sin especificar"
             size="small"
             sx={{
-              bgcolor: '#f1f5f9',
-              color: '#94a3b8',
-              fontWeight: 500,
-              borderRadius: '6px',
-              fontSize: '0.72rem',
-              height: '26px',
-              border: '1px solid #e2e8f0',
-              boxShadow: 'none',
+              bgcolor: '#f1f5f9', color: '#94a3b8',
+              fontWeight: 500, borderRadius: '6px', fontSize: '0.72rem',
+              height: '26px', border: '1px solid #e2e8f0', boxShadow: 'none',
             }}
           />
         );
@@ -199,11 +195,7 @@ export default function AssignedTicketsTab({
     },
     { field: "caseNumber", headerName: "Tickets", flex: 1, minWidth: 120 },
     { field: "subject", headerName: "Asunto de Caso", flex: 2, minWidth: 250 },
-    { field: "primerNombre",
-       headerName: "Responsable", 
-       flex: 1.5, minWidth: 200, 
-       valueGetter: (value, row) => `${row?.primerNombre || ""} ${row?.primerApellido || ""}`.trim() },
-       
+    
     {
       field: "status", 
       headerName: "Estado", 
@@ -215,6 +207,7 @@ export default function AssignedTicketsTab({
         const valor = params.value;
         const Translations: Record<string, any> = {
           [TICKET_STATUS.ACTIVO]: { labelText: "ACTIVO", bgcolor: "#f0fdf4", color: "#166534", border: "#bbf7d0" },
+          [TICKET_STATUS.EN_GESTION]: { labelText: "EN GESTIÓN", bgcolor: "#fffbeb", color: "#92400e", border: "#fde68a" },
           ["default"]: { labelText: valor, bgcolor: "#f8fafc", color: "#64748b", border: "#e2e8f0" },
         };
         const config = Translations[valor] || Translations["default"];

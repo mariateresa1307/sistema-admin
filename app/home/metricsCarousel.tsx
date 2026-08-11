@@ -129,7 +129,7 @@ export function MetricsCarousel() {
                 width: '260px',
                 p: '24px',
                 borderRadius: '10px',
-                bgcolor: '#f4f6f9',
+                bgcolor: '#ffffff',
                 border: `1px solid ${alpha(card.color, 0.15)}`,
                 position: 'relative',
                 overflow: 'hidden',

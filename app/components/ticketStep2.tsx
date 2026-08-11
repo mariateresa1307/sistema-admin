@@ -54,10 +54,10 @@ export const TicketStep2 = React.memo(
     onFieldChange,
     onCausaRaizChange,
   }: TicketStep2Props) => {
-    
+
     // Verificar si el ticket está cerrado
     const isClosed = form.estatus === TICKET_STATUS.CERRADO || form.estatus === 'CERRADO';
-    
+
     useEffect(() => {
       console.log('🔍 [TicketStep2] Estado del formulario:', {
         requiereEscalamiento: form.requiereEscalamiento,
@@ -75,7 +75,7 @@ export const TicketStep2 = React.memo(
     const handleDateTimeClick = (e: React.MouseEvent<HTMLInputElement>) => {
       try {
         (e.target as any).showPicker();
-      } catch (err) {}
+      } catch (err) { }
     };
 
     const formatUserName = (userList: Array<Operador>) => {
@@ -86,7 +86,7 @@ export const TicketStep2 = React.memo(
     const formatCierreFalla = () => {
       const status = form.estatus || form.estatus;
       const isClosed = status === TICKET_STATUS.CERRADO || status === 'CERRADO' || status === 'cerrado';
-      
+
       if (!isClosed || !form.horaCierreFalla) return '';
 
       try {
@@ -113,101 +113,101 @@ export const TicketStep2 = React.memo(
 
         {/* t0: Inicio Falla */}
         <Grid size={{ xs: 12, sm: 4 }}>
-          <TextField 
-            fullWidth 
-            required 
-            type="datetime-local" 
-            label="t0: Inicio Falla *" 
-            name="horaInicioFalla" 
-            value={form.horaInicioFalla ?? ""} 
-            onChange={handleChange} 
-            size="small" 
-            InputLabelProps={{ shrink: true }} 
-            inputProps={{ onClick: handleDateTimeClick }} 
+          <TextField
+            fullWidth
+            required
+            type="datetime-local"
+            label="t0: Inicio Falla *"
+            name="horaInicioFalla"
+            value={form.horaInicioFalla ?? ""}
+            onChange={handleChange}
+            size="small"
+            InputLabelProps={{ shrink: true }}
+            inputProps={{ onClick: handleDateTimeClick }}
             disabled={isClosed}
-            sx={{ '& input': { cursor: 'pointer' }, fontFamily: corporateFont }} 
+            sx={{ '& input': { cursor: 'pointer' }, fontFamily: corporateFont }}
           />
         </Grid>
 
         {/* t1: Apertura NOC (Auto) */}
         <Grid size={{ xs: 12, sm: 4 }}>
-          <TextField 
-            fullWidth 
-            disabled 
-            type="datetime-local" 
-            label="t1: Apertura NOC (Auto)" 
-            name="horaDeteccionNoc" 
-            value={form.horaDeteccionNoc ?? ""} 
-            size="small" 
-            InputLabelProps={{ shrink: true }} 
-            sx={{ bgcolor: '#f0f4f8', fontFamily: corporateFont }} 
+          <TextField
+            fullWidth
+            disabled
+            type="datetime-local"
+            label="t1: Apertura NOC (Auto)"
+            name="horaDeteccionNoc"
+            value={form.horaDeteccionNoc ?? ""}
+            size="small"
+            InputLabelProps={{ shrink: true }}
+            sx={{ bgcolor: '#f0f4f8', fontFamily: corporateFont }}
           />
         </Grid>
 
         {/* t2: Inicio Atención */}
         <Grid size={{ xs: 12, sm: 4 }}>
-          <TextField 
-            fullWidth 
-            required 
-            type="datetime-local" 
-            label="t2: Inicio Atención *" 
-            name="horaInicioAtencion" 
-            value={form.horaInicioAtencion ?? ""} 
-            onChange={handleChange} 
-            size="small" 
-            InputLabelProps={{ shrink: true }} 
-            inputProps={{ onClick: handleDateTimeClick }} 
+          <TextField
+            fullWidth
+            required
+            type="datetime-local"
+            label="t2: Inicio Atención *"
+            name="horaInicioAtencion"
+            value={form.horaInicioAtencion ?? ""}
+            onChange={handleChange}
+            size="small"
+            InputLabelProps={{ shrink: true }}
+            inputProps={{ onClick: handleDateTimeClick }}
             disabled={isClosed}
-            sx={{ '& input': { cursor: 'pointer' }, fontFamily: corporateFont }} 
+            sx={{ '& input': { cursor: 'pointer' }, fontFamily: corporateFont }}
           />
         </Grid>
 
         {/* t3: Escalamiento */}
         <Grid size={{ xs: 12, sm: 4 }}>
-          <TextField 
-            fullWidth 
-            type="datetime-local" 
-            label="t3: Escalamiento" 
-            name="horaEscalamiento" 
-            value={form.horaEscalamiento ?? ""} 
-            onChange={handleChange} 
-            size="small" 
-            InputLabelProps={{ shrink: true }} 
-            disabled={form.requiereEscalamiento === 'NO' || isClosed} 
-            required={form.requiereEscalamiento === 'SI'} 
-            inputProps={{ onClick: handleDateTimeClick }} 
-            sx={{ '& input': { cursor: 'pointer' }, fontFamily: corporateFont }} 
+          <TextField
+            fullWidth
+            type="datetime-local"
+            label="t3: Escalamiento"
+            name="horaEscalamiento"
+            value={form.horaEscalamiento ?? ""}
+            onChange={handleChange}
+            size="small"
+            InputLabelProps={{ shrink: true }}
+            disabled={form.requiereEscalamiento === 'NO' || isClosed}
+            required={form.requiereEscalamiento === 'SI'}
+            inputProps={{ onClick: handleDateTimeClick }}
+            sx={{ '& input': { cursor: 'pointer' }, fontFamily: corporateFont }}
           />
         </Grid>
 
         {/* Fin Afectación */}
         <Grid size={{ xs: 12, sm: 4 }}>
-          <TextField 
-            fullWidth 
-            type="datetime-local" 
-            label="Fin Afectación" 
-            name="horaFinAfectacion" 
-            value={form.horaFinAfectacion ?? ""} 
-            onChange={handleChange} 
-            size="small" 
-            InputLabelProps={{ shrink: true }} 
-            inputProps={{ onClick: handleDateTimeClick }} 
+          <TextField
+            fullWidth
+            type="datetime-local"
+            label="Fin Afectación"
+            name="horaFinAfectacion"
+            value={form.horaFinAfectacion ?? ""}
+            onChange={handleChange}
+            size="small"
+            InputLabelProps={{ shrink: true }}
+            inputProps={{ onClick: handleDateTimeClick }}
             disabled={isClosed}
-            sx={{ '& input': { cursor: 'pointer' }, fontFamily: corporateFont }} 
+            sx={{ '& input': { cursor: 'pointer' }, fontFamily: corporateFont }}
           />
         </Grid>
 
         {/* t4: Cierre Falla (Auto) */}
         <Grid size={{ xs: 12, sm: 4 }}>
           <TextField
-            fullWidth 
-            disabled 
-            label="t4: Cierre Falla (Auto)" 
+            fullWidth
+            disabled
+            label="t4: Cierre Falla (Auto)"
             value={cierreFallaValue}
             placeholder={form.estatus === 'CERRADO' ? 'Sin fecha de cierre' : 'Pendiente de cierre'}
             size="small"
-            sx={{ 
-              bgcolor: cierreFallaValue ? '#E8F5E9' : '#f0f4f8', 
+            sx={{
+              bgcolor: cierreFallaValue ? '#E8F5E9' : '#f0f4f8',
               fontFamily: corporateFont,
               '& .MuiInputBase-input': { color: cierreFallaValue ? '#2E7D32' : '#90A4AE', fontWeight: cierreFallaValue ? 700 : 400 },
               '& .MuiInputLabel-root': { color: cierreFallaValue ? '#2E7D32' : '#64748B' }
@@ -228,14 +228,14 @@ export const TicketStep2 = React.memo(
 
         {/* ¿Escalar a Especialistas? */}
         <Grid size={{ xs: 12, sm: 4 }}>
-          <TextField 
-            select 
-            fullWidth 
-            label="¿Escalar a Especialistas?" 
-            name="requiereEscalamiento" 
-            value={form.requiereEscalamiento ?? ""} 
-            onChange={handleChange} 
-            size="small" 
+          <TextField
+            select
+            fullWidth
+            label="¿Escalar a Especialistas?"
+            name="requiereEscalamiento"
+            value={form.requiereEscalamiento ?? ""}
+            onChange={handleChange}
+            size="small"
             disabled={isClosed}
             sx={{ fontFamily: corporateFont }}
           >
@@ -248,13 +248,13 @@ export const TicketStep2 = React.memo(
         {form.requiereEscalamiento === 'SI' && (
           <Grid size={{ xs: 12, sm: 4 }}>
             <TextField
-              select 
-              fullWidth 
-              label="Grupo destino" 
+              select
+              fullWidth
+              label="Grupo destino"
               name="escaladoA"
               value={form.escaladoA ?? ""}
-              onChange={handleChange} 
-              size="small" 
+              onChange={handleChange}
+              size="small"
               disabled={isClosed}
               sx={{ fontFamily: corporateFont }}
             >
@@ -270,14 +270,14 @@ export const TicketStep2 = React.memo(
 
         {/* Causa Raíz */}
         <Grid size={{ xs: 12, sm: 4 }}>
-          <TextField 
-            select 
-            fullWidth 
-            label="Causa Raíz" 
-            name="causaRaiz" 
-            value={form.causaRaiz ?? ""} 
-            onChange={(e) => onCausaRaizChange(e.target.value)} 
-            size="small" 
+          <TextField
+            select
+            fullWidth
+            label="Causa Raíz"
+            name="causaRaiz"
+            value={form.causaRaiz ?? ""}
+            onChange={(e) => onCausaRaizChange(e.target.value)}
+            size="small"
             disabled={isClosed}
             sx={{ fontFamily: corporateFont }}
           >
@@ -290,15 +290,15 @@ export const TicketStep2 = React.memo(
 
         {/* Solución Caso */}
         <Grid size={{ xs: 12, sm: 4 }}>
-          <TextField 
-            select 
-            fullWidth 
-            label="Solución Caso" 
-            name="SolucionCaso" 
-            value={form.SolucionCaso ?? ""} 
-            onChange={handleChange} 
-            size="small" 
-            disabled={!form.causaRaiz || isClosed} 
+          <TextField
+            select
+            fullWidth
+            label="Solución Caso"
+            name="SolucionCaso"
+            value={form.SolucionCaso ?? ""}
+            onChange={handleChange}
+            size="small"
+            disabled={!form.causaRaiz || isClosed}
             sx={{ fontFamily: corporateFont }}
           >
             <MenuItem value="" sx={{ fontFamily: corporateFont }}><em>{form.causaRaiz ? 'Seleccionar...' : 'Seleccione una causa raíz'}</em></MenuItem>
@@ -310,23 +310,23 @@ export const TicketStep2 = React.memo(
 
         {/* Turno */}
         <Grid size={{ xs: 12, sm: 4 }}>
-          <TextField 
-            fullWidth 
-            disabled 
-            label="Turno" 
-            value={tiempos.turnoAsignado ?? ""} 
-            size="small" 
-            sx={{ bgcolor: '#f0f4f8', fontFamily: corporateFont }} 
+          <TextField
+            fullWidth
+            disabled
+            label="Turno"
+            value={tiempos.turnoAsignado ?? ""}
+            size="small"
+            sx={{ bgcolor: '#f0f4f8', fontFamily: corporateFont }}
           />
         </Grid>
 
-               {/* TT-ZOHO */}
+        {/* TT-ZOHO */}
         <Grid size={{ xs: 12, sm: 4 }}>
-          <TextField 
-            fullWidth 
-            label="TT-ZOHO" 
-            name="ttZoho" 
-            value={form.ttZoho ?? ""} 
+          <TextField
+            fullWidth
+            label="TT-ZOHO"
+            name="ttZoho"
+            value={form.ttZoho ?? ""}
             onChange={(e) => {
               let val = e.target.value;
               // Si el usuario escribe algo, eliminamos cualquier '#' existente y agregamos exactamente uno al inicio
@@ -334,81 +334,80 @@ export const TicketStep2 = React.memo(
                 val = '#' + val.replace(/^#+/, '');
               }
               onFieldChange('ttZoho', val);
-            }} 
-            size="small" 
+            }}
+            size="small"
             disabled={isClosed}
             placeholder="#123456"
-            sx={{ fontFamily: corporateFont }} 
+            sx={{ fontFamily: corporateFont }}
           />
         </Grid>
 
         {/* TT-CLIENTE */}
         <Grid size={{ xs: 12, sm: 4 }}>
-          <TextField 
-            fullWidth 
-            label="TT-CLIENTE" 
-            name="ttClienteProveedor" 
-            value={form.ttClienteProveedor ?? ""} 
-            onChange={handleChange} 
-            size="small" 
+          <TextField
+            fullWidth
+            label="TT-CLIENTE"
+            name="ttClienteProveedor"
+            value={form.ttClienteProveedor ?? ""}
+            onChange={handleChange}
+            size="small"
             disabled={isClosed}
-            sx={{ fontFamily: corporateFont }} 
+            sx={{ fontFamily: corporateFont }}
           />
         </Grid>
 
         {/* Operador Responsable */}
         <Grid size={{ xs: 12, sm: 4 }}>
-          <TextField 
-            fullWidth 
-            disabled 
-            label="Operador" 
-            name="operatorResponsable" 
-            value={formatUserName(operadores)} 
-            size="small" 
-            InputProps={{ startAdornment: <PersonIcon sx={{ color: '#121227', mr: 1, fontSize: '1.1rem' }} /> }} 
-            sx={{ bgcolor: '#f0f4f8', fontFamily: corporateFont }} 
+          <TextField
+            fullWidth
+            disabled
+            label="Operador"
+            name="operatorResponsable"
+            value={formatUserName(operadores)}
+            size="small"
+            InputProps={{ startAdornment: <PersonIcon sx={{ color: '#121227', mr: 1, fontSize: '1.1rem' }} /> }}
+            sx={{ bgcolor: '#f0f4f8', fontFamily: corporateFont }}
           />
         </Grid>
 
         {/* Operador Asignado */}
-        <Grid size={{ xs: 12, sm: 4 }}>
-          <TextField 
-            select 
-            fullWidth 
-            label="Operador asignado" 
-            name="operatorAsignado" 
-            value={form.operatorAsignado ?? ""} 
-            onChange={handleChange} 
-            size="small" 
-            InputProps={{ startAdornment: <PersonIcon sx={{ color: '#121227', mr: 1, fontSize: '1.1rem' }} /> }} 
-            disabled={isClosed}
-            sx={{ fontFamily: corporateFont }}
+        <Grid size={{ xs: 12, md: 4 }}>
+          <TextField
+            select
+            fullWidth
+            required
+            label="Operador Asignado"
+            value={form.operatorAsignado ?? ''}
+            onChange={(e) => onFieldChange('operatorAsignado', e.target.value)}
+            size="small"
           >
-            <MenuItem value="" sx={{ fontFamily: corporateFont }}><em>Seleccionar operador</em></MenuItem>
-            {(operadores || []).map((op) => (
-              <MenuItem key={op._id} value={op._id} sx={{ fontFamily: corporateFont }}>{[op.primerNombre, op.primerApellido].filter(Boolean).join(' ').trim() || op.username}</MenuItem>
+            <MenuItem value="">Sin asignar</MenuItem>
+            {operadores.map((op) => (
+              <MenuItem key={op._id} value={op._id}>
+                {op.primerNombre} {op.primerApellido}
+              </MenuItem>
             ))}
           </TextField>
         </Grid>
 
         {/* Severidad */}
         <Grid size={{ xs: 12, sm: 4 }}>
-          <TextField 
-            select 
-            fullWidth 
-            required 
-            label="Severidad" 
-            name="severidad" 
-            value={form.severidad ?? ""} 
-            onChange={handleChange} 
-            size="small" 
+          <TextField
+            select
+            fullWidth
+            required
+            label="Severidad"
+            name="severidad"
+            value={form.severidad ?? ""}
+            onChange={handleChange}
+            size="small"
             disabled={isClosed}
-            SelectProps={{ 
-              renderValue: (selected) => { 
-                const config = getNivelSeveridadConfig(selected as string); 
-                return <Chip label={`${config.icon} ${config.label}`} size="small" sx={{ fontWeight: 700, borderRadius: '6px', fontSize: '0.72rem', px: 1, bgcolor: config.bgcolor, color: config.color, width: '100%', fontFamily: corporateFont }} />; 
-              } 
-            }} 
+            SelectProps={{
+              renderValue: (selected) => {
+                const config = getNivelSeveridadConfig(selected as string);
+                return <Chip label={`${config.icon} ${config.label}`} size="small" sx={{ fontWeight: 700, borderRadius: '6px', fontSize: '0.72rem', px: 1, bgcolor: config.bgcolor, color: config.color, width: '100%', fontFamily: corporateFont }} />;
+              }
+            }}
             sx={{ fontFamily: corporateFont }}
           >
             {NIVEL_SEVERIDAD.map((nivel) => (
@@ -421,15 +420,15 @@ export const TicketStep2 = React.memo(
 
         {/* Imputable a */}
         <Grid size={{ xs: 12, sm: 4 }}>
-          <TextField 
-            select 
-            fullWidth 
-            required 
-            label="Imputable a" 
-            name="imputable" 
-            value={form.imputable ?? ""} 
-            onChange={handleChange} 
-            size="small" 
+          <TextField
+            select
+            fullWidth
+            required
+            label="Imputable a"
+            name="imputable"
+            value={form.imputable ?? ""}
+            onChange={handleChange}
+            size="small"
             disabled={isClosed}
             sx={{ fontFamily: corporateFont }}
           >
@@ -453,7 +452,7 @@ export const TicketStep2 = React.memo(
             onChange={handleChange}
             size="small"
             disabled={isClosed}
-            sx={{ 
+            sx={{
               fontFamily: corporateFont,
               '& .MuiInputBase-input': {
                 fontFamily: 'Calibri, Arial, sans-serif',

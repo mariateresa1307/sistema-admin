@@ -66,7 +66,7 @@ export const CardSeeServiceModal = ({
     type: "warning" as "warning" | "info" | "success",
   });
 
-  // ✅ FUNCIÓN AUXILIAR: Normaliza respuestas de API para garantizar array
+
   const normalizeToArray = (response: any): any[] => {
     if (!response?.data) return [];
     
@@ -119,13 +119,8 @@ export const CardSeeServiceModal = ({
         }
 
         const response = await getMiscellaneous({ categoria: "TIPO_CLIENTE" });
-        
-        // ✅ NORMALIZAR RESPUESTA: Garantizar que siempre sea array
         const tipoClientes = normalizeToArray(response);
-        
-        // ✅ GUARD DEFENSIVO antes de usar .find()
         const listaSegura = Array.isArray(tipoClientes) ? tipoClientes : [];
-        
         const tipoEncontrado = listaSegura.find(
           (tc: any) => String(tc._id) === tipoClienteId,
         );
@@ -181,7 +176,6 @@ export const CardSeeServiceModal = ({
 
   if (!service) return null;
 
-  // ✅ Helper para formatear fechas de forma segura
   const formatDate = (dateValue: string | Date | undefined) => {
     if (!dateValue) return null;
     try {
@@ -460,7 +454,7 @@ export const CardSeeServiceModal = ({
                     </Grid>
                   ))}
 
-                  {/* ✅ SECCIÓN DE FECHAS: Creado y Actualizado */}
+                  {/*  SECCIÓN DE FECHAS: Creado y Actualizado */}
                   {(service.createdAt || service.updatedAt) && (
                     <Grid size={12}>
                       <Divider sx={{ my: 2 }} />

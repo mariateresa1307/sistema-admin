@@ -1,14 +1,19 @@
 "use client";
-import CustomDataGrid, { SearchParams } from "app/components/customDataGrid";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { ContainerBox } from "../components/containerBox";
 import { FloatingAddButton } from "../components/FloatingAddButton";
+import CustomDataGrid from "../components/customDataGrid";
 import { FullScreenServiceDialog } from "./serviceModal";
 import { CardSeeServiceModal } from "./cardSeeServiceModal";
 import { GridCellParams, GridColDef } from "@mui/x-data-grid";
 import { Chip, Tabs, Tab, Box } from "@mui/material";
 import { Service } from "app/utils/types";
 import { getService, getMiscellaneous } from "@/lib/api";
+
+type SearchParams = {
+  field: string;
+  value: string;
+};
 
 export default function RBSPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -100,9 +105,12 @@ export default function RBSPage() {
       if (tipoServicioParam) apiParams.tipoServicio = tipoServicioParam;
       if (excludeTipo) apiParams.excludeTipo = excludeTipo;
 
-      if (searchParams?.field === 'status' && searchParams.value) {
+      // ✅ Lógica de búsqueda (incluye soporte para nodos en el backend)
+      if (searchParams?.field === 'nodos' && searchParams.value) {
+        apiParams.nodos = searchParams.value;
+      } else if (searchParams?.field === 'status' && searchParams.value) {
         apiParams.status = searchParams.value;
-      } else if (searchParams?.field && searchParams.field !== 'tipoServicio' && searchParams.field !== 'status' && searchParams.value) {
+      } else if (searchParams?.field && searchParams.field !== 'tipoServicio' && searchParams.field !== 'status' && searchParams.field !== 'nodos' && searchParams.value) {
         apiParams.search = searchParams.value;
       }
 
@@ -191,7 +199,6 @@ export default function RBSPage() {
       field: "proveedorDelServicioCompartido", 
       headerName: "Proveedor", 
       width: 200,
-      // ✅ Render cell para mostrar nombre en lugar de ID
       renderCell: (params) => getProveedorNombre(params.value),
     },
     { field: "city", headerName: "Ciudad", width: 140 },

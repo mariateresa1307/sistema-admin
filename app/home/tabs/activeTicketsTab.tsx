@@ -136,6 +136,21 @@ const columns: GridColDef[] = [
   },
   { field: "caseNumber", headerName: "Tickets", flex: 1, minWidth: 120 },
   { field: "subject", headerName: "Asunto de Caso", flex: 2, minWidth: 250 },
+   {
+  field: "operatorResponsable",
+  headerName: "Responsable", 
+  flex: 1.5,
+  minWidth: 200,
+  renderCell: (params: any) => {
+    const resp = params.value;
+    if (!resp) return <span style={{ color: '#94a3b8' }}>Sin asignar</span>;
+    if (typeof resp === 'object' && resp !== null) {
+      const nombre = `${resp.primerNombre || ''} ${resp.primerApellido || ''}`.trim();
+      return nombre || resp.username || resp.email || 'Sin asignar';
+    }
+    return String(resp);
+  },
+},
   {
     field: "status",
     headerName: "Estado",
