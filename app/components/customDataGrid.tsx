@@ -6,6 +6,7 @@ import { Theme } from "@mui/material/styles";
 import { TextField, Box, InputAdornment, MenuItem, Typography } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import { TICKET_STATUS } from "app/utils/constants";
+import { TableSkeleton } from './skeletons';
 
 export type SearchParams = { field: string; value: string };
 
@@ -48,10 +49,8 @@ export default function CustomDataGrid({
     }
   }, [rawColumns]);
 
-  // ✅ DETECTAR SI ES EL MÓDULO DE SERVICIOS
   const isServiciosModule = useMemo(() => columns.some(col => col.field === 'tipoServicio'), [columns]);
 
-  // ✅ CREAR ARRAY ORDENADO PARA EL DROPDOWN (Inyectando 'Nodos' si es servicios)
   const dropdownOptions = useMemo(() => {
     if (!Array.isArray(columns) || columns.length === 0) return [];
     
@@ -60,7 +59,6 @@ export default function CustomDataGrid({
     
     let options = caseNumberCol ? [caseNumberCol, ...otherCols] : columns;
 
-    // ✅ INYECTAR OPCIÓN 'NODOS' AL INICIO DEL DROPDOWN SI ES SERVICIOS
     if (isServiciosModule) {
       if (!options.some(opt => opt.field === 'nodos')) {
         options = [{ field: 'nodos', headerName: 'Nodos' }, ...options];
@@ -127,7 +125,6 @@ export default function CustomDataGrid({
     return () => clearTimeout(timer);
   }, [searchTerm, searchField, handleSearch, debounceMs]);
 
-  // Envío al servidor (Padre)
   useEffect(() => {
     if (!onSearch) return;
     if (skipInitialSearch.current) { 
@@ -154,6 +151,44 @@ export default function CustomDataGrid({
       </Box>
     );
   }
+
+  
+    if (loading && displayRows.length === 0) {
+    return (
+      <Box  key="skeleton-view">
+        <Box key="grid-view" sx={{ display: "flex", gap: 2, mb: 2, alignItems: "center", flexWrap: "wrap" }}>
+          <TextField
+            disabled
+            value=""               // ✅ controlled desde el inicio
+            label="Buscar por"
+            size="small"
+            sx={{ minWidth: 150 }}
+          />
+          <TextField
+            disabled
+            value=""               
+            placeholder="Cargando datos..."
+            size="small"
+            fullWidth
+            sx={{ maxWidth: 500 }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon sx={{ color: '#cbd5e1' }} />
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Box>
+
+        <TableSkeleton
+          rows={Math.min(paginationModel?.pageSize || 8, 15)}
+          withSearch={false}
+        />
+      </Box>
+    );
+  }
+      
 
   const renderStatusMenuItems = () => {
     const items = [<MenuItem key="all" value="">Todos</MenuItem>];
@@ -202,7 +237,6 @@ export default function CustomDataGrid({
           size="small" 
           sx={{ minWidth: 150 }}
         >
-          {/* ✅ USAR dropdownOptions (con Nodos inyectado si aplica) */}
           {dropdownOptions.map((col) => (
             <MenuItem key={col.field} value={col.field}>{col.headerName || col.field}</MenuItem>
           ))}

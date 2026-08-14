@@ -2,7 +2,6 @@ import dayjs from 'dayjs';
 import { Dayjs } from 'dayjs';
 import { IncidenciaPorServicio } from '../report/hooks/useIncidenciasData';
 
-// Escapa valores para CSV (comillas dobles según RFC 4180)
 const escapeCsv = (value: unknown): string => `"${String(value ?? '').replace(/"/g, '""')}"`;
 
 export const exportIncidenciasCsv = (data: IncidenciaPorServicio[], mes: Dayjs): void => {
@@ -40,7 +39,6 @@ export const exportIncidenciasCsv = (data: IncidenciaPorServicio[], mes: Dayjs):
     [escapeCsv('TOTALES'), '', totales.total, totales.abiertas, totales.cerradas, ''].map(escapeCsv).join(','),
   ].join('\n');
 
-  // ✅ BOM UTF-8: Excel abre acentos y caracteres especiales correctamente
   const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
   const url = window.URL.createObjectURL(blob);
   const link = document.createElement('a');

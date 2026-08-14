@@ -81,13 +81,19 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
         getMiscellaneous({ categoria: 'LOCALIDAD', limit: 999 }),
       ]);
 
-      setOperadores((operadoresRes.data || []).map((u: any) => ({
+      const operadoresData = Array.isArray(operadoresRes.data?.data)
+        ? operadoresRes.data.data
+        : Array.isArray(operadoresRes.data)
+          ? operadoresRes.data
+          : [];
+
+      setOperadores(operadoresData.map((u: any) => ({
         _id: u._id,
         primerNombre: u.primerNombre,
         primerApellido: u.primerApellido,
         username: u.username,
       })));
-      
+
       setCiudadesOptions(extractData(ciudadesRes));
       setCausasRaiz(extractData(causasRes));
       setGrupoDestino(extractData(grupoDestinoRes));
@@ -127,14 +133,14 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
       setLocalidadesOptions([]);
       return;
     }
-    
+
     const searchVal = String(ciudadIdOrName).toLowerCase().trim();
     const filtradas = todasLasLocalidades.filter((loc: any) => {
       const locCiudadId = String(loc.ciudadId || loc.padreId || '').toLowerCase();
       const locCiudadNombre = String(loc.padreNombre || '').toLowerCase();
       return locCiudadId === searchVal || locCiudadNombre === searchVal || locCiudadNombre.includes(searchVal);
     });
-    
+
     setLocalidadesOptions(filtradas);
   }, [todasLasLocalidades]);
 
@@ -206,10 +212,10 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
       const dataServicios: any[] = Array.isArray(res)
         ? res
         : Array.isArray(res?.data)
-        ? res.data
-        : Array.isArray(res?.data?.data)
-        ? res.data.data
-        : [];
+          ? res.data
+          : Array.isArray(res?.data?.data)
+            ? res.data.data
+            : [];
 
       setServiciosAfectados(dataServicios);
     } catch (error) {
@@ -226,14 +232,14 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
     try {
       console.log('📡 [useTicketData] Solicitando TODOS los servicios (Falla Masiva)...');
       const res = await getService({ limit: 9999 });
-      
+
       const dataServicios: any[] = Array.isArray(res)
         ? res
         : Array.isArray(res?.data)
-        ? res.data
-        : Array.isArray(res?.data?.data)
-        ? res.data.data
-        : [];
+          ? res.data
+          : Array.isArray(res?.data?.data)
+            ? res.data.data
+            : [];
 
       console.log('✅ [useTicketData] Todos los servicios recibidos:', dataServicios.length);
       setServiciosAfectados(dataServicios);

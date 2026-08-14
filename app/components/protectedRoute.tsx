@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Box, CircularProgress, Typography } from "@mui/material";
 import { useAuth } from "../context/authContext";
+import { useUserSession } from '../hooks/useUserSession';
+import { PageSkeleton } from './skeletons'; // ✅ Import único para loading
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -15,20 +16,19 @@ export default function ProtectedRoute({ children, module }: ProtectedRouteProps
   const router = useRouter();
   const [isChecking, setIsChecking] = useState(true);
 
+  // ✅ Reportar actividad del usuario logueado (heartbeat cada 60s)
+  useUserSession();
+
   useEffect(() => {
-    // Esperar a que termine de cargar
     if (!isLoading) {
       setIsChecking(false);
       
-      // Verificar autenticación y permisos
       if (!isAuthenticated) {
-       
         router.push("/");
         return;
       }
       
       if (!hasPermission(module)) {
-        
         router.push("/home");
         return;
       }
@@ -37,32 +37,14 @@ export default function ProtectedRoute({ children, module }: ProtectedRouteProps
     }
   }, [isLoading, isAuthenticated, hasPermission, module, router]);
 
-  // Mostrar spinner mientras verifica
+  // ✅ NUEVO: Skeleton mientras verifica autenticación/permisos
   if (isLoading || isChecking) {
-    return (
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          minHeight: "60vh",
-          gap: 2,
-        }}
-      >
-        <CircularProgress />
-        <Typography variant="body1" color="text.secondary">
-          Verificando permisos...
-        </Typography>
-      </Box>
-    );
+    return <PageSkeleton />;
   }
 
-  // Si no está autenticado o no tiene permisos, no renderizar nada
   if (!isAuthenticated || !hasPermission(module)) {
     return null;
   }
 
-  
   return <>{children}</>;
 }

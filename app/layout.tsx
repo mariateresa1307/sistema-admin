@@ -4,6 +4,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import theme from '@/lib/theme';
 import { AuthProvider } from './context/authContext'; 
 import NotificationProvider from './components/NotificationProvider';
+import { UserSessionTracker } from './user/components/UserSessionTracker';
 
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -15,6 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <AuthProvider> 
               <CssBaseline />
               <NotificationProvider />
+              <UserSessionTracker />  
               {children}
             </AuthProvider>
           </ThemeProvider>

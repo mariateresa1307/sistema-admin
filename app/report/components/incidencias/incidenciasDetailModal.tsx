@@ -15,11 +15,37 @@ interface Props {
   incidencia: IncidenciaPorServicio | null;
 }
 
+// ✅ Normaliza el status a formato estándar del sistema
+const formatStatus = (status: string): string => {
+  const statusUpper = status.toUpperCase().trim();
+  
+  if (statusUpper === 'EN_GESTION' || statusUpper === 'EN GESTIÓN' || statusUpper === 'EN_GESTIÓN') {
+    return 'EN GESTIÓN';
+  }
+  if (statusUpper === 'ACTIVO') {
+    return 'ACTIVO';
+  }
+  if (statusUpper === 'CERRADO') {
+    return 'CERRADO';
+  }
+  
+  return statusUpper;
+};
+
+// ✅ Colores consistentes con el resto del sistema (assignedTicketsTab, etc.)
 const getStatusChip = (status: string) => {
-  const s = String(status).toLowerCase();
-  if (s.includes('cerrado')) return { bgcolor: '#e8f5e9', color: '#2e7d32' };
-  if (s.includes('gestion')) return { bgcolor: '#fff3e0', color: '#ef6c00' };
-  return { bgcolor: '#e3f2fd', color: '#1565c0' };
+  const formatted = formatStatus(status);
+  
+  switch (formatted) {
+    case 'ACTIVO':
+      return { bgcolor: '#f0fdf4', color: '#166534', border: '#bbf7d0' };
+    case 'EN GESTIÓN':
+      return { bgcolor: '#fffbeb', color: '#92400e', border: '#fde68a' };
+    case 'CERRADO':
+      return { bgcolor: '#e8f5e9', color: '#2e7d32', border: '#86efac' };
+    default:
+      return { bgcolor: '#f8fafc', color: '#64748b', border: '#e2e8f0' };
+  }
 };
 
 export const IncidenciasDetailModal = ({ open, onClose, incidencia }: Props) => {
@@ -111,9 +137,7 @@ export const IncidenciasDetailModal = ({ open, onClose, incidencia }: Props) => 
                     <Typography variant="h6" sx={{ fontWeight: 700, color: '#0f172a', lineHeight: 1.2, wordBreak: 'break-word' }}>
                       {incidencia.tipoServicio}
                     </Typography>
-                    <Typography variant="caption" sx={{ color: '#64748b' }}>
-                      {incidencia.serviciosCount} {incidencia.serviciosCount === 1 ? 'servicio afectado' : 'servicios afectados'}
-                    </Typography>
+                    
                   </Box>
                 </Box>
                 <IconButton onClick={onClose} size="small" sx={{ color: '#94a3b8' }}>
@@ -146,6 +170,8 @@ export const IncidenciasDetailModal = ({ open, onClose, incidencia }: Props) => 
                 <Stack spacing={1.5}>
                   {ticketsOrdenados.map((ticket) => {
                     const detalles = getDetallesTecnicos(ticket);
+                    const statusColors = getStatusChip(ticket.status);
+                    const statusLabel = formatStatus(ticket.status);
 
                     return (
                       <Box
@@ -172,7 +198,19 @@ export const IncidenciasDetailModal = ({ open, onClose, incidencia }: Props) => 
                               {ticket.servicioNombre} · {dayjs(ticket.createdAt).format('DD/MM/YYYY HH:mm')}
                             </Typography>
                           </Box>
-                          <Chip label={ticket.status} size="small" sx={{ ...getStatusChip(ticket.status), fontWeight: 700, flexShrink: 0 }} />
+                          <Chip 
+                            label={statusLabel} 
+                            size="small" 
+                            sx={{ 
+                              bgcolor: statusColors.bgcolor,
+                              color: statusColors.color,
+                              border: `1px solid ${statusColors.border}`,
+                              fontWeight: 700, 
+                              flexShrink: 0,
+                              fontSize: '0.72rem',
+                              height: '26px',
+                            }} 
+                          />
                         </Box>
 
                         {/* ✅ Detalles técnicos según tipo de servicio */}

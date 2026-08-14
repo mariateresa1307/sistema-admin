@@ -88,12 +88,13 @@ export default api;
 export const getMiscellaneousById = (id: string) => api.get(`/miscellaneous/${id}`);
 
 // ENDPOINTS DE USUARIOS
-export const getUsers = (search?: string, params?: any) => 
-  api.get(`/user${search ? `?search=${search}` : ''}`, { params });
+export const getUsers = (search?: string, params?: any) =>  api.get(`/user${search ? `?search=${search}` : ''}`, { params });
 export const createUser = (data: any) => api.post('/user', data);
 export const updateUser = (id: string, data: any) => api.put(`/user/${id}`, data);
 export const deleteUser = (id: string) => api.delete(`/user/${id}`);
 export const toggleStatus = (id: string, status: boolean) =>   api.patch(`/user/${id}/status`, { isActive: status });
+
+
 
 // ENDPOINTS DE AUTENTICACIÓN
 export const logout = () => api.post('/auth/logout');
@@ -129,3 +130,7 @@ export const exportAuditExcel = (params?: any) => api.get('/audit/export', {para
 
 // ENDPOINTS DE REPORTES
 export const getReportPreview = (params: any) => api.get('/reports/preview', { params });
+
+// USER SESSIONS
+export const sendHeartbeat = () => api.post('/user-sessions/heartbeat');
+export const getOnlineUsers = () => api.get('/user-sessions/online');

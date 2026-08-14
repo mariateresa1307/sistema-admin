@@ -269,6 +269,13 @@ export const AuditDetailModal = ({ open, onClose, log }: AuditDetailModalProps) 
     return null;
   }, [log?.action, oldValueParsed]);
 
+  // ✅ Las acciones de sesión (login/logout/login_failed) no tienen "cambios" que mostrar
+  const isSessionAction = useMemo(() => {
+    if (!log?.action) return false;
+    const a = String(log.action).toUpperCase();
+    return a === 'LOGIN' || a === 'LOGOUT' || a === 'LOGIN_FAILED';
+  }, [log?.action]);
+
   if (!log) return null;
 
   const IconComponent = config.icon;
@@ -292,7 +299,7 @@ export const AuditDetailModal = ({ open, onClose, log }: AuditDetailModalProps) 
     if (action === 'UPDATE') {
       return (
         <>
-            <Grid size={12}>
+          <Grid size={12}>
             <Typography
               variant="caption"
               sx={{
@@ -303,9 +310,6 @@ export const AuditDetailModal = ({ open, onClose, log }: AuditDetailModalProps) 
                 mb: 1,
               }}
             >
-              {changedKeys.size > 0
-                ? 'Los campos resaltados fueron modificados'
-                : 'No se detectaron diferencias entre el valor anterior y el actual'}
             </Typography>
           </Grid>
 
@@ -325,7 +329,6 @@ export const AuditDetailModal = ({ open, onClose, log }: AuditDetailModalProps) 
       );
     }
 
-    // ✅ DELETE: Presentación completa del registro eliminado
     if (action === 'DELETE') {
       if (!oldValueParsed || typeof oldValueParsed !== 'object' || Array.isArray(oldValueParsed)) {
         return (
@@ -489,7 +492,7 @@ export const AuditDetailModal = ({ open, onClose, log }: AuditDetailModalProps) 
     return null;
   };
 
-  const getActionDividerConfig = (action: string,  changesCount = 0) => {
+  const getActionDividerConfig = (action: string, changesCount = 0) => {
     switch (action.toUpperCase()) {
       case 'DELETE':
         return { label: 'Datos Eliminados', icon: <DeleteIcon sx={{ fontSize: 16 }} />, bgcolor: '#ffebee', color: '#c62828' };
@@ -497,17 +500,18 @@ export const AuditDetailModal = ({ open, onClose, log }: AuditDetailModalProps) 
         return { label: 'Datos Creados', icon: <AddCircleIcon sx={{ fontSize: 16 }} />, bgcolor: '#e3f2fd', color: '#1565c0' };
       case 'UPDATE':
       default:
-        return { label:  changesCount > 0
-              ? `${changesCount} ${changesCount === 1 ? 'Cambio Realizado' : 'Cambios Realizados'}`
-              : 'Sin Cambios Detectados', 
-              icon: <CompareArrowsIcon sx={{ fontSize: 16 }} />,
-              bgcolor: changesCount > 0 ? '#fff3e0' : '#f1f5f9',
-              color: changesCount > 0 ? '#ef6c00' : '#64748b'
-            };
+        return {
+          label: changesCount > 0
+            ? `${changesCount} ${changesCount === 1 ? 'Cambio Realizado' : 'Cambios Realizados'}`
+            : 'Sin Cambios Detectados',
+          icon: <CompareArrowsIcon sx={{ fontSize: 16 }} />,
+          bgcolor: changesCount > 0 ? '#fff3e0' : '#f1f5f9',
+          color: changesCount > 0 ? '#ef6c00' : '#64748b'
+        };
     }
   };
 
-   const dividerConfig = getActionDividerConfig(log.action, changedKeys.size);
+  const dividerConfig = getActionDividerConfig(log.action, changedKeys.size);
 
   return (
     <AnimatePresence>
@@ -629,16 +633,17 @@ export const AuditDetailModal = ({ open, onClose, log }: AuditDetailModalProps) 
                   </Grid>
                 )}
 
-                {(oldValueParsed || newValueParsed) && (
+                {/* ✅ Oculto en LOGIN/LOGOUT/LOGIN_FAILED */}
+                {(oldValueParsed || newValueParsed) && !isSessionAction && (
                   <>
                     <Grid size={12}>
                       <Divider sx={{ my: 2 }}>
-                        <Chip 
-                        icon={dividerConfig.icon} 
-                        label={dividerConfig.label} 
-                        size="small" 
-                        sx={{ fontWeight: 700, bgcolor: dividerConfig.bgcolor, color: dividerConfig.color }}
-                         />
+                        <Chip
+                          icon={dividerConfig.icon}
+                          label={dividerConfig.label}
+                          size="small"
+                          sx={{ fontWeight: 700, bgcolor: dividerConfig.bgcolor, color: dividerConfig.color }}
+                        />
                       </Divider>
                     </Grid>
                     {renderChangesSection()}

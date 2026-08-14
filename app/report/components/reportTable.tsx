@@ -17,15 +17,14 @@ interface Props {
 // ✅ Columnas actualizadas: Tipo - Total - Abiertas - Cerradas - Última Incidencia
 const HEADERS = [
   { key: 'tipoServicio', label: 'Tipo' },
-  { key: 'totalIncidencias', label: 'Total' },
   { key: 'abiertas', label: 'Abiertas' },
   { key: 'cerradas', label: 'Cerradas' },
+  { key: 'totalIncidencias', label: 'Total' },
   { key: 'ultimaIncidencia', label: 'Última Incidencia' },
 ];
 
 // ✅ Eliminada búsqueda por nombre de servicio
 const SEARCH_FIELDS = [
-  { value: 'tipoServicio', label: 'Tipo de Servicio' },
   { value: 'caseNumber', label: 'Número de Caso' },
 ];
 
@@ -161,11 +160,7 @@ export const ReportTable = ({ data, loading, onRowClick }: Props) => {
                       sx={{ fontWeight: 600, fontSize: '0.72rem' }}
                     />
                   </TableCell>
-                  <TableCell>
-                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#080769' }}>
-                      {row.totalIncidencias}
-                    </Typography>
-                  </TableCell>
+                
                   <TableCell>
                     <Chip
                       label={row.abiertas}
@@ -179,6 +174,12 @@ export const ReportTable = ({ data, loading, onRowClick }: Props) => {
                       size="small"
                       sx={{ bgcolor: '#e8f5e9', color: '#2e7d32', fontWeight: 700 }}
                     />
+                  </TableCell>
+
+                    <TableCell>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#080769' }}>
+                      {row.totalIncidencias}
+                    </Typography>
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" sx={{ color: '#64748b', fontSize: '0.85rem' }}>

@@ -43,7 +43,7 @@ export const IncidenciasChart = ({ barData, pieData }: Props) => {
   return (
     <Grid container spacing={3} sx={{ mb: 4 }}>
       {/* ✅ Gráfico de Barras: Top Servicios (por nombre) */}
-      <Grid size={{ xs: 12, lg: 7 }}>
+      <Grid size={{ xs: 12, lg: 6 }}>
         <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'divider', borderRadius: 3, height: '100%' }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h6" sx={{ fontWeight: 700, color: '#080769' }}>
@@ -114,8 +114,7 @@ export const IncidenciasChart = ({ barData, pieData }: Props) => {
         </Paper>
       </Grid>
 
-      {/* ✅ Gráfico de Torta: Distribución por Tipo de Servicio */}
-      <Grid size={{ xs: 12, lg: 5 }}>
+      <Grid size={{ xs: 12, lg: 6 }}>
         <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'divider', borderRadius: 3, height: '100%' }}>
           <Typography variant="h6" sx={{ fontWeight: 700, color: '#080769', mb: 2 }}>
             Distribución por Tipo de Servicio
@@ -130,8 +129,8 @@ export const IncidenciasChart = ({ barData, pieData }: Props) => {
               <PieChart>
                 <Pie
                   data={pieData}
-                  cx="50%"
-                  cy="50%"
+                  cx="42%"
+                  cy="58%"
                   labelLine={false}
                   label={({ name, percent }) => `${name ?? ''}: ${((percent ?? 0) * 100).toFixed(0)}%`}
                   outerRadius={120}

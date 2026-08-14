@@ -68,72 +68,66 @@ const getTicketPriority = (ticket: any): number => {
 };
 
 const columns: GridColDef[] = [
-  {
-    field: 'tipoCliente',
-    headerName: 'Tipo de Cliente',
-    width: 160,
-    renderCell: (params: any) => {
-      const tipoClienteValor = getTipoClienteValor(params.value);
-      const incidentType = params.row.incidentType || '';
+{
+  field: 'tipoCliente',
+  headerName: 'Tipo de Cliente',
+  width: 160,
+  renderCell: (params: any) => {
+    const tipoClienteValor = getTipoClienteValor(params.value);
+    const incidentType = params.row.incidentType || '';
+    const incidentUpper = incidentType.toUpperCase();
 
-      if (tipoClienteValor !== 'Sin especificar') {
-        const colors = getColorByTipoCliente(tipoClienteValor);
-        return (
-          <Chip
-            label={tipoClienteValor}
-            size="small"
-            sx={{
-              bgcolor: colors.bgcolor,
-              color: colors.color,
-              fontWeight: 600,
-              borderRadius: '6px',
-              fontSize: '0.72rem',
-              height: '26px',
-              border: `1px solid ${colors.bgcolor}`,
-              boxShadow: 'none',
-            }}
-          />
-        );
-      }
+    // ✅ REGLA 1 (PRIORIDAD): FALLA MASIVA y VENTANA DE MANTENIMIENTO siempre visibles
+    const esCategoriaCritica =
+      incidentUpper.includes('MASIVA') ||
+      incidentUpper.includes('MANTENIMIENTO') ||
+      incidentUpper.includes('VENTANA');
 
-      if (!incidentType.toUpperCase().includes('PUNTUAL')) {
-        const colors = getColorByTipoIncidencia(incidentType);
-        return (
-          <Chip
-            label={incidentType}
-            size="small"
-            sx={{
-              bgcolor: colors.bgcolor,
-              color: colors.color,
-              fontWeight: 600,
-              borderRadius: '6px',
-              fontSize: '0.72rem',
-              height: '26px',
-              border: `1px solid ${colors.bgcolor}`,
-              boxShadow: 'none',
-            }}
-          />
-        );
-      }
-
+    if (esCategoriaCritica) {
+      const colors = getColorByTipoIncidencia(incidentType);
       return (
         <Chip
-          label="Sin especificar"
+          label={incidentType}
           size="small"
           sx={{
-            bgcolor: '#f1f5f9',
-            color: '#94a3b8',
-            fontWeight: 500,
-            borderRadius: '6px',
-            fontSize: '0.72rem',
-            height: '26px',
-            border: '1px solid #e2e8f0',
-            boxShadow: 'none',
+            bgcolor: colors.bgcolor, color: colors.color,
+            fontWeight: 600, borderRadius: '6px', fontSize: '0.72rem',
+            height: '26px', border: `1px solid ${colors.bgcolor}`, boxShadow: 'none',
           }}
         />
       );
-    },
+    }
+
+    // ✅ REGLA 2: Si no es categoría crítica, mostrar tipo de cliente válido
+    if (tipoClienteValor !== 'Sin especificar') {
+      const colors = getColorByTipoCliente(tipoClienteValor);
+      return (
+        <Chip
+          label={tipoClienteValor}
+          size="small"
+          sx={{
+            bgcolor: colors.bgcolor, color: colors.color,
+            fontWeight: 600, borderRadius: '6px', fontSize: '0.72rem',
+            height: '26px', border: `1px solid ${colors.bgcolor}`, boxShadow: 'none',
+          }}
+        />
+      );
+    }
+
+    // ✅ FALLBACK: Sin especificar
+    return (
+      <Chip
+        label="Sin especificar"
+        size="small"
+        sx={{
+          bgcolor: '#f1f5f9', color: '#94a3b8',
+          fontWeight: 500, borderRadius: '6px', fontSize: '0.72rem',
+          height: '26px', border: '1px solid #e2e8f0', boxShadow: 'none',
+        }}
+      />
+    );
   },
+},
   { field: "caseNumber", headerName: "Tickets", flex: 1, minWidth: 120 },
   { field: "subject", headerName: "Asunto de Caso", flex: 2, minWidth: 250 },
    {

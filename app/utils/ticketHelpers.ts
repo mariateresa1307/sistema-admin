@@ -239,7 +239,6 @@ export const mapTicketToFormData = (
     }
   }
 
-  // ✅ CORRECCIÓN CLAVE: Extraer solo el _id si tipoCliente viene como objeto poblado
   const tipoClienteId = typeof ticket.tipoCliente === 'object' && ticket.tipoCliente !== null
     ? (ticket.tipoCliente as any)._id
     : (ticket.tipoCliente || '');
@@ -252,7 +251,7 @@ export const mapTicketToFormData = (
     categoria: ticket.networkCategory || '',
     subcategoria: ticket.subcategoria || '',
     detalle: ticket.detalle || '',
-    tipoCliente: tipoClienteId, // ✅ Aquí usamos el ID extraído
+    tipoCliente: tipoClienteId,
     ciudad: ticket.ciudad || '',
     estado: ticket.estado || '',
     localidad: ticket.localidad || '',

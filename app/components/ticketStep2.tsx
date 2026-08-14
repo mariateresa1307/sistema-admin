@@ -54,7 +54,16 @@ export const TicketStep2 = React.memo(
     onFieldChange,
     onCausaRaizChange,
   }: TicketStep2Props) => {
-
+useEffect(() => {
+  console.log('🔍 [TicketStep2] Diagnóstico operadores:', {
+    operadoresRecibidos: operadores?.length || 0,
+    primerOperador: operadores?.[0],
+    formOperatorResponsable: form.operatorResponsable,
+    formOperatorAsignado: form.operatorAsignado,
+    matchResponsable: operadores?.find(op => op._id === form.operatorResponsable),
+    matchAsignado: operadores?.find(op => op._id === form.operatorAsignado),
+  });
+}, [operadores, form.operatorResponsable, form.operatorAsignado]);
     // Verificar si el ticket está cerrado
     const isClosed = form.estatus === TICKET_STATUS.CERRADO || form.estatus === 'CERRADO';
 

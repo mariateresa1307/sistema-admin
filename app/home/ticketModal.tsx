@@ -13,7 +13,6 @@ import { TicketStep1 } from '../components/ticketStep1';
 import { TicketStep2 } from '../components/ticketStep2';
 import { TicketActions } from '../components/ticketActions';
 import { ConfirmDialog } from '../components/confirmDialog';
-import { promises } from 'node:dns';
 
 const modalStyle = {
   position: 'absolute' as const,
@@ -35,6 +34,7 @@ const PASOS = ['Clasificación e Infraestructura', 'Tiempos y Cierre Operativo']
 export default function TicketModal({ open, onClose, onSave, ticketToEdit }: TicketModalProps) {
   const sessionOperatorId = useRef('');
   const isSaving = useRef(false);
+  const localidadCargadaRef = useRef<string | null>(null);
 
   const [confirmDialog, setConfirmDialog] = useState({
     open: false,
@@ -116,7 +116,7 @@ export default function TicketModal({ open, onClose, onSave, ticketToEdit }: Tic
         const formData = mapTicketToFormData(ticketToEdit, sessionOperatorId.current, sessionOperatorId.current);
         ticketForm.loadFromTicket(formData, ticketToEdit._id);
 
-        const { tipoIncidencia, categoria, subcategoria, ciudad, causaRaiz } = formData;
+        const { tipoIncidencia, categoria, subcategoria, causaRaiz } = formData;
 
         if (tipoIncidencia) {
           await ticketData.loadCategoriasRed(tipoIncidencia);
@@ -126,14 +126,8 @@ export default function TicketModal({ open, onClose, onSave, ticketToEdit }: Tic
         }
         if (categoria) await ticketData.loadSubcategorias(categoria);
         if (subcategoria) await ticketData.loadDetalle(subcategoria);
-        
-        // ✅ CORRECCIÓN CLAVE PARA LOCALIDAD:
-        if (ciudad) {
-          console.log('🏙️ [initEditMode] Cargando localidades para la ciudad:', ciudad);
-          // Pasamos el valor de 'ciudad' (que puede ser ID o Nombre) a loadLocalidades
-          await ticketData.loadLocalidades(ciudad);
-        }
 
+        // ✅ Localidad: se carga vía effect separado (ver abajo) para evitar race conditions
         if (causaRaiz) {
           await ticketData.loadCausasRaiz();
           await ticketData.loadSolucionesCaso(causaRaiz);
@@ -155,6 +149,31 @@ export default function TicketModal({ open, onClose, onSave, ticketToEdit }: Tic
       isMounted = false;
     };
   }, [open, ticketToEdit?._id]);
+
+  // ✅ FIX LOCALIDAD: fuente única de verdad para carga de localidades
+  //    - Solo corre en modo edición
+  //    - Espera a que el catálogo de ciudades esté listo
+  //    - Deduplica con useRef para evitar re-ejecuciones redundantes
+  //    - Resetea el ref al cerrar el modal
+  useEffect(() => {
+    if (!open || !ticketForm.isEditMode) {
+      localidadCargadaRef.current = null;
+      return;
+    }
+
+    const ciudad = ticketForm.form.ciudad;
+    const ciudadesListas = ticketData.ciudadesOptions.length > 0;
+
+    if (!ciudad || !ciudadesListas) return;
+
+    // Guard de deduplicación: mismo par ciudad+ciudades no recarga
+    const cacheKey = `${ciudad}|${ticketData.ciudadesOptions.length}`;
+    if (localidadCargadaRef.current === cacheKey) return;
+
+    localidadCargadaRef.current = cacheKey;
+    ticketData.loadLocalidades(ciudad);
+  }, [open, ticketForm.isEditMode, ticketForm.form.ciudad, ticketData.ciudadesOptions.length, ticketData]);
+
   useEffect(() => {
     if (ticketForm.isEditMode) return;
     if (ticketForm.activeStep > 0 && !ticketForm.preSaved && !isSaving.current) {
@@ -253,6 +272,7 @@ export default function TicketModal({ open, onClose, onSave, ticketToEdit }: Tic
 
   const handleCiudadChange = useCallback(async (ciudadValue: string) => {
     ticketData.clearLocalidades();
+    localidadCargadaRef.current = null; // Reset para permitir recarga
     const selected = ticketData.ciudadesOptions.find((c: any) => c.valor === ciudadValue || c._id === ciudadValue);
     ticketForm.handleCiudadChange(selected?.valor || ciudadValue, selected?.padreNombre || '');
 
@@ -301,11 +321,11 @@ export default function TicketModal({ open, onClose, onSave, ticketToEdit }: Tic
 
   const handleBack = useCallback(() => ticketForm.setActiveStep((prev) => prev - 1), [ticketForm]);
   const handleClose = useCallback(() => {
+    localidadCargadaRef.current = null; // Reset al cerrar
     ticketForm.resetForm();
     onClose();
   }, [ticketForm, onClose]);
 
-  //  guarda los cambios ANTES de cerrar el ticket
   const requestCloseTicket = useCallback(() => {
     if (!ticketForm.preSaved) return;
 
@@ -329,21 +349,17 @@ export default function TicketModal({ open, onClose, onSave, ticketToEdit }: Tic
       onConfirm: async () => {
         setConfirmDialog(prev => ({ ...prev, open: false }));
 
-        // 🔒 Bloquear para evitar doble clic
         if (isSaving.current) return;
         isSaving.current = true;
 
         try {
-
           const ahora = new Date().toISOString();
           ticketForm.updateField('horaCierreFalla', ahora);
 
           await new Promise(resolve => setTimeout(resolve, 100));
-          // ✅ PASO 1: Guardar los cambios actuales del formulario (incluye Step 2)
           const finalData = ticketForm.prepareFinalData();
           await updateTicket(ticketForm.preSaved!, mapFormToUpdatePayload(finalData));
 
-          // ✅ PASO 2: Cerrar el ticket
           const result = await closeTicket(ticketForm.preSaved!);
 
           window.dispatchEvent(new CustomEvent('app-notification', { detail: { message: 'Ticket guardado y cerrado exitosamente', severity: 'success' } }));
@@ -360,7 +376,6 @@ export default function TicketModal({ open, onClose, onSave, ticketToEdit }: Tic
     });
   }, [ticketForm.preSaved, ticketForm.form, ticketForm.prepareFinalData, ticketForm.updateField, onSave, onClose]);
 
-  
   const requestReopenTicket = useCallback(() => {
     if (!ticketForm.preSaved) return;
     setConfirmDialog({
@@ -370,7 +385,9 @@ export default function TicketModal({ open, onClose, onSave, ticketToEdit }: Tic
         try {
           const result = await reopenTicket(ticketForm.preSaved!);
           window.dispatchEvent(new CustomEvent('app-notification', { detail: { message: 'Ticket reabierto exitosamente', severity: 'success' } }));
-          onSave(result.data); ticketForm.resetForm(); onClose();
+          onSave(result.data);
+          ticketForm.resetForm();
+          onClose();
         } catch (err: any) {
           window.dispatchEvent(new CustomEvent('app-notification', { detail: { message: err.response?.data?.message || 'Error al reabrir', severity: 'error' } }));
         }
