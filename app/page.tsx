@@ -81,8 +81,7 @@ export default function LoginPage() {
         window.location.href = '/home';
       }
     } catch (error: any) {
-      // ✅ Ya no necesitamos setNotification aquí. 
-      // El interceptor de api.ts se encargará de mostrar la notificación global.
+     
       console.error("Error de login:", error);
     }
   };
@@ -172,7 +171,6 @@ export default function LoginPage() {
         </Box>
       </motion.div>
       
-      {/* ✅ Se eliminó el componente <Notification /> local para evitar la duplicidad */}
     </Box>
   );
 }

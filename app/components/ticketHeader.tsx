@@ -2,6 +2,7 @@
 import React from 'react';
 import { Box, Typography, IconButton, Chip } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber'; // ✅ Icono agregado
 import { getNivelSeveridadConfig } from 'app/utils/auxiliares';
 
 export interface TicketHeaderProps {
@@ -52,28 +53,39 @@ export const TicketHeader = React.memo(({ severidad, isEditMode = false, numeroT
               display: 'flex',
               alignItems: 'center',
               flexWrap: 'wrap',
-              gap: 1
+              gap: 1.5
             }}
           >
-            {isEditMode ? 'Editar Ticket - NOC' : 'Apertura y Tipificación - NOC'}
+            {isEditMode ? 'Editar Ticket - NOC' : 'Ficha Técnica del Caso - NOC'}
             
-            {/* ✅ Mostrar número de ticket solo en modo edición */}
-            {isEditMode  && numeroTicket && (
-              <Typography 
-                component="span" 
+            {/* ✅ Mostrar número de ticket SIEMPRE que exista, con diseño de etiqueta */}
+            {numeroTicket && (
+              <Box 
                 sx={{ 
-                  color:  '#BE2915',
-                  fontSize: '1.1rem',
-                  fontWeight: 700,
-                  fontFamily: 'Calibri, Arial, sans-serif',
-                  bgcolor: config.bgcolor,
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 0.5,
+                  bgcolor: '#f1f5f9',
+                  border: '1px solid #cbd5e1',
                   px: 1.5,
-                  py: 0.2,
+                  py: 0.3,
                   borderRadius: '6px'
                 }}
               >
-               {numeroTicket}
-              </Typography>
+                <ConfirmationNumberIcon sx={{ fontSize: '1rem', color: '#475569' }} />
+                <Typography 
+                  component="span" 
+                  sx={{ 
+                    color: '#1e293b',
+                    fontSize: '1rem',
+                    fontWeight: 700,
+                    fontFamily: 'Calibri, Arial, sans-serif',
+                    letterSpacing: '0.02em'
+                  }}
+                >
+                  {numeroTicket}
+                </Typography>
+              </Box>
             )}
           </Typography>
           
@@ -118,3 +130,4 @@ export const TicketHeader = React.memo(({ severidad, isEditMode = false, numeroT
 });
 
 TicketHeader.displayName = 'TicketHeader';
+

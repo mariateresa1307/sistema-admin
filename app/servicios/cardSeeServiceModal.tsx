@@ -1,17 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import {
-  Modal,
-  Paper,
-  Box,
-  Typography,
-  IconButton,
-  Divider,
-  Chip,
-  Tooltip,
-  Dialog,
-  Avatar,
-} from "@mui/material";
+import { Modal, Paper, Box, Typography, IconButton, Divider, Chip, Tooltip, Dialog, Avatar } from "@mui/material";
 import Grid from "@mui/material/Grid";
 import { motion, AnimatePresence } from "framer-motion";
 import CloseIcon from "@mui/icons-material/Close";
@@ -21,6 +10,8 @@ import DoneAllIcon from "@mui/icons-material/DoneAll";
 import SettingsEthernetIcon from "@mui/icons-material/SettingsEthernet";
 import PhotoCamera from "@mui/icons-material/PhotoCamera";
 import ZoomInIcon from "@mui/icons-material/ZoomIn";
+import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
+import UpdateIcon from "@mui/icons-material/Update";
 import { getMiscellaneous, deleteService } from "@/lib/api";
 import { ConfirmDialog } from "../components/confirmDialog";
 
@@ -44,7 +35,9 @@ interface ServiceData {
   status?: string;
   instalado?: boolean;
   proveedorDelServicioCompartido?: string;
-  diagramaRed?: string; // ✅ Agregado: Campo para la imagen
+  diagramaRed?: string;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
 }
 
 interface CardSeeServiceModalProps {
@@ -64,10 +57,7 @@ export const CardSeeServiceModal = ({
 }: CardSeeServiceModalProps) => {
   const [tipoClienteNombre, setTipoClienteNombre] = useState<string>("");
   const [loadingTipoCliente, setLoadingTipoCliente] = useState(false);
-
-  // ✅ NUEVO: Estado para controlar el modal de vista completa de la imagen
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
-
   const [confirmDialog, setConfirmDialog] = useState({
     open: false,
     title: "",
@@ -75,6 +65,23 @@ export const CardSeeServiceModal = ({
     onConfirm: () => {},
     type: "warning" as "warning" | "info" | "success",
   });
+
+
+  const normalizeToArray = (response: any): any[] => {
+    if (!response?.data) return [];
+    
+    // Si response.data ya es el array directamente
+    if (Array.isArray(response.data)) return response.data;
+    
+    // Si response.data tiene estructura paginada { data: [...], total: X }
+    if (Array.isArray(response.data.data)) return response.data.data;
+    
+    // Si response.data tiene estructura { results: [...] }
+    if (Array.isArray(response.data.results)) return response.data.results;
+    
+    // Fallback: array vacío
+    return [];
+  };
 
   useEffect(() => {
     if (!open || !service?.tipoCliente) {
@@ -87,10 +94,7 @@ export const CardSeeServiceModal = ({
       try {
         let tipoClienteId = "";
 
-        if (
-          typeof service.tipoCliente === "object" &&
-          service.tipoCliente !== null
-        ) {
+        if (typeof service.tipoCliente === "object" && service.tipoCliente !== null) {
           if ("valor" in service.tipoCliente && service.tipoCliente.valor) {
             setTipoClienteNombre(service.tipoCliente.valor);
             setLoadingTipoCliente(false);
@@ -115,15 +119,14 @@ export const CardSeeServiceModal = ({
         }
 
         const response = await getMiscellaneous({ categoria: "TIPO_CLIENTE" });
-        const tipoClientes = response.data || [];
-        const tipoEncontrado = tipoClientes.find(
+        const tipoClientes = normalizeToArray(response);
+        const listaSegura = Array.isArray(tipoClientes) ? tipoClientes : [];
+        const tipoEncontrado = listaSegura.find(
           (tc: any) => String(tc._id) === tipoClienteId,
         );
 
         if (tipoEncontrado) {
-          setTipoClienteNombre(
-            tipoEncontrado.valor || tipoEncontrado.nombre || "Sin nombre",
-          );
+          setTipoClienteNombre(tipoEncontrado.valor || tipoEncontrado.nombre || "Sin nombre");
         } else {
           setTipoClienteNombre(tipoClienteId);
         }
@@ -165,16 +168,26 @@ export const CardSeeServiceModal = ({
           onClose();
           if (onDeleteSuccess) onDeleteSuccess();
         } catch (error: any) {
-          console.error(
-            `❌ [SeeModal] Error al ${accionTexto} servicio:`,
-            error,
-          );
+          console.error(`❌ [SeeModal] Error al ${accionTexto} servicio:`, error);
         }
       },
     });
   };
 
   if (!service) return null;
+
+  const formatDate = (dateValue: string | Date | undefined) => {
+    if (!dateValue) return null;
+    try {
+      return new Date(dateValue).toLocaleDateString("es-VE", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+    } catch {
+      return null;
+    }
+  };
 
   const getDynamicFields = (s: ServiceData) => {
     switch (s.tipoServicio) {
@@ -190,16 +203,8 @@ export const CardSeeServiceModal = ({
         ];
       case "RBS":
         return [
-          {
-            label: "ID NETUNO / CIRCUITO",
-            value: s.id_netuno || s.id_circuito || "N/A",
-          },
-          {
-            label: "TIPO CLIENTE",
-            value: loadingTipoCliente
-              ? "Cargando..."
-              : tipoClienteNombre || "—",
-          },
+          { label: "ID NETUNO / CIRCUITO", value: s.id_netuno || s.id_circuito || "N/A" },
+          { label: "TIPO CLIENTE", value: loadingTipoCliente ? "Cargando..." : tipoClienteNombre || "—" },
           { label: "ID RBS", value: s.idRBS },
           { label: "SERIAL ONT", value: s.serialONT },
           { label: "NODO A", value: s.nodoA },
@@ -223,13 +228,15 @@ export const CardSeeServiceModal = ({
           { label: "NODO OLT", value: s.nodoOLT },
           { label: "SERIAL ONT", value: s.serialONT },
         ];
-      case "Redes Compartidas":
+      case "REDES COMPARTIDAS":
         return [
           { label: "NOMBRE CLIENTE", value: s.name },
+           { label: "TIPO CLIENTE", value: loadingTipoCliente ? "Cargando..." : tipoClienteNombre || "—" },
           { label: "CONTRATO", value: s.contrato },
           { label: "VLAN", value: s.vlan },
           { label: "NODO A", value: s.nodoA },
           { label: "IP NETUNO", value: s.ipNetuno },
+          
         ];
       default:
         return [];
@@ -238,15 +245,13 @@ export const CardSeeServiceModal = ({
 
   return (
     <>
-      {/* ✅ MODAL VISOR DE IMAGEN A PANTALLA COMPLETA */}
+      {/* MODAL VISOR DE IMAGEN A PANTALLA COMPLETA */}
       <Dialog
         open={isImageModalOpen}
         onClose={() => setIsImageModalOpen(false)}
         maxWidth="lg"
         fullWidth
-        PaperProps={{
-          sx: { bgcolor: "rgba(0, 0, 0, 0.9)", boxShadow: "none" },
-        }}
+        PaperProps={{ sx: { bgcolor: "rgba(0, 0, 0, 0.9)", boxShadow: "none" } }}
       >
         <Box
           sx={{
@@ -293,12 +298,7 @@ export const CardSeeServiceModal = ({
           <Modal
             open={open}
             onClose={onClose}
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              p: 2,
-            }}
+            sx={{ display: "flex", alignItems: "center", justifyContent: "center", p: 2 }}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -339,25 +339,15 @@ export const CardSeeServiceModal = ({
                   }}
                 >
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                    <SettingsEthernetIcon
-                      sx={{ color: "#080769", fontSize: "1.5rem" }}
-                    />
-                    <Typography
-                      variant="h6"
-                      component="div"
-                      sx={{ fontWeight: 700, color: "#0f172a" }}
-                    >
+                    <SettingsEthernetIcon sx={{ color: "#080769", fontSize: "1.5rem" }} />
+                    <Typography variant="h6" component="div" sx={{ fontWeight: 700, color: "#0f172a" }}>
                       Detalles del Servicio
                     </Typography>
                   </Box>
                   <Box sx={{ display: "flex", gap: 1 }}>
-                    {onEditClick && (
+                    {onEditClick && isActivo && (
                       <Tooltip title="Editar">
-                        <IconButton
-                          onClick={onEditClick}
-                          size="small"
-                          sx={{ color: "#1976d2" }}
-                        >
+                        <IconButton onClick={onEditClick} size="small" sx={{ color: "#1976d2" }}>
                           <EditIcon />
                         </IconButton>
                       </Tooltip>
@@ -379,7 +369,7 @@ export const CardSeeServiceModal = ({
 
                 <Divider sx={{ mb: 3.5, borderColor: "#c0c8d0" }} />
 
-                {/* ✅ SECCIÓN DE IMAGEN (Solo se muestra si existe diagramaRed) */}
+                {/* SECCIÓN DE IMAGEN */}
                 {service.diagramaRed && (
                   <Grid size={12} sx={{ mb: 3 }}>
                     <Box
@@ -440,14 +430,7 @@ export const CardSeeServiceModal = ({
 
                 <Grid container spacing={3}>
                   <Grid size={{ xs: 12, sm: 4 }}>
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        fontWeight: 700,
-                        color: "#64748b",
-                        display: "block",
-                      }}
-                    >
+                    <Typography variant="caption" sx={{ fontWeight: 700, color: "#64748b", display: "block" }}>
                       ESTADO
                     </Typography>
                     <Box sx={{ mt: 0.5 }}>
@@ -455,39 +438,74 @@ export const CardSeeServiceModal = ({
                         label={isActivo ? "Activo" : "Inactivo"}
                         size="small"
                         color={isActivo ? "success" : "default"}
-                        sx={
-                          isActivo
-                            ? {}
-                            : { border: "1px solid #cbd5e1", color: "#64748b" }
-                        }
+                        sx={isActivo ? {} : { border: "1px solid #cbd5e1", color: "#64748b" }}
                       />
                     </Box>
                   </Grid>
 
                   {getDynamicFields(service).map((field, idx) => (
                     <Grid key={idx} size={{ xs: 12, sm: 4 }}>
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          fontWeight: 700,
-                          color: "#64748b",
-                          display: "block",
-                        }}
-                      >
+                      <Typography variant="caption" sx={{ fontWeight: 700, color: "#64748b", display: "block" }}>
                         {field.label}
                       </Typography>
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          fontWeight: 600,
-                          color: "#334155",
-                          wordBreak: "break-word",
-                        }}
-                      >
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: "#334155", wordBreak: "break-word" }}>
                         {field.value || "—"}
                       </Typography>
                     </Grid>
                   ))}
+
+                  {/*  SECCIÓN DE FECHAS: Creado y Actualizado */}
+                  {(service.createdAt || service.updatedAt) && (
+                    <Grid size={12}>
+                      <Divider sx={{ my: 2 }} />
+                      <Box sx={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                        {service.createdAt && (
+                          <Box>
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                textTransform: "uppercase",
+                                color: "#64748b",
+                                fontWeight: 700,
+                                letterSpacing: "0.5px",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 0.5,
+                              }}
+                            >
+                              <CalendarMonthIcon sx={{ fontSize: 14 }} />
+                              Creado
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: "#475569", fontWeight: 500, mt: 0.5 }}>
+                              {formatDate(service.createdAt)}
+                            </Typography>
+                          </Box>
+                        )}
+                        {service.updatedAt && (
+                          <Box>
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                textTransform: "uppercase",
+                                color: "#64748b",
+                                fontWeight: 700,
+                                letterSpacing: "0.5px",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 0.5,
+                              }}
+                            >
+                              <UpdateIcon sx={{ fontSize: 14 }} />
+                              Actualizado
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: "#475569", fontWeight: 500, mt: 0.5 }}>
+                              {formatDate(service.updatedAt)}
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
+                    </Grid>
+                  )}
                 </Grid>
               </Paper>
             </motion.div>

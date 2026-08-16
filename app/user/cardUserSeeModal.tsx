@@ -5,7 +5,7 @@ import Grid from '@mui/material/Grid';
 import { motion, AnimatePresence } from 'framer-motion';
 import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete'; // ✅ Ícono de eliminar
+import DeleteIcon from '@mui/icons-material/Delete'; 
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 
 interface UsuarioData {
@@ -25,7 +25,7 @@ interface CardSeeModalProps {
   onClose: () => void;
   user: UsuarioData | null;
   onEditClick?: () => void;
-  onDeleteClick?: () => void; // ✅ Función para manejar la eliminación
+  onDeleteClick?: () => void;
 }
 
 export function CardSeeModal({ open, onClose, user, onEditClick, onDeleteClick }: CardSeeModalProps) {
@@ -100,15 +100,15 @@ export function CardSeeModal({ open, onClose, user, onEditClick, onDeleteClick }
                     </Tooltip>
                   )}
 
-                  {/* ✅ NUEVO: Botón Eliminar (Solo si el usuario está INACTIVO) */}
+                  {/*  Botón Eliminar (Solo si el usuario está INACTIVO) */}
                   {!user.isActive && onDeleteClick && (
                     <Tooltip title="Eliminar Usuario">
                       <IconButton 
                         onClick={onDeleteClick} 
                         size="small" 
                         sx={{ 
-                          color: '#ef4444', // Rojo de advertencia
-                          '&:hover': { bgcolor: '#ef44441a' } // Fondo rojo muy suave al pasar el mouse
+                          color: '#ef4444', 
+                          '&:hover': { bgcolor: '#ef44441a' }
                         }}
                       >
                         <DeleteIcon fontSize="small" />

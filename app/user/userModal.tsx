@@ -55,11 +55,11 @@ export const FullScreenUserDialog = ({
   const [isActive, setIsActive] = React.useState<boolean>(true);
   const [role, setRole] = React.useState<string>('admin');
 
-const ROLES_USUARIO = [
-  { value: "admin", label: "Administrador" },
-  { value: "operador", label: "Operador" },
-  { value: "editor", label: "Operator Editor" },
-];
+  const ROLES_USUARIO = [
+    { value: "admin", label: "Administrador" },
+    { value: "operador", label: "Operador" },
+    { value: "editor", label: "Operator Editor" },
+  ];
 
   const formRef = React.useRef<HTMLFormElement>(null);
 
@@ -101,7 +101,19 @@ const ROLES_USUARIO = [
 
     const formData = new FormData(event.currentTarget);
     const data = Object.fromEntries(formData.entries());
-    const payload: any = { ...data, isActive: isActive, role: role };
+    const payload: any = {
+      ...data,
+      isActive: isActive,
+      role: role,
+      // Campos en MAYÚSCULAS
+      primerNombre: String(data.primerNombre || '').toUpperCase(),
+      segundoNombre: String(data.segundoNombre || '').toUpperCase(),
+      primerApellido: String(data.primerApellido || '').toUpperCase(),
+      segundoApellido: String(data.segundoApellido || '').toUpperCase(),
+      username: String(data.username || '').toUpperCase(),
+      // Email en MINÚSCULAS
+      email: String(data.email || '').toLowerCase(),
+    };
 
     if (isEditMode && !payload.clave) {
       delete payload.clave;
@@ -225,6 +237,7 @@ const ROLES_USUARIO = [
                 fullWidth
                 required
                 defaultValue={initialData?.primerNombre || ""}
+
                 size="small"
                 slotProps={{ inputLabel: { shrink: true } }}
               />

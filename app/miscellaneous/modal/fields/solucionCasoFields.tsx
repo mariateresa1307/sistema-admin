@@ -1,8 +1,6 @@
 "use client";
 import * as React from "react";
-import {
-  Typography, TextField, MenuItem, Box, Grid
-} from "@mui/material";
+import { Typography, TextField, MenuItem, Box, Grid} from "@mui/material";
 import { Timeline as TimelineIcon, BugReport as BugReportIcon } from "@mui/icons-material";
 import { MiscellaneousItem } from "../baseMiscellaneousModal";
 
@@ -23,7 +21,6 @@ export const SolucionCasoFields = ({
 }: SolucionCasoFieldsProps) => {
   const [causaRaizSeleccionada, setCausaRaizSeleccionada] = React.useState("");
 
-  // Inicializar valor al editar
   React.useEffect(() => {
     if (isOpen) {
       if (initialData?.padreId) {
@@ -34,12 +31,10 @@ export const SolucionCasoFields = ({
     }
   }, [initialData, isOpen]);
 
-  // Notificar al padre cuando cambia la causa raíz
   React.useEffect(() => {
     onCausaRaizChange(causaRaizSeleccionada);
   }, [causaRaizSeleccionada, onCausaRaizChange]);
 
-  // Registrar función de validación
   React.useEffect(() => {
     onValidate(() => {
       return !!causaRaizSeleccionada;

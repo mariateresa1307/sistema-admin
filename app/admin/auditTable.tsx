@@ -16,6 +16,7 @@ import { AuditDetailModal } from './auditDetailModal';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/es';
+import { useIdResolver } from '../hooks/useIdResolver';
 
 dayjs.extend(relativeTime);
 dayjs.locale('es');
@@ -27,7 +28,7 @@ interface Props {
   page: number;
   limit: number;
   onPageChange: (page: number) => void;
-  onRowsPerPageChange?: (limit: number) => void; 
+  onRowsPerPageChange?: (limit: number) => void;
 }
 
 const ACTION_CONFIG: Record<string, { label: string; color: 'success' | 'error' | 'warning' | 'info' | 'default'; icon: React.ElementType }> = {
@@ -39,6 +40,19 @@ const ACTION_CONFIG: Record<string, { label: string; color: 'success' | 'error' 
   DELETE: { label: 'Eliminar', color: 'error', icon: DeleteIcon },
   EXPORT: { label: 'Exportar', color: 'info', icon: HistoryIcon },
 };
+
+
+const extractRecordName = (log: AuditLog): string | undefined => {
+  if (log.oldValue) {
+    try {
+      const oldValue = typeof log.oldValue === 'string' ? JSON.parse(log.oldValue) : log.oldValue;
+      const name = oldValue?.valor || oldValue?.name || oldValue?.nombre || oldValue?.title || oldValue?.label;
+      if (name) return name;
+    } catch {
+    }
+  }
+  return undefined;
+}
 
 const formatModuleName = (moduleId: string | undefined | null): string => {
   if (!moduleId) return '—';
@@ -52,7 +66,7 @@ const formatModuleName = (moduleId: string | undefined | null): string => {
 
 export default function AuditTable({ data, loading, total, page, limit, onPageChange, onRowsPerPageChange }: Props) {
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
-
+  const { resolveText } = useIdResolver();
   const handleRowClick = (log: AuditLog) => setSelectedLog(log);
   const handleCloseModal = () => setSelectedLog(null);
 
@@ -93,6 +107,8 @@ export default function AuditTable({ data, loading, total, page, limit, onPageCh
               const eventDate = dateValue ? dayjs(dateValue) : null;
               const moduleId = (log as any).moduleId || (log as any).module;
               const moduleName = formatModuleName(moduleId);
+              const recordName = log.action === 'DELETE' ? extractRecordName(log) : (log.details || '—');
+
 
               return (
                 <TableRow key={log._id || Math.random()} hover onClick={() => handleRowClick(log)} sx={{ cursor: 'pointer', '&:hover': { bgcolor: '#f8fafc' }, transition: 'background-color 0.15s ease' }}>
@@ -119,9 +135,9 @@ export default function AuditTable({ data, loading, total, page, limit, onPageCh
                     </Typography>
                   </TableCell>
                   <TableCell>
-                    <Tooltip title={log.details || ''}>
+                    <Tooltip title={resolveText(log.details)}>
                       <Typography variant="body2" sx={{ maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.8rem', color: '#64748b' }}>
-                        {log.details || '—'}
+                        {resolveText(log.details) || '—'}
                       </Typography>
                     </Tooltip>
                   </TableCell>
@@ -143,7 +159,7 @@ export default function AuditTable({ data, loading, total, page, limit, onPageCh
             onRowsPerPageChange(parseInt(event.target.value, 10));
           }
         }}
-        rowsPerPageOptions={[10, 50, 100]} // ✅ Opciones de registros por página
+        rowsPerPageOptions={[10, 50, 100]}
         labelRowsPerPage="Registros por página"
         labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
         sx={{ '& .MuiTablePagination-toolbar': { fontSize: '0.85rem' } }}

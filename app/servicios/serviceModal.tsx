@@ -1,105 +1,274 @@
-// app/servicios/serviceModal.tsx
 "use client";
 import * as React from "react";
 import {
-  Dialog, DialogTitle, DialogContent, DialogActions, IconButton, Typography, Button,
+  Dialog, DialogTitle, DialogContent, IconButton, Typography, Button,
   TextField, MenuItem, Box, Divider, Avatar, Collapse, Snackbar, Alert, CircularProgress,
-  Switch, FormControlLabel, Backdrop
+  FormControl, Select
 } from "@mui/material";
 import Grid from "@mui/material/Grid";
-import { 
-  Close as CloseIcon, 
-  CloudUpload as UploadIcon, 
-  PhotoCamera, 
-  Schema as DiagramIcon, 
-  AddPhotoAlternate as AddIcon,
-  ZoomIn as ZoomInIcon // ✅ Nuevo icono para indicar que se puede ampliar
+import {
+  Close as CloseIcon, CloudUpload as UploadIcon, PhotoCamera,
+  Schema as DiagramIcon, AddPhotoAlternate as AddIcon, ZoomIn as ZoomInIcon,
+  Warning as WarningIcon
 } from "@mui/icons-material";
 import { ConfiguracionInterface } from "app/utils/types";
 import { createService, updateService, getMiscellaneous } from "@/lib/api";
+import { PRODUCTO, TIPO_SERVICIO } from "app/utils/constants";
 
-const CIUDADES_VENEZUELA = ["Caracas", "Maracaibo", "Valencia", "Guarenas / Guatire", "Barquisimeto", "Maracay", "San Cristóbal", "Mérida", "Puerto la cruz"].sort();
-const TIPOS_SERVICIO = ["DOG", "Redes Compartidas", "METROLAN", "RBS", "IU"];
-const TIPO_CLIENTE_FULL = ["TELEFONICA", "GALANET", "DIGITEL", "MOVILNET", "INTER", "EWINET", "VNET"];
-const PROVEEDOR_IU = ["INTER", "DIGITEL", "VNET"];
-const TIPOS_CLIENTE_METROLAN = ["CARRIER", "BANCA", "CORPO"];
-const PROVEEDORES_UM = ["Inter", "Digitel", "Vnet", "Movistar", "Otro"];
-
-export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servicio", initialData }: any) => {
-  const [tipoServicio, setTipoServicio] = React.useState("RBS");
-  const [proveedorCompartido, setProveedorCompartido] = React.useState("");
+export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servicio", initialData, onSuccess }: any) => {
+  const [tipoServicio, setTipoServicio] = React.useState("DOG");
+  const [proveedorOUMId, setProveedorOUMId] = React.useState("");
+  const [proveedorNotFound, setProveedorNotFound] = React.useState(false);
   const [imagePreview, setImagePreview] = React.useState<string | null>(null);
   const [showImageSection, setShowImageSection] = React.useState(false);
-  
-  // ✅ NUEVO: Estado para controlar el modal de vista completa de la imagen
   const [isImageModalOpen, setIsImageModalOpen] = React.useState(false);
-  
-  const [tipoCliente, setTipoCliente] = React.useState<Array<ConfiguracionInterface>>([]);
+  const [saving, setSaving] = React.useState(false);
+  const [ciudades, setCiudades] = React.useState<ConfiguracionInterface[]>([]);
+  const [tipoClienteList, setTipoClienteList] = React.useState<ConfiguracionInterface[]>([]);
+  const [proveedoresList, setProveedoresList] = React.useState<ConfiguracionInterface[]>([]);
+  const [ultimaMillaList, setUltimaMillaList] = React.useState<ConfiguracionInterface[]>([]);
+  const [isMiscLoaded, setIsMiscLoaded] = React.useState(false);
+  const [ciudadSeleccionada, setCiudadSeleccionada] = React.useState<string>("");
   const [tipoClienteSeleccionado, setTipoClienteSeleccionado] = React.useState<string>('');
-  const [hasUltimaMilla, setHasUltimaMilla] = React.useState(false);
-  const [proveedorUM, setProveedorUM] = React.useState("");
-  const [notification, setNotification] = React.useState({ open: false, message: '', severity: 'success' as any });
-  const [loadingTiposCliente, setLoadingTiposCliente] = React.useState(false);
+  const [productoSeleccionado, setProductoSeleccionado] = React.useState<string>('');
+  const [notification, setNotification] = React.useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
   const [vlanValue, setVlanValue] = React.useState<string>("");
+  const [contratoValue, setContratoValue] = React.useState<string>("");
+  const [ipNetuno, setIpNetuno] = React.useState<string>("");
 
-  const triggerNotification = (message: string, severity: 'success' | 'error') => {
+  // validación 
+  const [nameValue, setNameValue] = React.useState<string>("");
+  const [idCircuitoValue, setIdCircuitoValue] = React.useState<string>("");
+  const [idNetunoValue, setIdNetunoValue] = React.useState<string>("");
+  const [idRBSValue, setIdRBSValue] = React.useState<string>("");
+  const [idDOGValue, setIdDOGValue] = React.useState<string>("");
+  const [nodoAValue, setNodoAValue] = React.useState<string>("");
+  const [nodoBValue, setNodoBValue] = React.useState<string>("");
+  const [nodoOLTValue, setNodoOLTValue] = React.useState<string>("");
+  const [serialONTValue, setSerialONTValue] = React.useState<string>("");
+  const [proveedorValue, setProveedorValue] = React.useState<string>("");
+  const [fieldErrors, setFieldErrors] = React.useState<Record<string, boolean>>({});
+
+  const triggerNotification = React.useCallback((message: string, severity: 'success' | 'error') => {
     setNotification({ open: true, message, severity });
+  }, []);
+
+  const normalizeToArray = (response: any): ConfiguracionInterface[] => {
+    if (!response?.data) return [];
+    if (Array.isArray(response.data)) return response.data;
+    if (Array.isArray(response.data.data)) return response.data.data;
+    if (Array.isArray(response.data.results)) return response.data.results;
+    return [];
   };
 
   React.useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || isMiscLoaded) return;
     let isMounted = true;
 
-    const cargarTiposCliente = async () => {
-      setLoadingTiposCliente(true);
+    const cargarMiscellaneous = async () => {
       try {
-        const config = await getMiscellaneous({ categoria: 'TIPO_CLIENTE' });
-        if (isMounted) setTipoCliente(config.data || []);
+        const [resCiudades, resTiposCliente, resProveedores, resUltimaMilla] = await Promise.all([
+          getMiscellaneous({ categoria: 'CIUDAD' }),
+          getMiscellaneous({ categoria: 'TIPO_CLIENTE' }),
+          getMiscellaneous({ categoria: 'PROVEEDOR' }),
+          getMiscellaneous({ categoria: 'ULTIMA_MILLA' }),
+        ]);
+
+        if (isMounted) {
+          setCiudades(normalizeToArray(resCiudades));
+          setTipoClienteList(normalizeToArray(resTiposCliente));
+          setProveedoresList(normalizeToArray(resProveedores));
+          setUltimaMillaList(normalizeToArray(resUltimaMilla));
+          setIsMiscLoaded(true);
+        }
       } catch (error) {
-        console.error("❌ [Modal] Error cargando tipos de cliente:", error);
-      } finally {
-        if (isMounted) setLoadingTiposCliente(false);
+        console.error("Error cargando datos:", error);
+        if (isMounted) {
+          setCiudades([]);
+          setTipoClienteList([]);
+          setProveedoresList([]);
+          setUltimaMillaList([]);
+          setIsMiscLoaded(true);
+        }
       }
     };
 
-    cargarTiposCliente();
+    cargarMiscellaneous();
     return () => { isMounted = false; };
-  }, [isOpen]);
+  }, [isOpen, isMiscLoaded]);
 
   React.useEffect(() => {
-    if (!isOpen) return;
-    setTipoServicio(initialData?.tipoServicio || "RBS");
-    setProveedorCompartido(initialData?.proveedorDelServicioCompartido || "");
-    setHasUltimaMilla(!!initialData?.ultimaMilla);
-    setProveedorUM(initialData?.proveedorUM || "");
-    setImagePreview(initialData?.diagramaRed || null);
-    setShowImageSection(!!initialData?.diagramaRed);
-    setVlanValue(initialData?.vlan !== undefined && initialData?.vlan !== null ? String(initialData.vlan) : "");
-
-    if (initialData?.tipoCliente) {
-      const tipoClienteId = typeof initialData.tipoCliente === 'object' && initialData.tipoCliente._id 
-        ? initialData.tipoCliente._id 
-        : String(initialData.tipoCliente);
-      setTipoClienteSeleccionado(tipoClienteId);
-    } else {
-      setTipoClienteSeleccionado('');
+    if (!isOpen || !initialData || !initialData._id) {
+      setTipoServicio("RBS");
+      setCiudadSeleccionada("");
+      setTipoClienteSeleccionado("");
+      setProductoSeleccionado("");
+      setVlanValue("");
+      setContratoValue(""); 
+      setIpNetuno("");
+      setNameValue("");
+      setIdCircuitoValue("");
+      setIdNetunoValue("");
+      setIdRBSValue("");
+      setIdDOGValue("");
+      setNodoAValue("");
+      setNodoBValue("");
+      setNodoOLTValue("");
+      setSerialONTValue("");
+      setProveedorValue("");     
+      setImagePreview(null);
+      setShowImageSection(false);
+      setProveedorOUMId("");
+      setProveedorNotFound(false);
+      setFieldErrors({});
+      return;
     }
-  }, [isOpen, initialData]);
+
+    const currentTipo = initialData.tipoServicio || "RBS";
+    setTipoServicio(currentTipo);
+
+    const cityVal = typeof initialData.city === 'object' && initialData.city?.valor
+      ? initialData.city.valor
+      : (typeof initialData.city === 'string' ? initialData.city : "");
+    setCiudadSeleccionada(cityVal);
+
+    const tcId = typeof initialData.tipoCliente === 'object' ? initialData.tipoCliente?._id : initialData.tipoCliente;
+    setTipoClienteSeleccionado(tcId ? String(tcId) : "");
+
+    setProductoSeleccionado(initialData.producto || "");
+    setVlanValue(initialData.vlan ? String(initialData.vlan) : "");
+    setContratoValue(initialData.contrato !== null && initialData.contrato !== undefined ? String(initialData.contrato) : "");
+    setIpNetuno(initialData.ipNetuno || "");
+    setNameValue(initialData.name || "");
+    setIdCircuitoValue(initialData.id_circuito || "");
+    setIdNetunoValue(initialData.id_netuno || "");
+    setIdRBSValue(initialData.idRBS || "");
+    setIdDOGValue(initialData.idDOG || "");
+    setNodoAValue(initialData.nodoA || "");
+    setNodoBValue(initialData.nodoB || "");
+    setNodoOLTValue(initialData.nodoOLT || "");
+    setSerialONTValue(initialData.serialONT || "");
+    setProveedorValue(initialData.proveedor || "");
+    
+    setImagePreview(initialData.diagramaRed || null);
+    setShowImageSection(Boolean(initialData.diagramaRed));
+
+    let rawValue = currentTipo === "METROLAN"
+      ? (initialData.ultimaMilla || initialData.proveedorUM)
+      : initialData.proveedorDelServicioCompartido;
+
+    if (rawValue) {
+      let idValue = typeof rawValue === 'object' && rawValue !== null
+        ? String(rawValue._id || rawValue.valor)
+        : String(rawValue);
+
+      if (idValue) {
+        const listToCheck = currentTipo === "METROLAN" ? ultimaMillaList : proveedoresList;
+        const foundItem = listToCheck.find((item: any) => String(item._id) === idValue);
+
+        if (foundItem) {
+          setProveedorOUMId(idValue);
+          setProveedorNotFound(false);
+        } else {
+          const altList = currentTipo === "METROLAN" ? proveedoresList : ultimaMillaList;
+          const foundInAlt = altList.find((item: any) => String(item._id) === idValue);
+
+          if (foundInAlt) {
+            setProveedorOUMId(idValue);
+            setProveedorNotFound(false);
+          } else {
+            setProveedorOUMId(idValue);
+            setProveedorNotFound(true);
+          }
+        }
+      }
+    } else {
+      setProveedorOUMId("");
+      setProveedorNotFound(false);
+    }
+
+    setFieldErrors({});
+  }, [isOpen, initialData, ultimaMillaList, proveedoresList]);
 
   const formRef = React.useRef<HTMLFormElement>(null);
-  const labelStyle = { fontWeight: 700, fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', mb: 0.5 };
+  const labelStyle = React.useMemo(() => ({ fontWeight: 700, fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', mb: 0.5 } as const), []);
+  const isMetrolan = tipoServicio === "METROLAN";
   const isEditMode = Boolean(initialData?._id);
 
-  const opcionesCliente = React.useMemo(() => {
-    if (tipoServicio === "METROLAN") return TIPOS_CLIENTE_METROLAN;
-    if (tipoServicio === "IU") return PROVEEDOR_IU;
-    return TIPO_CLIENTE_FULL;
-  }, [tipoServicio]);
+  //  validación completa
+  const validateForm = (): boolean => {
+    const errors: Record<string, boolean> = {};
+    const camposFaltantes: string[] = [];
 
-  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const checkRequired = (value: any, fieldName: string, label: string) => {
+      const isEmpty = value === undefined || value === null || String(value).trim() === "";
+      if (isEmpty) {
+        errors[fieldName] = true;
+        camposFaltantes.push(label);
+      } else {
+        errors[fieldName] = false;
+      }
+    };
+
+    // Campos comunes obligatorios
+    checkRequired(nameValue, "name", "Nombre");
+    checkRequired(ciudadSeleccionada, "city", "Ciudad");
+    checkRequired(tipoClienteSeleccionado, "tipoCliente", "Tipo de Cliente");
+    checkRequired(proveedorOUMId, "proveedor", isMetrolan ? "Última Milla" : "Proveedor");
+
+    // Campos específicos por tipo de servicio
+    if (tipoServicio === "METROLAN") {
+      checkRequired(idCircuitoValue, "id_circuito", "ID Circuito");
+      checkRequired(contratoValue, "contrato", "Contrato");
+      checkRequired(nodoAValue, "nodoA", "Nodo A");
+      checkRequired(nodoBValue, "nodoB", "Nodo B");
+      checkRequired(ipNetuno, "ipNetuno", "IP Netuno");
+      checkRequired(vlanValue, "vlan", "VLAN");
+    } else if (tipoServicio === "RBS") {
+      checkRequired(idCircuitoValue, "id_circuito", "ID Circuito");
+      checkRequired(idRBSValue, "idRBS", "ID RBS");
+      checkRequired(serialONTValue, "serialONT", "Serial ONT");
+      checkRequired(nodoAValue, "nodoA", "Nodo A");
+      checkRequired(nodoBValue, "nodoB", "Nodo B");
+      checkRequired(nodoOLTValue, "nodoOLT", "Nodo OLT");
+    } else if (tipoServicio === "IU") {
+      checkRequired(idCircuitoValue, "id_circuito", "ID Circuito");
+      checkRequired(vlanValue, "vlan", "VLAN");
+      checkRequired(nodoAValue, "nodoA", "Nodo A");
+      checkRequired(nodoBValue, "nodoB", "Nodo B");
+    } else if (tipoServicio === "DOG") {
+      checkRequired(idNetunoValue, "id_netuno", "ID Netuno");
+      checkRequired(contratoValue, "contrato", "Contrato");
+      checkRequired(idCircuitoValue, "id_circuito", "ID Circuito");
+      checkRequired(vlanValue, "vlan", "VLAN");
+      checkRequired(nodoAValue, "nodoA", "Nodo A");
+      checkRequired(nodoBValue, "nodoB", "Nodo B");
+      checkRequired(nodoOLTValue, "nodoOLT", "Nodo OLT");
+      checkRequired(serialONTValue, "serialONT", "Serial ONT");
+    } else if (tipoServicio === "REDES COMPARTIDAS") {
+      checkRequired(ipNetuno, "ipNetuno", "IP Netuno");
+      checkRequired(contratoValue, "contrato", "Contrato");
+      checkRequired(nodoAValue, "nodoA", "Nodo A");
+      checkRequired(vlanValue, "vlan", "VLAN");
+      checkRequired(productoSeleccionado, "producto", "Producto");
+    }
+
+    setFieldErrors(errors);
+
+    if (camposFaltantes.length > 0) {
+      triggerNotification(
+        `⚠️ Campos obligatorios faltantes: ${camposFaltantes.join(", ")}`,
+        "error"
+      );
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleImageChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // Validación de tamaño (máximo 5MB)
       if (file.size > 5 * 1024 * 1024) {
         triggerNotification("La imagen no debe superar los 5MB", "error");
         return;
@@ -108,20 +277,81 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
       reader.onloadend = () => setImagePreview(reader.result as string);
       reader.readAsDataURL(file);
     }
-  };
+  }, [triggerNotification]);
 
-  const handleVlanChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const cleanedValue = e.target.value.replace(/[^0-9-]/g, '');
-    setVlanValue(cleanedValue);
-  };
+  const handleVlanChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setVlanValue(e.target.value.replace(/[^0-9-]/g, ''));
+    setFieldErrors(prev => ({ ...prev, vlan: false }));
+  }, []);
 
-  const handleSave = async () => {
-    if (!formRef.current) return;
-    
-    const formData = new FormData(formRef.current);
-    const data = Object.fromEntries(formData.entries()) as any;
-    const serviceId = initialData?._id || initialData?.id;
-    
+  const handleIpChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setIpNetuno(e.target.value.replace(/[^0-9.]/g, ''));
+    setFieldErrors(prev => ({ ...prev, ipNetuno: false }));
+  }, []);
+
+  const handleContratoChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setContratoValue(e.target.value.replace(/[^0-9]/g, ''));
+    setFieldErrors(prev => ({ ...prev, contrato: false }));
+  }, []);
+
+  const handleNameChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setNameValue(e.target.value);
+    setFieldErrors(prev => ({ ...prev, name: false }));
+  }, []);
+
+  const handleIdCircuitoChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setIdCircuitoValue(e.target.value);
+    setFieldErrors(prev => ({ ...prev, id_circuito: false }));
+  }, []);
+
+  const handleIdNetunoChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setIdNetunoValue(e.target.value);
+    setFieldErrors(prev => ({ ...prev, id_netuno: false }));
+  }, []);
+
+  const handleIdRBSChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setIdRBSValue(e.target.value);
+    setFieldErrors(prev => ({ ...prev, idRBS: false }));
+  }, []);
+
+  const handleIdDOGChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setIdDOGValue(e.target.value);
+    setFieldErrors(prev => ({ ...prev, idDOG: false }));
+  }, []);
+
+  const handleNodoAChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setNodoAValue(e.target.value);
+    setFieldErrors(prev => ({ ...prev, nodoA: false }));
+  }, []);
+
+  const handleNodoBChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setNodoBValue(e.target.value);
+    setFieldErrors(prev => ({ ...prev, nodoB: false }));
+  }, []);
+
+  const handleNodoOLTChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setNodoOLTValue(e.target.value);
+    setFieldErrors(prev => ({ ...prev, nodoOLT: false }));
+  }, []);
+
+  const handleSerialONTChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSerialONTValue(e.target.value);
+    setFieldErrors(prev => ({ ...prev, serialONT: false }));
+  }, []);
+
+  const handleProveedorChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setProveedorValue(e.target.value);
+    setFieldErrors(prev => ({ ...prev, proveedor: false }));
+  }, []);
+
+  const handleSave = React.useCallback(async () => {
+    if (saving) return;
+
+    // ✅ VALIDACIÓN: No permitir guardar si hay campos vacíos
+    if (!validateForm()) return;
+
+    const serviceId = initialData?._id;
+
     if (isEditMode && !serviceId) {
       triggerNotification("Error: No se encontró el ID del servicio", "error");
       return;
@@ -133,100 +363,120 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
       return isNaN(parsed) ? null : parsed;
     };
 
-    const payload = {
+    const idToSend = proveedorOUMId && proveedorOUMId.trim() !== "" ? proveedorOUMId : null;
+
+    const payload: any = {
       tipoServicio,
-      name: data.name || "",
-      city: data.city || "",
-      tipoCliente: tipoClienteSeleccionado || "",
-      proveedorDelServicioCompartido: proveedorCompartido || data.proveedorDelServicioCompartido || "",
-      diagramaRed: imagePreview || "",
-      ipNetuno: data.ipNetuno || null,
-      id_circuito: data.id_circuito || null,
-      id_netuno: data.id_netuno || null,
-      idRBS: data.idRBS || null,
-      idDOG: data.idDOG || null,
-      nodoA: data.nodoA || null,
-      nodoB: data.nodoB || null,
-      nodoOLT: data.oltnode || null,
-      vlan: vlanValue.trim() === "" ? null : vlanValue,
-      contrato: parseNumberOrNull(data.contrato),
-      serialONT: data.serialONT || null,
-      ultimaMilla: hasUltimaMilla,
-      proveedorUM: hasUltimaMilla ? (data.proveedorUM || proveedorUM || null) : null,
-      proveedor: data.proveedor || null,
-      status: "Activo"
+      name: nameValue.trim() || undefined,
+      city: ciudadSeleccionada || undefined,
+      tipoCliente: tipoClienteSeleccionado || undefined,
+      diagramaRed: imagePreview || undefined,
+      ipNetuno: ipNetuno.trim() || undefined, 
+      producto: tipoServicio === "REDES COMPARTIDAS" ? (productoSeleccionado || undefined) : undefined,
+      id_circuito: idCircuitoValue.trim() || undefined,
+      id_netuno: idNetunoValue.trim() || undefined,
+      idRBS: idRBSValue.trim() || undefined,
+      idDOG: idDOGValue.trim() || undefined,
+      nodoA: nodoAValue.trim() || undefined,
+      nodoB: nodoBValue.trim() || undefined,
+      nodoOLT: nodoOLTValue.trim() || undefined,
+      vlan: vlanValue.trim() || undefined,
+      contrato: parseNumberOrNull(contratoValue),
+      serialONT: serialONTValue.trim() || undefined,
+      proveedor: proveedorValue.trim() || undefined,
+      status: initialData?.status || "Activo"
     };
 
+    if (isMetrolan) {
+      payload.ultimaMilla = idToSend;
+      payload.proveedorUM = null;
+      payload.proveedorDelServicioCompartido = null;
+    } else {
+      payload.proveedorDelServicioCompartido = idToSend;
+      payload.ultimaMilla = null;
+      payload.proveedorUM = null;
+    }
+
+    Object.keys(payload).forEach(key => {
+      if (payload[key] === undefined) delete payload[key];
+    });
+
     try {
-      if (isEditMode && serviceId) {
-        const response = await updateService(payload, String(serviceId));
-        if (response.status === 200 || response.status === 201) {
-          triggerNotification("Servicio actualizado correctamente", "success");
-          setTimeout(onClose, 1000);
-        }
-      } else {
-        const response = await createService(payload);
-        if (response.status === 201) {
-          triggerNotification("Servicio creado correctamente", "success");
-          setTimeout(onClose, 1000);
-        }
+      setSaving(true);
+      const response = isEditMode && serviceId
+        ? await updateService(payload, String(serviceId))
+        : await createService(payload);
+
+      if (response.status === 200 || response.status === 201) {
+        triggerNotification(`Servicio ${isEditMode ? 'actualizado' : 'creado'} correctamente`, "success");
+        onClose();
+        onSuccess?.();
       }
     } catch (error: any) {
-      console.error("❌ [Modal] Error completo:", error);
       const errorMessage = error.response?.data?.message || error.message || "Error al guardar";
-      triggerNotification(errorMessage, "error");
+      triggerNotification(Array.isArray(errorMessage) ? errorMessage.join(', ') : errorMessage, "error");
+    } finally {
+      setSaving(false);
     }
-  };
+  }, [
+    saving, initialData, isEditMode, tipoServicio, ciudadSeleccionada, 
+    tipoClienteSeleccionado, productoSeleccionado, imagePreview, vlanValue, 
+    ipNetuno, contratoValue, proveedorOUMId, isMetrolan, triggerNotification, 
+    onClose, onSuccess, nameValue, idCircuitoValue, idNetunoValue, idRBSValue,
+    idDOGValue, nodoAValue, nodoBValue, nodoOLTValue, serialONTValue, proveedorValue
+  ]);
+
+  const listaBase = isMetrolan ? ultimaMillaList : proveedoresList;
+
+  const opcionesParaRenderizar = React.useMemo(() => {
+    const base = Array.isArray(listaBase) ? listaBase : [];
+    if (proveedorNotFound && proveedorOUMId) {
+      const yaExiste = base.some((item: any) => String(item._id) === proveedorOUMId);
+      if (!yaExiste) {
+        return [
+          ...base,
+          { _id: proveedorOUMId, valor: `ID: ${proveedorOUMId.substring(0, 8)}...`, esFallback: true }
+        ];
+      }
+    }
+    return base;
+  }, [listaBase, proveedorNotFound, proveedorOUMId]);
+
+  const safeCiudadValue = React.useMemo(() => {
+    const lista = Array.isArray(ciudades) ? ciudades : [];
+    return lista.some(c => c.valor === ciudadSeleccionada) ? ciudadSeleccionada : "";
+  }, [ciudades, ciudadSeleccionada]);
+
+  const safeTipoClienteValue = React.useMemo(() => {
+    const lista = Array.isArray(tipoClienteList) ? tipoClienteList : [];
+    return lista.some(c => String(c._id) === tipoClienteSeleccionado) ? tipoClienteSeleccionado : "";
+  }, [tipoClienteList, tipoClienteSeleccionado]);
+
+  //  Helper con asterisco si es requerido
+  const renderLabel = (text: string, isRequired: boolean = false) => (
+    <Typography sx={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 0.3 }}>
+      {text}
+      {isRequired && <span style={{ color: '#d32f2f', fontWeight: 700 }}>*</span>}
+    </Typography>
+  );
+
+  // Helper para obtener error 
+  const getErrorProp = (fieldName: string) => fieldErrors[fieldName] === true;
 
   return (
     <>
-      <Snackbar
-        open={notification.open}
-        autoHideDuration={6000}
-        onClose={() => setNotification({ ...notification, open: false })}
-        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-      >
+      <Snackbar open={notification.open} autoHideDuration={6000} onClose={() => setNotification(prev => ({ ...prev, open: false }))} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
         <Alert severity={notification.severity} variant="filled" sx={{ width: '100%', bgcolor: notification.severity === 'success' ? '#1ccf46' : '#d32f2f' }}>
           {notification.message}
         </Alert>
       </Snackbar>
 
-      {/* ✅ MODAL VISOR DE IMAGEN A PANTALLA COMPLETA */}
-      <Dialog 
-        open={isImageModalOpen} 
-        onClose={() => setIsImageModalOpen(false)} 
-        maxWidth="lg" 
-        fullWidth
-        PaperProps={{ sx: { bgcolor: 'rgba(0, 0, 0, 0.9)', boxShadow: 'none' } }}
-      >
+      <Dialog open={isImageModalOpen} onClose={() => setIsImageModalOpen(false)} maxWidth="lg" fullWidth PaperProps={{ sx: { bgcolor: 'rgba(0, 0, 0, 0.9)', boxShadow: 'none' } }}>
         <Box sx={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh', p: 2 }}>
-          <IconButton 
-            onClick={() => setIsImageModalOpen(false)} 
-            sx={{ 
-              position: 'absolute', 
-              top: 16, 
-              right: 16, 
-              color: 'white', 
-              bgcolor: 'rgba(255, 255, 255, 0.1)', 
-              '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.2)' },
-              zIndex: 10
-            }}
-          >
+          <IconButton onClick={() => setIsImageModalOpen(false)} sx={{ position: 'absolute', top: 16, right: 16, color: 'white', bgcolor: 'rgba(255, 255, 255, 0.1)', '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.2)' }, zIndex: 10 }}>
             <CloseIcon />
           </IconButton>
-          {imagePreview && (
-            <img 
-              src={imagePreview} 
-              alt="Diagrama de red ampliado" 
-              style={{ 
-                maxWidth: '100%', 
-                maxHeight: '85vh', 
-                objectFit: 'contain', 
-                borderRadius: '8px',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
-              }} 
-            />
-          )}
+          {imagePreview && <img src={imagePreview} alt="Diagrama" style={{ maxWidth: '100%', maxHeight: '85vh', objectFit: 'contain', borderRadius: '8px', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }} />}
         </Box>
       </Dialog>
 
@@ -248,32 +498,12 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
                 </Box>
                 <Collapse in={showImageSection}>
                   <Box sx={{ mb: 3, px: 1 }}>
-                    {/* ✅ Miniatura clickeable con efecto hover y cursor de zoom */}
-                    <Box 
-                      onClick={() => imagePreview && setIsImageModalOpen(true)}
-                      sx={{ 
-                        position: 'relative', 
-                        cursor: imagePreview ? 'zoom-in' : 'default',
-                        transition: 'transform 0.2s ease',
-                        '&:hover': imagePreview ? { transform: 'scale(1.02)' } : {}
-                      }}
-                    >
+                    <Box onClick={() => imagePreview && setIsImageModalOpen(true)} sx={{ position: 'relative', cursor: imagePreview ? 'zoom-in' : 'default', transition: 'transform 0.2s ease', '&:hover': imagePreview ? { transform: 'scale(1.02)' } : {} }}>
                       <Avatar src={imagePreview || ""} variant="rounded" sx={{ width: '100%', height: 160, mb: 2, bgcolor: '#F8FAFC' }}>
                         {tipoServicio === "METROLAN" ? <DiagramIcon sx={{ fontSize: 40, color: '#94a3b8' }} /> : <PhotoCamera sx={{ fontSize: 40, color: '#94a3b8' }} />}
                       </Avatar>
                       {imagePreview && (
-                        <Box sx={{ 
-                          position: 'absolute', 
-                          top: 8, 
-                          right: 8, 
-                          bgcolor: 'rgba(0,0,0,0.6)', 
-                          color: 'white', 
-                          borderRadius: '50%', 
-                          p: 0.5,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}>
+                        <Box sx={{ position: 'absolute', top: 8, right: 8, bgcolor: 'rgba(0,0,0,0.6)', color: 'white', borderRadius: '50%', p: 0.5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           <ZoomInIcon fontSize="small" />
                         </Box>
                       )}
@@ -286,124 +516,242 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
                 </Collapse>
               </Grid>
 
-              {/* ... (El resto de los campos del formulario se mantienen exactamente igual que antes) ... */}
               <Grid size={{ xs: 12, md: 6 }}>
-                <Typography sx={labelStyle}>Tipo de Servicio</Typography>
-                <TextField select fullWidth value={tipoServicio} onChange={(e) => {
-                  setTipoServicio(e.target.value);
-                  if (e.target.value !== "METROLAN" && e.target.value !== "IU") setProveedorCompartido("");
-                }} size="small">
-                  {TIPOS_SERVICIO.map((opt) => <MenuItem key={opt} value={opt}>{opt}</MenuItem>)}
+                {renderLabel("Tipo de Servicio")}
+                <TextField select fullWidth value={tipoServicio} onChange={(e) => { setTipoServicio(e.target.value); setProveedorOUMId(""); setProveedorNotFound(false); setFieldErrors({}); }} size="small">
+                  {Object.values(TIPO_SERVICIO).map((opt) => <MenuItem key={opt} value={opt}>{opt}</MenuItem>)}
                 </TextField>
               </Grid>
+
               <Grid size={{ xs: 12, md: 6 }}>
-                <Typography sx={labelStyle}>{tipoServicio === "IU" ? "Nombre del enlace" : "Nombre del Cliente"}</Typography>
-                <TextField fullWidth name="name" defaultValue={initialData?.name ?? ""} size="small" />
+                {renderLabel(tipoServicio === "IU" ? "Nombre del enlace" : "Nombre del Cliente", true)}
+                <TextField 
+                  fullWidth 
+                  name="name" 
+                  value={nameValue} 
+                  onChange={handleNameChange} 
+                  size="small" 
+                  error={getErrorProp("name")}
+                  helperText={getErrorProp("name") ? "Campo obligatorio" : ""}
+                />
               </Grid>
+
               <Grid size={6}>
-                <Typography sx={labelStyle}>Ciudad</Typography>
-                <TextField select fullWidth name="city" defaultValue={initialData?.city ?? ""} size="small">
-                  {CIUDADES_VENEZUELA.map((c) => <MenuItem key={c} value={c}>{c}</MenuItem>)}
+                {renderLabel("Ciudad", true)}
+                <TextField select fullWidth name="city" value={safeCiudadValue} onChange={(e) => { setCiudadSeleccionada(e.target.value); setFieldErrors(prev => ({ ...prev, city: false })); }} size="small" error={getErrorProp("city")} helperText={getErrorProp("city") ? "Campo obligatorio" : ""}>
+                  <MenuItem value=""><em>Seleccione una ciudad</em></MenuItem>
+                  {(Array.isArray(ciudades) ? ciudades : []).map((c) => (
+                    <MenuItem key={c._id || c.valor} value={c.valor}>{c.valor}</MenuItem>
+                  ))}
                 </TextField>
               </Grid>
-              
+
               <Grid size={6}>
-                <Typography sx={labelStyle}>Proveedor del servicio compartido</Typography>
-                <TextField select fullWidth name="proveedorDelServicioCompartido" value={proveedorCompartido} onChange={(e) => setProveedorCompartido(e.target.value)} size="small">
-                  <MenuItem value=""><em>Ninguno</em></MenuItem>
-                  {opcionesCliente.map((c) => <MenuItem key={c} value={c}>{c}</MenuItem>)}
-                </TextField>
-              </Grid>
-              
-              <Grid size={6}>
-                <Typography sx={labelStyle}>Tipo de cliente</Typography>
-                {loadingTiposCliente ? (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
-                    <CircularProgress size={20} />
-                    <Typography variant="body2" color="text.secondary">Cargando...</Typography>
-                  </Box>
-                ) : (
-                  <TextField select fullWidth name="tipoCliente" value={tipoClienteSeleccionado} onChange={(e) => setTipoClienteSeleccionado(e.target.value)} size="small">
+                {renderLabel(isMetrolan ? "Última Milla" : "Proveedor del servicio compartido", true)}
+                <FormControl fullWidth size="small" error={proveedorNotFound || getErrorProp("proveedor")}>
+                  <Select
+                    name={isMetrolan ? "ultimaMilla" : "proveedorDelServicioCompartido"}
+                    value={proveedorOUMId}
+                    onChange={(e) => { setProveedorOUMId(e.target.value); setProveedorNotFound(false); setFieldErrors(prev => ({ ...prev, proveedor: false })); }}
+                    displayEmpty
+                    sx={{ bgcolor: 'white' }}
+                  >
                     <MenuItem value=""><em>Ninguno</em></MenuItem>
-                    {tipoCliente.map((c) => <MenuItem key={c._id} value={c._id}>{c.valor}</MenuItem>)}
-                  </TextField>
+                    {opcionesParaRenderizar.map((item: any) => (
+                      <MenuItem key={item._id} value={String(item._id)} sx={item.esFallback ? { bgcolor: '#fff3cd', color: '#856404', fontStyle: 'italic', borderLeft: '4px solid #ffc107', '&:hover': { bgcolor: '#ffe69c' } } : {}}>
+                        {item.esFallback && <WarningIcon sx={{ mr: 1, fontSize: '1rem' }} />}
+                        {item.valor}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                {getErrorProp("proveedor") && !proveedorNotFound && (
+                  <Typography variant="caption" sx={{ color: '#d32f2f', mt: 0.5, display: 'block', fontWeight: 600 }}>
+                    Campo obligatorio
+                  </Typography>
                 )}
+                {proveedorNotFound && (
+                  <Typography variant="caption" sx={{ color: 'warning.main', mt: 0.5, display: 'block', fontWeight: 600 }}>
+                    ⚠️ El registro original fue eliminado. Por favor, seleccione uno nuevo.
+                  </Typography>
+                )}
+              </Grid>
+
+              <Grid size={6}>
+                {renderLabel("Tipo de cliente", true)}
+                <TextField select fullWidth name="tipoCliente" value={safeTipoClienteValue} onChange={(e) => { setTipoClienteSeleccionado(e.target.value); setFieldErrors(prev => ({ ...prev, tipoCliente: false })); }} size="small" error={getErrorProp("tipoCliente")} helperText={getErrorProp("tipoCliente") ? "Campo obligatorio" : ""}>
+                  <MenuItem value=""><em>Ninguno</em></MenuItem>
+                  {(Array.isArray(tipoClienteList) ? tipoClienteList : []).map((c) => (
+                    <MenuItem key={c._id} value={String(c._id)}>{c.valor}</MenuItem>
+                  ))}
+                </TextField>
               </Grid>
 
               <Grid size={12}><Divider sx={{ my: 1 }} /></Grid>
 
               {tipoServicio === "METROLAN" && (
                 <>
-                  <Grid size={6}><TextField name="id_circuito" label="ID Circuito" fullWidth defaultValue={initialData?.id_circuito ?? ""} size="small" /></Grid>
-                  <Grid size={6}><TextField name="contrato" label="Contrato" fullWidth defaultValue={initialData?.contrato ?? ""} size="small" /></Grid>
-                  <Grid size={6}><TextField name="nodoA" label="NODO A" fullWidth defaultValue={initialData?.nodoA ?? ""} size="small" /></Grid>
-                  <Grid size={6}><TextField name="nodoB" label="NODO B" fullWidth defaultValue={initialData?.nodoB ?? ""} size="small" /></Grid>
-                  <Grid size={6}><TextField name="ipNetuno" label="IP NETUNO" fullWidth defaultValue={initialData?.ipNetuno ?? ""} size="small" /></Grid>
                   <Grid size={6}>
-                    <TextField name="vlan" label="VLAN" fullWidth value={vlanValue} onChange={handleVlanChange} size="small" inputProps={{ maxLength: 20 }} helperText="Solo números y guiones (ej: 600-609)" />
+                    {renderLabel("ID Circuito", true)}
+                    <TextField name="id_circuito" label="" fullWidth value={idCircuitoValue} onChange={handleIdCircuitoChange} size="small" error={getErrorProp("id_circuito")} helperText={getErrorProp("id_circuito") ? "Campo obligatorio" : ""} />
                   </Grid>
-                  <Grid size={6} sx={{ display: 'flex', alignItems: 'center' }}>
-                    <FormControlLabel control={<Switch checked={hasUltimaMilla} onChange={(e) => setHasUltimaMilla(e.target.checked)} />} label="¿Tiene última milla?" />
+                  <Grid size={6}>
+                    {renderLabel("Contrato", true)}
+                    <TextField name="contrato" label="" fullWidth value={contratoValue} onChange={handleContratoChange} size="small" error={getErrorProp("contrato")} helperText={getErrorProp("contrato") ? "Campo obligatorio" : ""} />
                   </Grid>
-                  {hasUltimaMilla && (
-                    <Grid size={6}>
-                      <TextField select fullWidth name="proveedorUM" label="Proveedor UM" size="small" value={proveedorUM} onChange={(e) => setProveedorUM(e.target.value)}>
-                        {PROVEEDORES_UM.map((prov) => <MenuItem key={prov} value={prov}>{prov}</MenuItem>)}
-                      </TextField>
-                    </Grid>
-                  )}
+                  <Grid size={6}>
+                    {renderLabel("NODO A", true)}
+                    <TextField name="nodoA" label="" fullWidth value={nodoAValue} onChange={handleNodoAChange} size="small" error={getErrorProp("nodoA")} helperText={getErrorProp("nodoA") ? "Campo obligatorio" : ""} />
+                  </Grid>
+                  <Grid size={6}>
+                    {renderLabel("NODO B", true)}
+                    <TextField name="nodoB" label="" fullWidth value={nodoBValue} onChange={handleNodoBChange} size="small" error={getErrorProp("nodoB")} helperText={getErrorProp("nodoB") ? "Campo obligatorio" : ""} />
+                  </Grid>
+                  <Grid size={6}>
+                    {renderLabel("IP NETUNO", true)}
+                    <TextField name="ipNetuno" label="" fullWidth value={ipNetuno} onChange={handleIpChange} size="small" error={getErrorProp("ipNetuno")} helperText={getErrorProp("ipNetuno") ? "Campo obligatorio" : ""} />
+                  </Grid>
+                  <Grid size={6}>
+                    {renderLabel("VLAN", true)}
+                    <TextField name="vlan" label="" fullWidth value={vlanValue} onChange={handleVlanChange} size="small" inputProps={{ maxLength: 20 }} error={getErrorProp("vlan")} helperText={getErrorProp("vlan") ? "Campo obligatorio" : ""} />
+                  </Grid>
                 </>
               )}
 
               {tipoServicio === "RBS" && (
                 <>
-                  <Grid size={6}><TextField name="id_circuito" label="ID Circuito" fullWidth defaultValue={initialData?.id_circuito ?? ""} size="small" /></Grid>
-                  <Grid size={6}><TextField name="idRBS" label="ID RBS" fullWidth defaultValue={initialData?.idRBS ?? ""} size="small" /></Grid>
-                  <Grid size={6}><TextField name="serialONT" label="Serial ONT" fullWidth defaultValue={initialData?.serialONT ?? ""} size="small" /></Grid>
-                  <Grid size={6}><TextField name="nodoA" label="Nodo A y Puerto" fullWidth defaultValue={initialData?.nodoA ?? ""} size="small" /></Grid>
-                  <Grid size={6}><TextField name="nodoB" label="Nodo B" fullWidth defaultValue={initialData?.nodoB ?? ""} size="small" /></Grid>
-                  <Grid size={6}><TextField name="oltnode" label="Nodo OLT" fullWidth defaultValue={initialData?.nodoOLT ?? ""} size="small" /></Grid>
-                  <Grid size={6}><TextField name="vlan" label="VLAN" fullWidth value={vlanValue} onChange={handleVlanChange} size="small" inputProps={{ maxLength: 20 }} /></Grid>
+                  <Grid size={6}>
+                    {renderLabel("ID Circuito", true)}
+                    <TextField name="id_circuito" label="" fullWidth value={idCircuitoValue} onChange={handleIdCircuitoChange} size="small" error={getErrorProp("id_circuito")} helperText={getErrorProp("id_circuito") ? "Campo obligatorio" : ""} />
+                  </Grid>
+                  <Grid size={6}>
+                    {renderLabel("ID RBS", true)}
+                    <TextField name="idRBS" label="" fullWidth value={idRBSValue} onChange={handleIdRBSChange} size="small" error={getErrorProp("idRBS")} helperText={getErrorProp("idRBS") ? "Campo obligatorio" : ""} />
+                  </Grid>
+                  <Grid size={6}>
+                    {renderLabel("Serial ONT", true)}
+                    <TextField name="serialONT" label="" fullWidth value={serialONTValue} onChange={handleSerialONTChange} size="small" error={getErrorProp("serialONT")} helperText={getErrorProp("serialONT") ? "Campo obligatorio" : ""} />
+                  </Grid>
+                  <Grid size={6}>
+                    {renderLabel("Nodo A y Puerto", true)}
+                    <TextField name="nodoA" label="" fullWidth value={nodoAValue} onChange={handleNodoAChange} size="small" error={getErrorProp("nodoA")} helperText={getErrorProp("nodoA") ? "Campo obligatorio" : ""} />
+                  </Grid>
+                  <Grid size={6}>
+                    {renderLabel("Nodo B", true)}
+                    <TextField name="nodoB" label="" fullWidth value={nodoBValue} onChange={handleNodoBChange} size="small" error={getErrorProp("nodoB")} helperText={getErrorProp("nodoB") ? "Campo obligatorio" : ""} />
+                  </Grid>
+                  <Grid size={6}>
+                    {renderLabel("Nodo OLT", true)}
+                    <TextField name="oltnode" label="" fullWidth value={nodoOLTValue} onChange={handleNodoOLTChange} size="small" error={getErrorProp("nodoOLT")} helperText={getErrorProp("nodoOLT") ? "Campo obligatorio" : ""} />
+                  </Grid>
                 </>
               )}
 
               {tipoServicio === "IU" && (
                 <>
-                  <Grid size={6}><TextField name="id_circuito" label="ID Circuito" fullWidth defaultValue={initialData?.id_circuito ?? ""} size="small" /></Grid>
-                  <Grid size={6}><TextField name="vlan" label="VLAN / Segmento" fullWidth value={vlanValue} onChange={handleVlanChange} size="small" inputProps={{ maxLength: 20 }} /></Grid>
-                  <Grid size={6}><TextField name="nodoA" label="Nodo A y Puerto" fullWidth defaultValue={initialData?.nodoA ?? ""} size="small" /></Grid>
-                  <Grid size={6}><TextField name="nodoB" label="Nodo B" fullWidth defaultValue={initialData?.nodoB ?? ""} size="small" /></Grid>
+                  <Grid size={6}>
+                    {renderLabel("ID Circuito", true)}
+                    <TextField name="id_circuito" label="" fullWidth value={idCircuitoValue} onChange={handleIdCircuitoChange} size="small" error={getErrorProp("id_circuito")} helperText={getErrorProp("id_circuito") ? "Campo obligatorio" : ""} />
+                  </Grid>
+                  <Grid size={6}>
+                    {renderLabel("VLAN / Segmento", true)}
+                    <TextField name="vlan" label="" fullWidth value={vlanValue} onChange={handleVlanChange} size="small" inputProps={{ maxLength: 20 }} error={getErrorProp("vlan")} helperText={getErrorProp("vlan") ? "Campo obligatorio" : ""} />
+                  </Grid>
+                  <Grid size={6}>
+                    {renderLabel("Nodo A y Puerto", true)}
+                    <TextField name="nodoA" label="" fullWidth value={nodoAValue} onChange={handleNodoAChange} size="small" error={getErrorProp("nodoA")} helperText={getErrorProp("nodoA") ? "Campo obligatorio" : ""} />
+                  </Grid>
+                  <Grid size={6}>
+                    {renderLabel("Nodo B", true)}
+                    <TextField name="nodoB" label="" fullWidth value={nodoBValue} onChange={handleNodoBChange} size="small" error={getErrorProp("nodoB")} helperText={getErrorProp("nodoB") ? "Campo obligatorio" : ""} />
+                  </Grid>
                 </>
               )}
 
               {tipoServicio === "DOG" && (
                 <>
-                  <Grid size={6}><TextField name="id_netuno" label="ID NETUNO" fullWidth defaultValue={initialData?.id_netuno ?? ""} size="small" /></Grid>
-                  <Grid size={6}><TextField name="contrato" label="Contrato" fullWidth defaultValue={initialData?.contrato ?? ""} size="small" /></Grid>
-                  <Grid size={6}><TextField name="id_circuito" label="Circuito" fullWidth defaultValue={initialData?.id_circuito ?? ""} size="small" /></Grid>
-                  <Grid size={6}><TextField name="vlan" label="VLAN" fullWidth value={vlanValue} onChange={handleVlanChange} size="small" inputProps={{ maxLength: 20 }} /></Grid>
-                  <Grid size={6}><TextField name="nodoA" label="Nodo A y puerto" fullWidth defaultValue={initialData?.nodoA ?? ""} size="small" /></Grid>
-                  <Grid size={6}><TextField name="nodoB" label="Nodo B" fullWidth defaultValue={initialData?.nodoB ?? ""} size="small" /></Grid>
-                  <Grid size={6}><TextField name="oltnode" label="Nodo OLT" fullWidth defaultValue={initialData?.nodoOLT ?? ""} size="small" /></Grid>
-                  <Grid size={6}><TextField name="serialONT" label="Serial ONT" fullWidth defaultValue={initialData?.serialONT ?? ""} size="small" /></Grid>
+                  <Grid size={6}>
+                    {renderLabel("ID NETUNO", true)}
+                    <TextField name="id_netuno" label="" fullWidth value={idNetunoValue} onChange={handleIdNetunoChange} size="small" error={getErrorProp("id_netuno")} helperText={getErrorProp("id_netuno") ? "Campo obligatorio" : ""} />
+                  </Grid>
+                  <Grid size={6}>
+                    {renderLabel("Contrato", true)}
+                    <TextField name="contrato" label="" fullWidth value={contratoValue} onChange={handleContratoChange} size="small" error={getErrorProp("contrato")} helperText={getErrorProp("contrato") ? "Campo obligatorio" : ""} />
+                  </Grid>
+                  <Grid size={6}>
+                    {renderLabel("Circuito", true)}
+                    <TextField name="id_circuito" label="" fullWidth value={idCircuitoValue} onChange={handleIdCircuitoChange} size="small" error={getErrorProp("id_circuito")} helperText={getErrorProp("id_circuito") ? "Campo obligatorio" : ""} />
+                  </Grid>
+                  <Grid size={6}>
+                    {renderLabel("VLAN", true)}
+                    <TextField name="vlan" label="" fullWidth value={vlanValue} onChange={handleVlanChange} size="small" inputProps={{ maxLength: 20 }} error={getErrorProp("vlan")} helperText={getErrorProp("vlan") ? "Campo obligatorio" : ""} />
+                  </Grid>
+                  <Grid size={6}>
+                    {renderLabel("Nodo A y puerto", true)}
+                    <TextField name="nodoA" label="" fullWidth value={nodoAValue} onChange={handleNodoAChange} size="small" error={getErrorProp("nodoA")} helperText={getErrorProp("nodoA") ? "Campo obligatorio" : ""} />
+                  </Grid>
+                  <Grid size={6}>
+                    {renderLabel("Nodo B", true)}
+                    <TextField name="nodoB" label="" fullWidth value={nodoBValue} onChange={handleNodoBChange} size="small" error={getErrorProp("nodoB")} helperText={getErrorProp("nodoB") ? "Campo obligatorio" : ""} />
+                  </Grid>
+                  <Grid size={6}>
+                    {renderLabel("Nodo OLT", true)}
+                    <TextField name="oltnode" label="" fullWidth value={nodoOLTValue} onChange={handleNodoOLTChange} size="small" error={getErrorProp("nodoOLT")} helperText={getErrorProp("nodoOLT") ? "Campo obligatorio" : ""} />
+                  </Grid>
+                  <Grid size={6}>
+                    {renderLabel("Serial ONT", true)}
+                    <TextField name="serialONT" label="" fullWidth value={serialONTValue} onChange={handleSerialONTChange} size="small" error={getErrorProp("serialONT")} helperText={getErrorProp("serialONT") ? "Campo obligatorio" : ""} />
+                  </Grid>
                 </>
               )}
 
-              {tipoServicio === "Redes Compartidas" && (
+              {tipoServicio === "REDES COMPARTIDAS" && (
                 <>
-                  <Grid size={6}><TextField name="ipNetuno" label="IP NETUNO" fullWidth defaultValue={initialData?.ipNetuno ?? ""} size="small" /></Grid>
-                  <Grid size={6}><TextField name="contrato" label="Contrato" fullWidth defaultValue={initialData?.contrato ?? ""} size="small" /></Grid>
-                  <Grid size={6}><TextField name="nodoA" label="Nodo A" fullWidth defaultValue={initialData?.nodoA ?? ""} size="small" /></Grid>
-                  <Grid size={6}><TextField name="vlan" label="VLAN" fullWidth value={vlanValue} onChange={handleVlanChange} size="small" inputProps={{ maxLength: 20 }} /></Grid>
+                  <Grid size={6}>
+                    {renderLabel("IP NETUNO", true)}
+                    <TextField name="ipNetuno" label="" fullWidth value={ipNetuno} onChange={handleIpChange} size="small" error={getErrorProp("ipNetuno")} helperText={getErrorProp("ipNetuno") ? "Campo obligatorio" : ""} />
+                  </Grid>
+                  <Grid size={6}>
+                    {renderLabel("Contrato", true)}
+                    <TextField name="contrato" label="" fullWidth value={contratoValue} onChange={handleContratoChange} size="small" error={getErrorProp("contrato")} helperText={getErrorProp("contrato") ? "Campo obligatorio" : ""} />
+                  </Grid>
+                  <Grid size={6}>
+                    {renderLabel("Nodo A", true)}
+                    <TextField name="nodoA" label="" fullWidth value={nodoAValue} onChange={handleNodoAChange} size="small" error={getErrorProp("nodoA")} helperText={getErrorProp("nodoA") ? "Campo obligatorio" : ""} />
+                  </Grid>
+                  <Grid size={6}>
+                    {renderLabel("VLAN", true)}
+                    <TextField name="vlan" label="" fullWidth value={vlanValue} onChange={handleVlanChange} size="small" inputProps={{ maxLength: 20 }} error={getErrorProp("vlan")} helperText={getErrorProp("vlan") ? "Campo obligatorio" : ""} />
+                  </Grid>
+
+                  <Grid size={6}>
+                    {renderLabel("Producto", true)}
+                    <TextField
+                      select
+                      fullWidth
+                      name="producto"
+                      label=""
+                      size="small"
+                      value={productoSeleccionado}
+                      onChange={(e) => { setProductoSeleccionado(e.target.value); setFieldErrors(prev => ({ ...prev, producto: false })); }}
+                      error={getErrorProp("producto")}
+                      helperText={getErrorProp("producto") ? "Campo obligatorio" : ""}
+                    >
+                      <MenuItem value=""><em>Seleccione un producto</em></MenuItem>
+                      {PRODUCTO.map((prodName) => (
+                        <MenuItem value={prodName} key={prodName}>{prodName}</MenuItem>
+                      ))}
+                    </TextField>
+                  </Grid>
                 </>
               )}
             </Grid>
           </Box>
 
           <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-            <Button onClick={onClose}>Cancelar</Button>
-            <Button variant="contained" onClick={handleSave} sx={{ bgcolor: '#080769', borderRadius: '8px', px: 4 }}>
-              Guardar
+            <Button onClick={onClose} disabled={saving}>Cancelar</Button>
+            <Button variant="contained" onClick={handleSave} sx={{ bgcolor: '#080769', borderRadius: '8px', px: 4 }} disabled={saving}>
+              {saving ? <CircularProgress size={24} color="inherit" /> : "Guardar"}
             </Button>
           </Box>
         </DialogContent>

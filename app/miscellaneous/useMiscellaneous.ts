@@ -1,5 +1,4 @@
 import { useState, useCallback, useEffect } from 'react';
-// ✅ AGREGAR: Importar todas las funciones necesarias del API client
 import { getMiscellaneous, createMiscellaneous, updateMiscellaneous, deleteMiscellaneous } from "@/lib/api";
 
 export type MiscellaneousItem = {
@@ -13,6 +12,11 @@ export type MiscellaneousItem = {
   activo?: boolean;
   createdAt?: string;
   updatedAt?: string;
+  ciudadId?: string;
+  categoriaId?: string;
+  subcategoriaId?: string;
+  estadoId?: string;
+  causaId?: string;
 };
 
 export type NotificationType = {
@@ -21,17 +25,28 @@ export type NotificationType = {
   severity: 'success' | 'error';
 };
 
-export const useMiscellaneous = (currentCategoria: string) => {
+interface UseMiscellaneousProps {
+  categoria: string;
+  page?: number;
+  pageSize?: number;
+  searchValue?: string;
+}
+
+export const useMiscellaneous = ({ 
+  categoria, 
+  page = 1, 
+  pageSize = 10, 
+  searchValue 
+}: UseMiscellaneousProps) => {
   const [rows, setRows] = useState<MiscellaneousItem[]>([]);
+  const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(true);
-   const [totalCount, setTotalCount] = useState(0);
   const [notification, setNotification] = useState<NotificationType>({
     open: false,
     message: '',
     severity: 'success',
   });
 
-  // Estados específicos para cada tipo de dato
   const [estados, setEstados] = useState<MiscellaneousItem[]>([]);
   const [ciudades, setCiudades] = useState<MiscellaneousItem[]>([]);
   const [categorias, setCategorias] = useState<MiscellaneousItem[]>([]);
@@ -46,76 +61,75 @@ export const useMiscellaneous = (currentCategoria: string) => {
     setNotification(prev => ({ ...prev, open: false }));
   }, []);
 
-  // ✅ CORREGIDO: Usar getMiscellaneous en lugar de fetch
   const fetchItems = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await getMiscellaneous({ categoria: currentCategoria });
-      const data = Array.isArray(response.data) ? response.data : [];
+      const response = await getMiscellaneous({ 
+        categoria, 
+        page, 
+        limit: pageSize,
+        valor: searchValue 
+      });
+      
+      const data = response.data?.data || (Array.isArray(response.data) ? response.data : []);
+      const total = response.data?.total || data.length;
+      
       setRows(data);
+      setTotalItems(total);
     } catch (error) {
       console.error("Error al obtener items:", error);
       showNotification("Error al cargar los datos", "error");
       setRows([]);
+      setTotalItems(0);
     } finally {
       setLoading(false);
     }
-  }, [currentCategoria, showNotification]);
+  }, [categoria, page, pageSize, searchValue, showNotification]);
 
-  const fetchByCategoria = useCallback(async (categoria: string) => {
+  const fetchByCategoria = useCallback(async (cat: string) => {
     try {
-      const response = await getMiscellaneous({ categoria });
-      const data = Array.isArray(response.data) ? response.data : [];
+      const response = await getMiscellaneous({ categoria: cat, limit: 9999 });
+      const data = response.data?.data || (Array.isArray(response.data) ? response.data : []);
       return data;
     } catch (error) {
-      console.error(`Error al obtener ${categoria}:`, error);
+      console.error(`Error al obtener ${cat}:`, error);
       return [];
     }
   }, []);
 
-  // Cargar solo los datos necesarios según la categoría actual
   const fetchRelatedData = useCallback(async () => {
     const promises: Promise<any>[] = [];
 
-    // Siempre cargar estados (para el selector de ciudades)
     promises.push(fetchByCategoria('ESTADO').then(setEstados));
-
-    // Cargar datos según la categoría actual
-    switch (currentCategoria) {
+    switch (categoria) {
       case 'CIUDAD':
         promises.push(fetchByCategoria('LOCALIDAD').then(setLocalidades));
         break;
-        
       case 'LOCALIDAD':
         promises.push(fetchByCategoria('CIUDAD').then(setCiudades));
         break;
-        
       case 'SUBCATEGORIA':
         promises.push(fetchByCategoria('CATEGORIA_RED').then(setCategorias));
         break;
-        
       case 'CATEGORIA_RED':
         promises.push(fetchByCategoria('SUBCATEGORIA').then(setSubcategorias));
         break;
-        
       case 'DETALLE':
         promises.push(fetchByCategoria('SUBCATEGORIA').then(setSubcategorias));
         break;
-        
       case 'SOLUCION_CASO':
         promises.push(fetchByCategoria('CAUSA_RAIZ').then(setCategorias));
         break;
     }
 
     await Promise.all(promises);
-  }, [currentCategoria, fetchByCategoria]);
+  }, [categoria, fetchByCategoria]);
 
   useEffect(() => {
     fetchItems();
     fetchRelatedData();
   }, [fetchItems, fetchRelatedData]);
 
-  // ✅ CORREGIDO: Usar deleteMiscellaneous en lugar de fetch
   const deleteItem = useCallback(async (item: MiscellaneousItem): Promise<boolean> => {
     try {
       const itemId = item._id || item.id;
@@ -137,7 +151,6 @@ export const useMiscellaneous = (currentCategoria: string) => {
     }
   }, [fetchItems, fetchRelatedData, showNotification]);
 
-  // ✅ CORREGIDO: Usar createMiscellaneous en lugar de fetch
   const addItem = useCallback(async (payload: any): Promise<boolean> => {
     try {
       await createMiscellaneous(payload);
@@ -153,7 +166,6 @@ export const useMiscellaneous = (currentCategoria: string) => {
     }
   }, [fetchItems, fetchRelatedData, showNotification]);
 
-  // Funciones de filtrado
   const getEstados = useCallback(() => {
     return estados.filter(item => item.activo !== false);
   }, [estados]);
@@ -161,14 +173,14 @@ export const useMiscellaneous = (currentCategoria: string) => {
   const getLocalidadesByCiudad = useCallback((ciudadId: string) => {
     if (!ciudadId) return [];
     return localidades.filter(
-      item => item.padreId === ciudadId && item.activo !== false
+      item => (String(item.ciudadId) === String(ciudadId) || String(item.padreId) === String(ciudadId)) && item.activo !== false
     );
   }, [localidades]);
 
   const getSubcategoriasByCategoria = useCallback((categoriaId: string) => {
     if (!categoriaId) return [];
     return subcategorias.filter(
-      item => item.padreId === categoriaId && item.activo !== false
+      item => (String(item.categoriaId) === String(categoriaId) || String(item.padreId) === String(categoriaId)) && item.activo !== false
     );
   }, [subcategorias]);
 
@@ -182,6 +194,7 @@ export const useMiscellaneous = (currentCategoria: string) => {
 
   return {
     rows,
+    totalItems, 
     loading,
     notification,
     closeNotification,

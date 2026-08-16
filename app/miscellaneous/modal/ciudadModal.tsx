@@ -1,11 +1,8 @@
 "use client";
 import * as React from "react";
-import {
-  Typography, TextField, MenuItem, Box, Grid
-} from "@mui/material";
+import {  Typography, TextField, MenuItem, Box, Grid} from "@mui/material";
 import { Map as MapIcon } from "@mui/icons-material";
 import { MiscellaneousItem } from "./baseMiscellaneousModal";
-// ✅ AGREGAR: Importar getMiscellaneous
 import { getMiscellaneous } from "@/lib/api";
 
 interface CiudadModalProps {
@@ -25,13 +22,11 @@ export const CiudadFields = ({
   const [estados, setEstados] = React.useState<MiscellaneousItem[]>([]);
   const [loadingEstados, setLoadingEstados] = React.useState(false);
 
-  // ✅ Cargar estados usando getMiscellaneous (CORREGIDO)
   React.useEffect(() => {
     const cargarEstados = async () => {
       if (isOpen) {
         setLoadingEstados(true);
         try {
-          // ✅ USAR getMiscellaneous en lugar de fetch
           const response = await getMiscellaneous({ categoria: "ESTADO" });
           const data = Array.isArray(response.data) ? response.data : [];
           const estadosActivos = data.filter((e: MiscellaneousItem) => e.activo !== false);
@@ -46,7 +41,6 @@ export const CiudadFields = ({
     cargarEstados();
   }, [isOpen]);
 
-  // Inicializar estado seleccionado al editar
   React.useEffect(() => {
     if (isOpen) {
       if (initialData?.padreId) {
@@ -61,7 +55,6 @@ export const CiudadFields = ({
     onEstadoChange(estadoSeleccionado);
   }, [estadoSeleccionado, onEstadoChange]);
 
-  // Registrar función de validación en el padre
   React.useEffect(() => {
     onValidate(() => {
       if (!estadoSeleccionado) {

@@ -1,9 +1,12 @@
 'use client';
-import { DataGrid, GridColDef, DataGridProps, SxProps } from "@mui/x-data-grid";
-import { useMemo, useState, useEffect, useCallback, useRef, Theme } from "react";
-import { TextField, Box, InputAdornment, MenuItem } from "@mui/material";
+import { DataGrid, GridColDef, DataGridProps } from "@mui/x-data-grid";
+import { useMemo, useState, useEffect, useCallback, useRef } from "react";
+import { SxProps } from "@mui/system";
+import { Theme } from "@mui/material/styles";
+import { TextField, Box, InputAdornment, MenuItem, Typography } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import { TICKET_STATUS } from "app/utils/constants";
+import { TableSkeleton } from './skeletons';
 
 export type SearchParams = { field: string; value: string };
 
@@ -18,27 +21,66 @@ interface CustomDataGridProps extends Omit<DataGridProps, 'rows' | 'sx'> {
   pageSizeOptions?: number[];
   rowCount?: number;
   paginationMode?: 'client' | 'server';
-  sx?: SxProps<Theme>; // ✅ Permitir estilos personalizados
+  sx?: SxProps<Theme>;
 }
 
 export default function CustomDataGrid({
-  rows, columns, loading, onSearch, debounceMs = 400,
-  paginationModel, onPaginationModelChange, pageSizeOptions = [10, 25, 50],
-  rowCount, paginationMode = 'server',
-  sx: externalSx = {}, // ✅ Recibir estilos externos
+  rows, 
+  columns: rawColumns = [],
+  loading, 
+  onSearch, 
+  debounceMs = 400,
+  paginationModel, 
+  onPaginationModelChange, 
+  pageSizeOptions = [10, 25, 50],
+  rowCount, 
+  paginationMode = 'server',
+  sx: externalSx = {}, 
   ...restProps
 }: CustomDataGridProps) {
+  
+  const columns = Array.isArray(rawColumns) 
+    ? rawColumns.filter((col): col is GridColDef => Boolean(col) && typeof col === 'object') 
+    : [];
+
+  useEffect(() => {
+    if (!Array.isArray(rawColumns) || rawColumns.length === 0) {
+      console.warn("⚠️ [CustomDataGrid] El prop 'columns' está vacío o no es un array.");
+    }
+  }, [rawColumns]);
+
+  const isServiciosModule = useMemo(() => columns.some(col => col.field === 'tipoServicio'), [columns]);
+
+  const dropdownOptions = useMemo(() => {
+    if (!Array.isArray(columns) || columns.length === 0) return [];
+    
+    const caseNumberCol = columns.find(col => col.field === 'caseNumber');
+    const otherCols = columns.filter(col => col.field !== 'caseNumber');
+    
+    let options = caseNumberCol ? [caseNumberCol, ...otherCols] : columns;
+
+    if (isServiciosModule) {
+      if (!options.some(opt => opt.field === 'nodos')) {
+        options = [{ field: 'nodos', headerName: 'Nodos' }, ...options];
+      }
+    }
+    
+    return options;
+  }, [columns, isServiciosModule]);
+
   const [isMounted, setIsMounted] = useState(false);
   const [searchField, setSearchField] = useState<string>(
-    columns.find(col => col.field === 'name') ? 'name' : (columns[0]?.field || "")
+    columns.find(col => col.field === 'caseNumber')?.field || 
+    columns.find(col => col.field === 'name')?.field || 
+    columns[0]?.field || ""
   );
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState(rows);
   const [isSearching, setIsSearching] = useState(false);
+  
   const isApiSearch = Boolean(onSearch);
   const skipInitialSearch = useRef(true);
 
-  const isServiciosModule = useMemo(() => columns.some(col => col.field === 'tipoServicio'), [columns]);
   const isUserStatusField = useMemo(() => searchField === 'isActive', [searchField]);
   const isStatusField = useMemo(() => searchField === 'status', [searchField]);
   const isTipoServicioField = useMemo(() => searchField === 'tipoServicio', [searchField]);
@@ -66,6 +108,7 @@ export default function CustomDataGrid({
   }, [rows, debounceMs]);
 
   const handleSearch = useCallback(async () => {
+    if (isApiSearch) return;
     setIsSearching(true);
     try {
       setSearchResults(await mockApiSearch(searchField, searchTerm));
@@ -74,18 +117,23 @@ export default function CustomDataGrid({
     } finally {
       setIsSearching(false);
     }
-  }, [searchTerm, searchField, rows, mockApiSearch]);
+  }, [searchTerm, searchField, rows, mockApiSearch, isApiSearch]);
 
   useEffect(() => {
     if (isApiSearch) return;
     const timer = setTimeout(() => { handleSearch(); }, debounceMs);
     return () => clearTimeout(timer);
-  }, [searchTerm, searchField, handleSearch, isApiSearch, debounceMs]);
+  }, [searchTerm, searchField, handleSearch, debounceMs]);
 
   useEffect(() => {
     if (!onSearch) return;
-    if (skipInitialSearch.current) { skipInitialSearch.current = false; return; }
-    const timer = setTimeout(() => { onSearch({ field: searchField, value: searchTerm }); }, debounceMs);
+    if (skipInitialSearch.current) { 
+      skipInitialSearch.current = false; 
+      return; 
+    }
+    const timer = setTimeout(() => { 
+      onSearch({ field: searchField, value: searchTerm }); 
+    }, debounceMs);
     return () => clearTimeout(timer);
   }, [searchTerm, searchField, onSearch, debounceMs]);
 
@@ -95,7 +143,52 @@ export default function CustomDataGrid({
   }, [pageSizeOptions, paginationModel?.pageSize]);
 
   const displayRows = isApiSearch ? rows : searchResults;
-  if (!isMounted) return null;
+  
+  if (!isMounted || columns.length === 0) {
+    return (
+      <Box sx={{ p: 4, textAlign: 'center', color: 'text.secondary', border: '1px dashed #cbd5e1', borderRadius: '12px' }}>
+        <Typography>Cargando configuración de la tabla o columnas no disponibles...</Typography>
+      </Box>
+    );
+  }
+
+  
+    if (loading && displayRows.length === 0) {
+    return (
+      <Box  key="skeleton-view">
+        <Box key="grid-view" sx={{ display: "flex", gap: 2, mb: 2, alignItems: "center", flexWrap: "wrap" }}>
+          <TextField
+            disabled
+            value=""               // ✅ controlled desde el inicio
+            label="Buscar por"
+            size="small"
+            sx={{ minWidth: 150 }}
+          />
+          <TextField
+            disabled
+            value=""               
+            placeholder="Cargando datos..."
+            size="small"
+            fullWidth
+            sx={{ maxWidth: 500 }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon sx={{ color: '#cbd5e1' }} />
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Box>
+
+        <TableSkeleton
+          rows={Math.min(paginationModel?.pageSize || 8, 15)}
+          withSearch={false}
+        />
+      </Box>
+    );
+  }
+      
 
   const renderStatusMenuItems = () => {
     const items = [<MenuItem key="all" value="">Todos</MenuItem>];
@@ -110,11 +203,9 @@ export default function CustomDataGrid({
     return items;
   };
 
-  // ✅ ESTILOS BASE DE LA TABLA (incluyen el azul del encabezado)
   const baseSx: SxProps<Theme> = {
     borderRadius: "12px",
     border: '1px solid #eaedf1',
-    // ✅ ENCABEZADO AZUL OSCURO - IGUAL QUE TICKETS
     "& .MuiDataGrid-columnHeaders": { 
       backgroundColor: "#080769 !important",
       color: "#FFFFFF !important",
@@ -132,7 +223,6 @@ export default function CustomDataGrid({
     "& .MuiDataGrid-row:hover": {
       backgroundColor: "#f5f5f5 !important",
     },
-    // ✅ Combinar con estilos externos (como filas inactivas en rojo)
     ...externalSx,
   };
 
@@ -140,37 +230,63 @@ export default function CustomDataGrid({
     <Box>
       <Box sx={{ display: "flex", gap: 2, mb: 2, alignItems: "center", flexWrap: "wrap" }}>
         <TextField
-          select value={searchField}
+          select 
+          value={searchField}
           onChange={(e) => { setSearchField(e.target.value); setSearchTerm(""); }}
-          label="Buscar por" size="small" sx={{ minWidth: 150 }}
+          label="Buscar por" 
+          size="small" 
+          sx={{ minWidth: 150 }}
         >
-          {columns.map((col) => (
+          {dropdownOptions.map((col) => (
             <MenuItem key={col.field} value={col.field}>{col.headerName || col.field}</MenuItem>
           ))}
         </TextField>
 
         {isTipoServicioField ? (
-          <TextField select size="small" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} sx={{ minWidth: 200, flex: 1, maxWidth: 500 }} label="Filtrar por tipo">
+          <TextField 
+            select 
+            size="small" 
+            value={searchTerm} 
+            onChange={(e) => setSearchTerm(e.target.value)} 
+            sx={{ minWidth: 200, flex: 1, maxWidth: 500 }} 
+            label="Filtrar por tipo"
+          >
             <MenuItem value="">Todos</MenuItem>
             <MenuItem value="RBS">RBS</MenuItem>
             <MenuItem value="METROLAN">METROLAN</MenuItem>
-            <MenuItem value="IU">IU</MenuItem>
             <MenuItem value="DOG">DOG</MenuItem>
-            <MenuItem value="Redes Compartidas">Redes Compartidas</MenuItem>
+            <MenuItem value="REDES COMPARTIDAS">REDES COMPARTIDAS</MenuItem>
           </TextField>
         ) : isStatusField ? (
-          <TextField select size="small" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} sx={{ minWidth: 200, maxWidth: 500, flex: 1 }} label="Filtrar por estado">
+          <TextField 
+            select 
+            size="small" 
+            value={searchTerm} 
+            onChange={(e) => setSearchTerm(e.target.value)} 
+            sx={{ minWidth: 200, maxWidth: 500, flex: 1 }} 
+            label="Filtrar por estado"
+          >
             {renderStatusMenuItems()}
           </TextField>
         ) : isUserStatusField ? (
-          <TextField select size="small" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} sx={{ minWidth: 200, maxWidth: 500, flex: 1 }} label="Filtrar por estado">
+          <TextField 
+            select 
+            size="small" 
+            value={searchTerm} 
+            onChange={(e) => setSearchTerm(e.target.value)} 
+            sx={{ minWidth: 200, maxWidth: 500, flex: 1 }} 
+            label="Filtrar por estado"
+          >
             <MenuItem value="true">Activo</MenuItem>
             <MenuItem value="false">Inactivo</MenuItem>
           </TextField>
         ) : (
           <TextField
-            fullWidth value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder={`Buscar ${searchField}...`} size="small"
+            fullWidth 
+            value={searchTerm} 
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder={`Buscar ${searchField === 'nodos' ? 'Nodo (A, B u OLT)' : searchField}...`} 
+            size="small"
             InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment> }}
             sx={{ maxWidth: 500 }}
           />
@@ -178,7 +294,7 @@ export default function CustomDataGrid({
       </Box>
 
       <DataGrid
-        getRowId={(row) => row._id || row.id}
+        getRowId={(row) => String(row._id || row.id)}
         rows={displayRows}
         columns={columns}
         loading={loading || isSearching}
@@ -188,7 +304,7 @@ export default function CustomDataGrid({
         rowCount={rowCount ?? 0}
         paginationMode={paginationMode}
         disableRowSelectionOnClick
-        sx={baseSx} // ✅ Aplicar estilos combinados
+        sx={baseSx}
         {...restProps}
       />
     </Box>

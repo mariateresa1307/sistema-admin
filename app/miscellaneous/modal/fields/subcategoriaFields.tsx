@@ -1,11 +1,8 @@
 "use client";
 import * as React from "react";
-import {
-  Typography, TextField, MenuItem, Box, Grid
-} from "@mui/material";
+import {  Typography, TextField, MenuItem, Box, Grid} from "@mui/material";
 import { Category as CategoryIcon } from "@mui/icons-material";
 import { MiscellaneousItem } from "../baseMiscellaneousModal";
-// ✅ AGREGAR: Importar getMiscellaneous
 import { getMiscellaneous } from "@/lib/api";
 
 interface SubcategoriaFieldsProps {
@@ -25,20 +22,25 @@ export const SubcategoriaFields = ({
   const [categorias, setCategorias] = React.useState<MiscellaneousItem[]>([]);
   const [loadingCategorias, setLoadingCategorias] = React.useState(false);
 
-  // ✅ Cargar categorías usando getMiscellaneous (CORREGIDO)
   React.useEffect(() => {
     const cargarCategorias = async () => {
       if (isOpen) {
         setLoadingCategorias(true);
+
         try {
-          // ✅ USAR getMiscellaneous en lugar de fetch
-          const response = await getMiscellaneous({ categoria: "CATEGORIA_RED" });
-          // ✅ response.data contiene el array
-          const categoriasData = Array.isArray(response.data) ? response.data : [];
+          const response = await getMiscellaneous({ categoria: "CATEGORIA_RED", limit: 9999 });
+          const rawData = response?.data;
+          const categoriasData = Array.isArray(rawData?.data) 
+            ? rawData.data 
+            : (Array.isArray(rawData) ? rawData : []);
+            
           const categoriasActivas = categoriasData.filter((c: MiscellaneousItem) => c.activo !== false);
           setCategorias(categoriasActivas);
-        } catch (error) {
+
+        } 
+        catch (error) {
           console.error("Error al cargar categorías:", error);
+
         } finally {
           setLoadingCategorias(false);
         }
@@ -47,7 +49,6 @@ export const SubcategoriaFields = ({
     cargarCategorias();
   }, [isOpen]);
 
-  // Inicializar categoría seleccionada al editar
   React.useEffect(() => {
     if (isOpen) {
       if (initialData?.padreId) {
@@ -58,12 +59,10 @@ export const SubcategoriaFields = ({
     }
   }, [initialData, isOpen]);
 
-  // Notificar al padre cuando cambia la categoría
   React.useEffect(() => {
     onCategoriaChange(categoriaSeleccionada);
   }, [categoriaSeleccionada, onCategoriaChange]);
 
-  // Registrar función de validación en el padre
   React.useEffect(() => {
     onValidate(() => {
       if (!categoriaSeleccionada) {

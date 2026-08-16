@@ -10,24 +10,16 @@ import { SubcategoriasDialog } from "../components/subcategoriasDialog";
 import { MiscellaneousTable } from "../components/MiscellaneousTable";
 import { useMiscellaneous, MiscellaneousItem } from "./useMiscellaneous";
 import { GridCellParams } from "@mui/x-data-grid";
-import { Tabs, Tab, Box, Snackbar, Alert, Button, Typography} from "@mui/material";
+import { Tabs, Tab, Box, Snackbar, Alert, Button } from "@mui/material";
 import CategoryIcon from '@mui/icons-material/Category';
 import LocationCityIcon from '@mui/icons-material/LocationCity';
 import BuildIcon from '@mui/icons-material/Build';
-import StorageIcon from '@mui/icons-material/Storage';
-import DevicesIcon from '@mui/icons-material/Devices';
 import PeopleIcon from '@mui/icons-material/People';
 import GroupWorkIcon from '@mui/icons-material/GroupWork';
 import BugReportIcon from '@mui/icons-material/BugReport';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CableIcon from '@mui/icons-material/Cable';
-import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 import MapIcon from '@mui/icons-material/Map';
-import FmdGoodIcon from '@mui/icons-material/FmdGood';
-import WarningIcon from '@mui/icons-material/Warning';
-import ProtectedRoute from "../components/protectedRoute";
-import DashboardLayout from "../components/dashboardLayout";
-// ✅ AGREGAR: Importar getMiscellaneous del API client
 import { getMiscellaneous } from "@/lib/api";
 
 type TabConfig = {
@@ -52,28 +44,22 @@ const TABS_CONFIG: TabConfig[] = [
 export default function MiscellaneousPage() {
   const [tabValue, setTabValue] = useState(0);
   const currentCategoria = TABS_CONFIG[tabValue].categoria;
-
-  // Estados de UI
+  const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 10 });
+  const [searchValue, setSearchValue] = useState<string | undefined>(undefined);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<MiscellaneousItem | null>(null);
-
-  // Estados para modales de Estados y Localidades
   const [estadosDialogOpen, setEstadosDialogOpen] = useState(false);
   const [localidadesDialogOpen, setLocalidadesDialogOpen] = useState(false);
   const [ciudadSeleccionada, setCiudadSeleccionada] = useState<MiscellaneousItem | null>(null);
-
-  // Estados para modal de Subcategorías
   const [subcategoriasDialogOpen, setSubcategoriasDialogOpen] = useState(false);
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<MiscellaneousItem | null>(null);
-
-  // ✅ NUEVOS: Estados para soluciones y causas raíz
   const [soluciones, setSoluciones] = useState<MiscellaneousItem[]>([]);
   const [causasRaiz, setCausasRaiz] = useState<MiscellaneousItem[]>([]);
 
-  // Hook personalizado
   const {
     rows,
+    totalItems,
     loading,
     notification,
     closeNotification,
@@ -86,28 +72,34 @@ export default function MiscellaneousPage() {
     getSubcategoriasByCategoria,
     localidades,
     ciudades, 
-  } = useMiscellaneous(currentCategoria);
+  } = useMiscellaneous({
+    categoria: currentCategoria,
+    page: paginationModel.page + 1, 
+    pageSize: paginationModel.pageSize,
+    searchValue,
+  });
 
-  // ✅ Cargar soluciones y causas raíz cuando sea necesario (CORREGIDO)
   useEffect(() => {
-    // Cargar soluciones del caso
-    const loadSoluciones = async () => {
+     const loadSoluciones = async () => {
       try {
-        // ✅ USAR getMiscellaneous en lugar de fetch directo
-        const response = await getMiscellaneous({ categoria: 'SOLUCION_CASO' });
-        const solucionesData = Array.isArray(response.data) ? response.data : [];
+        const response = await getMiscellaneous({ categoria: 'SOLUCION_CASO', limit: 9999 });
+        const rawData = response?.data;
+        const solucionesData = Array.isArray(rawData?.data) 
+          ? rawData.data 
+          : (Array.isArray(rawData) ? rawData : []);
         setSoluciones(solucionesData.filter((s: MiscellaneousItem) => s.activo !== false));
       } catch (error) {
         console.error("Error al cargar soluciones:", error);
       }
     };
 
-    // Cargar causas raíz
-    const loadCausasRaiz = async () => {
+     const loadCausasRaiz = async () => {
       try {
-        // ✅ USAR getMiscellaneous en lugar de fetch directo
-        const response = await getMiscellaneous({ categoria: 'CAUSA_RAIZ' });
-        const causasData = Array.isArray(response.data) ? response.data : [];
+        const response = await getMiscellaneous({ categoria: 'CAUSA_RAIZ', limit: 9999 });
+        const rawData = response?.data;
+        const causasData = Array.isArray(rawData?.data) 
+          ? rawData.data 
+          : (Array.isArray(rawData) ? rawData : []);
         setCausasRaiz(causasData.filter((c: MiscellaneousItem) => c.activo !== false));
       } catch (error) {
         console.error("Error al cargar causas raíz:", error);
@@ -116,12 +108,13 @@ export default function MiscellaneousPage() {
 
     loadSoluciones();
     loadCausasRaiz();
-  }, []); // Se ejecuta solo al montar el componente
+  }, []);
 
-  // Handlers
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
     setSelectedItem(null);
+    setPaginationModel({ page: 0, pageSize: 10 });
+    setSearchValue(undefined);
   };
 
   const handleCellClick = (params: GridCellParams) => {
@@ -146,7 +139,6 @@ export default function MiscellaneousPage() {
     await deleteItem(item);
   };
 
-  // Handlers para Estados
   const handleOpenEstados = () => {
     setEstadosDialogOpen(true);
   };
@@ -163,7 +155,6 @@ export default function MiscellaneousPage() {
     await deleteItem(estado);
   };
 
-  // Handlers para Localidades
   const handleOpenLocalidades = (ciudad: MiscellaneousItem) => {
     console.log('🏙️ Abriendo modal para ciudad:', ciudad);
     setCiudadSeleccionada(ciudad);
@@ -175,7 +166,6 @@ export default function MiscellaneousPage() {
       console.error('❌ No hay ciudad seleccionada');
       return;
     }
-    
     try {
       const success = await addItem({
         categoria: 'LOCALIDAD',
@@ -232,18 +222,38 @@ export default function MiscellaneousPage() {
     await deleteItem(subcategoria);
   };
 
-  // Datos filtrados
+  const estados = useMemo(() => getEstados(), [getEstados]);
+
+  const handleSearch = useCallback((params: { field?: string; value?: string } | null) => {
+    setSearchValue(params?.value || undefined);
+    setPaginationModel({ page: 0, pageSize: 10 });
+  }, []);
+
   const filteredRows = useMemo(() => {
-    const rowsFiltradas = rows.filter(r => r.categoria === currentCategoria);
-    
-    // Si es CAUSA_RAIZ, agregar las soluciones asociadas a cada causa
+    let rowsFiltradas = rows;
+
+    if (currentCategoria === 'CIUDAD') {
+      rowsFiltradas = rowsFiltradas.map(ciudad => {
+        const estadoId = ciudad.padreId || ciudad.estadoId;
+        const estadoPadre = estados.find(
+          est => (est._id || est.id) === estadoId && est.activo !== false
+        );
+
+        return {
+          ...ciudad,
+          padreNombre: estadoPadre?.valor || ciudad.padreNombre || 'Sin estado'
+        };
+      });
+    }
+
     if (currentCategoria === 'CAUSA_RAIZ') {
       return rowsFiltradas.map(causa => {
         const causaId = causa._id || causa.id;
+
         const solucionesAsociadas = soluciones.filter(
-          sol => sol.padreId === causaId && sol.activo !== false
+          sol => (sol.causaId === causaId || sol.padreId === causaId) && sol.activo !== false
         );
-        
+
         return {
           ...causa,
           solucionesAsociadas: solucionesAsociadas
@@ -251,40 +261,33 @@ export default function MiscellaneousPage() {
       });
     }
 
- if (currentCategoria === 'SOLUCION_CASO') {
-    return rowsFiltradas.map(solucion => {
-      const causaId = solucion.padreId;
-      const causaRaizAsociada = causasRaiz.find(
-        causa => (causa._id || causa.id) === causaId && causa.activo !== false
-      );
+    if (currentCategoria === 'SOLUCION_CASO') {
+      return rowsFiltradas.map(solucion => {
+        const causaId = solucion.causaId || solucion.padreId;
+        const causaRaizAsociada = causasRaiz.find(
+          causa => (causa._id || causa.id) === causaId && causa.activo !== false
+        );
 
-      return {
-        ...solucion,
-        causaRaizAsociada: causaRaizAsociada || null
-      };
-    });
-  }
+        return {
+          ...solucion,
+          causaRaizAsociada: causaRaizAsociada || null
+        };
+      });
+    }
 
-
-    
     return rowsFiltradas;
-  }, [rows, currentCategoria, soluciones]);
+  }, [rows, currentCategoria, soluciones, causasRaiz, estados]);
 
-  const estados = useMemo(() => getEstados(), [getEstados]);
-
-  // Localidades para el modal de detalle
   const localidadesParaDetalle = useMemo(() => {
     if (!selectedItem?._id || selectedItem.categoria !== 'CIUDAD') return [];
     return getLocalidadesByCiudad(selectedItem._id);
   }, [selectedItem, getLocalidadesByCiudad]);
 
-  // Subcategorias para el modal de detalle
   const subcategoriasParaDetalle = useMemo(() => {
     if (!selectedItem?._id || selectedItem.categoria !== 'CATEGORIA_RED') return [];
     return getSubcategoriasByCategoria(selectedItem._id);
   }, [selectedItem, getSubcategoriasByCategoria]);
 
-  // Localidades para el modal de gestión
   const localidadesParaGestion = useMemo(() => {
     if (!ciudadSeleccionada?._id) return [];
     return getLocalidadesByCiudad(ciudadSeleccionada._id);
@@ -361,17 +364,23 @@ export default function MiscellaneousPage() {
           </Box>
         )}
 
-        {/* Tabla */}
-        <MiscellaneousTable
+        {/*  Tabla con paginado  */}
+       <MiscellaneousTable
           rows={filteredRows}
+          localidades={localidades}
           loading={loading}
           currentCategoria={currentCategoria}
-          localidades={localidades}
           onCellClick={handleCellClick}
           onEdit={handleEdit}
           onDelete={handleDelete}
           onOpenLocalidades={handleOpenLocalidades}
           onOpenSubcategorias={handleOpenSubcategorias}
+          onSearch={handleSearch}
+          paginationMode="server"
+          rowCount={totalItems}
+          paginationModel={paginationModel}
+          onPaginationModelChange={(newModel) => setPaginationModel(newModel)}
+          pageSizeOptions={[10, 25, 50]}
         />
       </ContainerBox>
 

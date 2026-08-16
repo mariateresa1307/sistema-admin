@@ -1,9 +1,7 @@
 "use client";
 import * as React from "react";
-import {
-  Dialog, DialogTitle, DialogContent, IconButton, Typography,
-  Button, TextField, Box, Snackbar, Alert, FormControlLabel, Switch
-} from "@mui/material";
+import { Dialog, DialogTitle, DialogContent, IconButton, Typography,
+  Button, TextField, Box, Snackbar, Alert, FormControlLabel, Switch} from "@mui/material";
 import Grid from "@mui/material/Grid";
 import { Close as CloseIcon } from "@mui/icons-material";
 
@@ -30,7 +28,6 @@ interface BaseModalProps {
   validate?: () => boolean;
 }
 
-// ✅ EXPORTAR BaseModal
 export const BaseModal = ({
   isOpen,
   onClose,
@@ -51,7 +48,6 @@ export const BaseModal = ({
     severity: "success" as "success" | "error",
   });
 
-  // Inicializar valores cuando se abre el modal
   React.useEffect(() => {
     if (isOpen) {
       if (initialData) {
@@ -76,7 +72,6 @@ export const BaseModal = ({
       return;
     }
 
-    // Validación personalizada del componente hijo
     if (validate && !validate()) {
       return;
     }
@@ -186,7 +181,7 @@ export const BaseModal = ({
                 />
               </Grid>
 
-              {/* ✅ CAMPO DESCRIPCIÓN (común a todos) */}
+              {/* CAMPO DESCRIPCIÓN  */}
               <Grid size={12}>
                 <Typography
                   sx={{
@@ -210,7 +205,7 @@ export const BaseModal = ({
                 />
               </Grid>
 
-              {/* ✅ SWITCH ACTIVO (común a todos) */}
+              {/*  SWITCH ACTIVO */}
               <Grid size={12}>
                 <FormControlLabel
                   control={
