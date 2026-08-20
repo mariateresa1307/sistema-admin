@@ -13,10 +13,17 @@ export const TIPO_SERVICIO = {
   METROLAN: "METROLAN",
   RBS: "RBS",
   REDES_COMPARTIDAS: "REDES COMPARTIDAS",
-  IU: "IU"
+  ENLACE: "ENLACE"
 }
 
-
+export const ESCALADO_POR = {
+  CORREO: "CORREO",
+  WHATSAPP: "WHATSAPP",
+  LLAMADA: "LLAMADA",
+  PANDION: "PANDION",
+  ZOHO: "ZOHO",
+  GESTORES: "GESTORES"
+}
 export const CATEGORIA_RED = [/*esto se debe trar de miscelaneos no de aca de aca se debe eliminar */
   "ACCESO",
   "AMBIENTE",
@@ -24,50 +31,50 @@ export const CATEGORIA_RED = [/*esto se debe trar de miscelaneos no de aca de ac
   "CORE",
   "IT",
   "TRANSPORTE"
-] 
+]
 
 export const PRODUCTO = [
-"FiberPonBusinessPlus100Mb",
-"FiberPonBusinessPlus200Mb",
-"FiberPonBusinessPlus400Mb",
-"FiberPonBusinessPlus600Mb",
-"FiberPonPremium100Mb",
-"FiberPonPremium200Mb",
-"FiberPonPremium250Mb",
-"FiberPonPremium300Mb",
-"FiberPonPremium400Mb",
-"FiberPonPremium500Mb",
-"FiberPonPremium600Mb",
-"FiberPonPremium800Mb",
-"FiberPonPremium1Gb",
-"FiberPonPremium5Gb",
-"FiberPonPremium8Gb",
-"FiberPonPremium10Gb",
+  "FiberPonBusinessPlus100Mb",
+  "FiberPonBusinessPlus200Mb",
+  "FiberPonBusinessPlus400Mb",
+  "FiberPonBusinessPlus600Mb",
+  "FiberPonPremium100Mb",
+  "FiberPonPremium200Mb",
+  "FiberPonPremium250Mb",
+  "FiberPonPremium300Mb",
+  "FiberPonPremium400Mb",
+  "FiberPonPremium500Mb",
+  "FiberPonPremium600Mb",
+  "FiberPonPremium800Mb",
+  "FiberPonPremium1Gb",
+  "FiberPonPremium5Gb",
+  "FiberPonPremium8Gb",
+  "FiberPonPremium10Gb",
 
-] 
+]
 
 
-export const PRODUCTO_DATOS= [
-"FiberPON_Datos_2Mbps",
-"FiberPON_Datos_6Mbps",
-"FiberPON_Datos_8Mbps",
-"FiberPON_Datos_10Mbps",
-"FiberPON_Datos_20Mbps",
-"FiberPON_Datos_30Mbps",
-"FiberPON_Datos_40Mbps",
-"FiberPON_Datos_50Mbps",
-"FiberPON_Datos_60Mbps",
-"FiberPON_Datos_80Mbps",
-"FiberPON_Datos_100Mbps",
-"FiberPON_Datos_150Mbps",
-"FiberPON_Datos_200Mbps",
-"FiberPON_Datos_300Mbps",
-"FiberPON_Datos_400Mbps",
-"FiberPON_Datos_500Mbps",
-"FiberPON_Datos_800Mbps",
-"FiberPON_Datos_1Gbps",
+export const PRODUCTO_DATOS = [
+  "FiberPON_Datos_2Mbps",
+  "FiberPON_Datos_6Mbps",
+  "FiberPON_Datos_8Mbps",
+  "FiberPON_Datos_10Mbps",
+  "FiberPON_Datos_20Mbps",
+  "FiberPON_Datos_30Mbps",
+  "FiberPON_Datos_40Mbps",
+  "FiberPON_Datos_50Mbps",
+  "FiberPON_Datos_60Mbps",
+  "FiberPON_Datos_80Mbps",
+  "FiberPON_Datos_100Mbps",
+  "FiberPON_Datos_150Mbps",
+  "FiberPON_Datos_200Mbps",
+  "FiberPON_Datos_300Mbps",
+  "FiberPON_Datos_400Mbps",
+  "FiberPON_Datos_500Mbps",
+  "FiberPON_Datos_800Mbps",
+  "FiberPON_Datos_1Gbps",
 
-] 
+]
 
 
 export const TICKET_STATUS = {
@@ -112,9 +119,9 @@ export const NIVEL_SEVERIDAD_DEFAULT: NivelSeveridadItem = {
 };
 
 export const TIPO_CLIENTE = {
-  BANCA: "BANCA", 
-  CARRIER: "CARRIER",   
-  CORPORATIVO: "CORPORATIVO", 
+  BANCA: "BANCA",
+  CARRIER: "CARRIER",
+  CORPORATIVO: "CORPORATIVO",
   RESIDENCIAL: "RESIDENCIAL"
 }
 

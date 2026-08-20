@@ -9,7 +9,7 @@ import {
   Chip,
 } from '@mui/material';
 import PersonIcon from '@mui/icons-material/Person';
-import { NIVEL_SEVERIDAD, IMPUTABLE, TICKET_STATUS } from 'app/utils/constants';
+import { NIVEL_SEVERIDAD, IMPUTABLE, TICKET_STATUS , ESCALADO_POR } from 'app/utils/constants';
 import { getNivelSeveridadConfig } from 'app/utils/auxiliares';
 import { TicketFormData } from '../utils/ticketHelpers';
 import { ConfiguracionInterface } from '../utils/types';
@@ -399,6 +399,9 @@ useEffect(() => {
           </TextField>
         </Grid>
 
+
+
+
         {/* Severidad */}
         <Grid size={{ xs: 12, sm: 4 }}>
           <TextField
@@ -423,6 +426,26 @@ useEffect(() => {
               <MenuItem key={nivel.value} value={nivel.value} sx={{ fontFamily: corporateFont }}>
                 <Chip label={`${nivel.icon} ${nivel.label}`} size="small" sx={{ fontWeight: 700, borderRadius: '6px', fontSize: '0.72rem', px: 1, bgcolor: nivel.bgcolor, color: nivel.color, width: '100%', fontFamily: corporateFont }} />
               </MenuItem>
+            ))}
+          </TextField>
+        </Grid>
+
+            <Grid size={{ xs: 12, sm: 4 }}>
+          <TextField
+            select
+            fullWidth
+            required
+            label="Escalado por"
+            name="escaladoPor"
+            value={form.escaladoPor ?? ""}
+            onChange={handleChange}
+            size="small"
+            disabled={isClosed}
+            sx={{ fontFamily: corporateFont }}
+          >
+            <MenuItem value="" sx={{ fontFamily: corporateFont }}><em>Seleccionar</em></MenuItem>
+            {Object.values(ESCALADO_POR).map((opcion) => (
+              <MenuItem key={opcion} value={opcion} sx={{ fontFamily: corporateFont }}>{opcion}</MenuItem>
             ))}
           </TextField>
         </Grid>

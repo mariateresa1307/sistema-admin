@@ -15,6 +15,7 @@ import { IncidenciasChart } from './incidenciasChart';
 import { ReportTable } from '../reportTable';
 import { IncidenciasDetailModal } from './incidenciasDetailModal';
 import { ProveedorTable } from '../proveedorTable';
+import { generarGraficaBarras, generarGraficaTorta } from '../../../utils/generarGraficas';
 
 export const IncidenciasPorServicio = () => {
   const {
@@ -37,6 +38,7 @@ export const IncidenciasPorServicio = () => {
 
   const [selected, setSelected] = useState<IncidenciaType | null>(null);
   const [filtroPrincipal, setFiltroPrincipal] = useState<string>('');
+  const [exportando, setExportando] = useState(false);
 
   const handleFiltroPrincipalChange = useCallback(
     (value: string) => {
@@ -70,17 +72,44 @@ export const IncidenciasPorServicio = () => {
     setFilters({ tipoServicio: '', proveedor: '', mes: dayjs() });
   }, [setFilters]);
 
-  const handleExport = useCallback(() => {
-    if (filters.proveedor) {
-      exportIncidenciasPorProveedorCsv(dataPorProveedor, filters.mes);
-    } else {
-      exportIncidenciasCsv(data, filters.mes);
+  const handleExport = useCallback(async () => {
+    setExportando(true);
+    try {
+      const barData = filters.proveedor ? servicioChartDataPorProveedor : servicioChartData;
+      const pieData = filters.proveedor ? tipoServicioChartDataPorProveedor : tipoServicioChartData;
+
+      const barras = generarGraficaBarras(barData as any);
+      const torta = generarGraficaTorta(pieData as any);
+
+      console.log('📊 Gráficas generadas:', {
+        barras: barras ? `${barras.length} chars` : 'undefined',
+        torta: torta ? `${torta.length} chars` : 'undefined',
+      });
+
+      if (filters.proveedor) {
+        await exportIncidenciasPorProveedorCsv(dataPorProveedor, filters.mes, {
+          barras, 
+          torta, 
+          serviciosAfectados: barData.length,
+        });
+      } else {
+        await exportIncidenciasCsv(data, filters.mes, {
+          barras, 
+          torta, 
+          serviciosAfectados: barData.length,
+        });
+      }
+    } catch (err) {
+      console.error('❌ Error exportando:', err);
+    } finally {
+      setExportando(false);
     }
-  }, [data, dataPorProveedor, filters.mes, filters.proveedor]);
+  }, [data, dataPorProveedor, filters.mes, filters.proveedor,
+      servicioChartData, servicioChartDataPorProveedor,
+      tipoServicioChartData, tipoServicioChartDataPorProveedor]);
 
   return (
     <Box>
-      {/* 1. Header con título dinámico y botón de exportar */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 2 }}>
         <Typography variant="h6" sx={{ fontWeight: 700, color: '#080769' }}>
           {filters.proveedor ? `Incidencias por Proveedor` : 'Incidencias por Servicio'}
@@ -90,7 +119,7 @@ export const IncidenciasPorServicio = () => {
           variant="contained"
           startIcon={<DownloadIcon />}
           onClick={handleExport}
-          disabled={loading || (filters.proveedor ? dataPorProveedor.length === 0 : data.length === 0)}
+          disabled={loading || exportando || (filters.proveedor ? dataPorProveedor.length === 0 : data.length === 0)}
           sx={{ 
             bgcolor: '#080769', 
             borderRadius: '8px', 
@@ -99,11 +128,10 @@ export const IncidenciasPorServicio = () => {
             '&:hover': { bgcolor: '#060550' } 
           }}
         >
-          Exportar Reporte
+          {exportando ? 'Generando Excel...' : 'Exportar Reporte'}
         </Button>
       </Box>
 
-      {/* 2. Filtros */}
       <IncidenciasFilters
         filtroPrincipal={filtroPrincipal}
         tipoServicio={filters.tipoServicio}
@@ -124,28 +152,22 @@ export const IncidenciasPorServicio = () => {
           {error}
         </Alert>
       )}
-      <IncidenciasKpiCards 
-          totales={filters.proveedor ? totalesPorProveedor : totales} 
-        />
 
+      <IncidenciasKpiCards totales={filters.proveedor ? totalesPorProveedor : totales} />
 
       {filters.proveedor ? (
         <ProveedorTable data={dataPorProveedor} loading={loading} />
       ) : (
         <ReportTable data={data} loading={loading} onRowClick={setSelected} />
       )}
-
    
       <Box sx={{ mt: 4 }}>
-        
-        
         <IncidenciasChart 
           barData={filters.proveedor ? servicioChartDataPorProveedor : servicioChartData} 
           pieData={filters.proveedor ? tipoServicioChartDataPorProveedor : tipoServicioChartData} 
         />
       </Box>
 
-      {/* 5. Modal de detalle (solo para la vista agrupada) */}
       {!filters.proveedor && (
         <IncidenciasDetailModal
           open={!!selected}

@@ -15,7 +15,6 @@ interface Props {
   incidencia: IncidenciaPorServicio | null;
 }
 
-// ✅ Normaliza el status a formato estándar del sistema
 const formatStatus = (status: string): string => {
   const statusUpper = status.toUpperCase().trim();
   
@@ -32,7 +31,6 @@ const formatStatus = (status: string): string => {
   return statusUpper;
 };
 
-// ✅ Colores consistentes con el resto del sistema (assignedTicketsTab, etc.)
 const getStatusChip = (status: string) => {
   const formatted = formatStatus(status);
   
@@ -49,7 +47,6 @@ const getStatusChip = (status: string) => {
 };
 
 export const IncidenciasDetailModal = ({ open, onClose, incidencia }: Props) => {
-  // ✅ Para resolver IDs de miscellaneous (proveedor, última milla) a nombres
   const { resolveValue } = useIdResolver();
 
   const ticketsOrdenados = React.useMemo(() => {
@@ -59,7 +56,6 @@ export const IncidenciasDetailModal = ({ open, onClose, incidencia }: Props) => 
     );
   }, [incidencia]);
 
-  // ✅ Campos técnicos según el tipo de servicio del ticket afectado
   const getDetallesTecnicos = React.useCallback((ticket: TicketAsociado) => {
     const detalles: { label: string; value: string }[] = [];
 
@@ -127,7 +123,6 @@ export const IncidenciasDetailModal = ({ open, onClose, incidencia }: Props) => 
             >
               <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '5px', bgcolor: '#080769' }} />
 
-              {/* Header */}
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                   <Box sx={{ width: 48, height: 48, borderRadius: '12px', bgcolor: '#e8eaf6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -145,7 +140,6 @@ export const IncidenciasDetailModal = ({ open, onClose, incidencia }: Props) => 
                 </IconButton>
               </Box>
 
-              {/* Resumen */}
               <Stack direction="row" spacing={1} sx={{ mb: 3 }}>
                 <Chip label={`Total: ${incidencia.totalIncidencias}`} size="small" sx={{ bgcolor: '#e8eaf6', color: '#080769', fontWeight: 700 }} />
                 <Chip label={`Abiertas: ${incidencia.abiertas}`} size="small" sx={{ bgcolor: '#ffebee', color: '#c62828', fontWeight: 700 }} />
@@ -161,21 +155,20 @@ export const IncidenciasDetailModal = ({ open, onClose, incidencia }: Props) => 
                 />
               </Divider>
 
-              {/* Lista de tickets */}
               {ticketsOrdenados.length === 0 ? (
                 <Typography variant="body2" sx={{ color: '#94a3b8', fontStyle: 'italic', textAlign: 'center', py: 3 }}>
                   No hay tickets asociados en el período seleccionado
                 </Typography>
               ) : (
                 <Stack spacing={1.5}>
-                  {ticketsOrdenados.map((ticket) => {
+                  {ticketsOrdenados.map((ticket, index) => {
                     const detalles = getDetallesTecnicos(ticket);
                     const statusColors = getStatusChip(ticket.status);
                     const statusLabel = formatStatus(ticket.status);
 
                     return (
                       <Box
-                        key={`${ticket._id}-${ticket.servicioNombre}`}
+                        key={`${ticket._id}-${ticket.servicioNombre}-${index}`}
                         sx={{
                           p: 2,
                           borderRadius: '10px',
@@ -185,7 +178,6 @@ export const IncidenciasDetailModal = ({ open, onClose, incidencia }: Props) => 
                           '&:hover': { bgcolor: '#f1f5f9' },
                         }}
                       >
-                        {/* Fila principal: caso + estado */}
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2 }}>
                           <Box sx={{ minWidth: 0 }}>
                             <Typography variant="body2" sx={{ fontWeight: 700, color: '#080769', fontFamily: 'monospace' }}>
@@ -213,12 +205,11 @@ export const IncidenciasDetailModal = ({ open, onClose, incidencia }: Props) => 
                           />
                         </Box>
 
-                        {/* ✅ Detalles técnicos según tipo de servicio */}
                         {detalles.length > 0 && (
                           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mt: 1 }}>
-                            {detalles.map((detalle) => (
+                            {detalles.map((detalle, detalleIndex) => (
                               <Typography
-                                key={detalle.label}
+                                key={`${detalle.label}-${detalleIndex}`}
                                 variant="caption"
                                 sx={{
                                   bgcolor: '#e8eaf6',

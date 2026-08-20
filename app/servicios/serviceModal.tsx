@@ -14,6 +14,8 @@ import {
 import { ConfiguracionInterface } from "app/utils/types";
 import { createService, updateService, getMiscellaneous } from "@/lib/api";
 import { PRODUCTO, TIPO_SERVICIO } from "app/utils/constants";
+import Autocomplete from '@mui/material/Autocomplete';
+
 
 export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servicio", initialData, onSuccess }: any) => {
   const [tipoServicio, setTipoServicio] = React.useState("DOG");
@@ -27,8 +29,12 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
   const [tipoClienteList, setTipoClienteList] = React.useState<ConfiguracionInterface[]>([]);
   const [proveedoresList, setProveedoresList] = React.useState<ConfiguracionInterface[]>([]);
   const [ultimaMillaList, setUltimaMillaList] = React.useState<ConfiguracionInterface[]>([]);
+  // ✅ NUEVO: Lista de estados geográficos
+  const [estadosList, setEstadosList] = React.useState<ConfiguracionInterface[]>([]);
   const [isMiscLoaded, setIsMiscLoaded] = React.useState(false);
   const [ciudadSeleccionada, setCiudadSeleccionada] = React.useState<string>("");
+  // ✅ NUEVO: Estado geográfico seleccionado
+  const [estadoSeleccionado, setEstadoSeleccionado] = React.useState<string>("");
   const [tipoClienteSeleccionado, setTipoClienteSeleccionado] = React.useState<string>('');
   const [productoSeleccionado, setProductoSeleccionado] = React.useState<string>('');
   const [notification, setNotification] = React.useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
@@ -67,11 +73,13 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
 
     const cargarMiscellaneous = async () => {
       try {
-        const [resCiudades, resTiposCliente, resProveedores, resUltimaMilla] = await Promise.all([
-          getMiscellaneous({ categoria: 'CIUDAD' }),
-          getMiscellaneous({ categoria: 'TIPO_CLIENTE' }),
-          getMiscellaneous({ categoria: 'PROVEEDOR' }),
-          getMiscellaneous({ categoria: 'ULTIMA_MILLA' }),
+        // ✅ NUEVO: agregada categoría ESTADO
+        const [resCiudades, resTiposCliente, resProveedores, resUltimaMilla, resEstados] = await Promise.all([
+          getMiscellaneous({ categoria: 'CIUDAD', limit: 9999 }),
+          getMiscellaneous({ categoria: 'TIPO_CLIENTE', limit: 9999 }),
+          getMiscellaneous({ categoria: 'PROVEEDOR', limit: 9999 }),
+          getMiscellaneous({ categoria: 'ULTIMA_MILLA', limit: 9999 }),
+          getMiscellaneous({ categoria: 'ESTADO', limit: 9999 }),
         ]);
 
         if (isMounted) {
@@ -79,6 +87,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
           setTipoClienteList(normalizeToArray(resTiposCliente));
           setProveedoresList(normalizeToArray(resProveedores));
           setUltimaMillaList(normalizeToArray(resUltimaMilla));
+          setEstadosList(normalizeToArray(resEstados)); // ✅ NUEVO
           setIsMiscLoaded(true);
         }
       } catch (error) {
@@ -88,6 +97,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
           setTipoClienteList([]);
           setProveedoresList([]);
           setUltimaMillaList([]);
+          setEstadosList([]); // ✅ NUEVO
           setIsMiscLoaded(true);
         }
       }
@@ -101,10 +111,11 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
     if (!isOpen || !initialData || !initialData._id) {
       setTipoServicio("RBS");
       setCiudadSeleccionada("");
+      setEstadoSeleccionado(""); // ✅ NUEVO
       setTipoClienteSeleccionado("");
       setProductoSeleccionado("");
       setVlanValue("");
-      setContratoValue(""); 
+      setContratoValue("");
       setIpNetuno("");
       setNameValue("");
       setIdCircuitoValue("");
@@ -115,7 +126,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
       setNodoBValue("");
       setNodoOLTValue("");
       setSerialONTValue("");
-      setProveedorValue("");     
+      setProveedorValue("");
       setImagePreview(null);
       setShowImageSection(false);
       setProveedorOUMId("");
@@ -126,6 +137,12 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
 
     const currentTipo = initialData.tipoServicio || "RBS";
     setTipoServicio(currentTipo);
+
+    // ✅ NUEVO: inicializar estado desde el servicio existente
+    const estadoVal = typeof initialData.estado === 'object' && initialData.estado?.valor
+      ? initialData.estado.valor
+      : (typeof initialData.estado === 'string' ? initialData.estado : "");
+    setEstadoSeleccionado(estadoVal);
 
     const cityVal = typeof initialData.city === 'object' && initialData.city?.valor
       ? initialData.city.valor
@@ -149,7 +166,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
     setNodoOLTValue(initialData.nodoOLT || "");
     setSerialONTValue(initialData.serialONT || "");
     setProveedorValue(initialData.proveedor || "");
-    
+
     setImagePreview(initialData.diagramaRed || null);
     setShowImageSection(Boolean(initialData.diagramaRed));
 
@@ -212,6 +229,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
 
     // Campos comunes obligatorios
     checkRequired(nameValue, "name", "Nombre");
+    checkRequired(estadoSeleccionado, "estado", "Estado"); // ✅ NUEVO
     checkRequired(ciudadSeleccionada, "city", "Ciudad");
     checkRequired(tipoClienteSeleccionado, "tipoCliente", "Tipo de Cliente");
     checkRequired(proveedorOUMId, "proveedor", isMetrolan ? "Última Milla" : "Proveedor");
@@ -231,7 +249,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
       checkRequired(nodoAValue, "nodoA", "Nodo A");
       checkRequired(nodoBValue, "nodoB", "Nodo B");
       checkRequired(nodoOLTValue, "nodoOLT", "Nodo OLT");
-    } else if (tipoServicio === "IU") {
+    } else if (tipoServicio === "ENLACE") {
       checkRequired(idCircuitoValue, "id_circuito", "ID Circuito");
       checkRequired(vlanValue, "vlan", "VLAN");
       checkRequired(nodoAValue, "nodoA", "Nodo A");
@@ -298,6 +316,80 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
     setNameValue(e.target.value);
     setFieldErrors(prev => ({ ...prev, name: false }));
   }, []);
+
+const handleEstadoChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const nuevoEstado = e.target.value;
+  setEstadoSeleccionado(nuevoEstado);
+  setFieldErrors(prev => ({ ...prev, estado: false }));
+
+  if (nuevoEstado) {
+    // 🔍 LOG DE DIAGNÓSTICO: ver estructura real de las ciudades
+    console.log('🔍 [handleEstadoChange] Estado seleccionado:', nuevoEstado);
+    console.log('🔍 [handleEstadoChange] Total ciudades cargadas:', ciudades.length);
+    if (ciudades.length > 0) {
+      console.log('🔍 [handleEstadoChange] Primera ciudad (estructura completa):', ciudades[0]);
+      console.log('🔍 [handleEstadoChange] Primera ciudad (padreNombre):', (ciudades[0] as any).padreNombre);
+      console.log('🔍 [handleEstadoChange] Primera ciudad (estadoId):', (ciudades[0] as any).estadoId);
+      console.log('🔍 [handleEstadoChange] Primera ciudad (padreId):', (ciudades[0] as any).padreId);
+    }
+
+    const estadoNormalizado = nuevoEstado.trim().toUpperCase();
+
+    // 🔍 ESTRATEGIA 1: Match por padreNombre (case-insensitive)
+    let ciudadDelEstado = ciudades.find((c: any) => {
+      const padreNombre = (c.padreNombre || '').toString().trim().toUpperCase();
+      return padreNombre === estadoNormalizado;
+    });
+
+    console.log('🔍 Estrategia 1 (padreNombre):', ciudadDelEstado ? ciudadDelEstado.valor : 'no encontrado');
+
+    // 🔍 ESTRATEGIA 2: Match por estadoId comparando con _id de estadosList
+    if (!ciudadDelEstado) {
+      const estadoObj = estadosList.find(e => e.valor.trim().toUpperCase() === estadoNormalizado);
+      if (estadoObj) {
+        ciudadDelEstado = ciudades.find((c: any) => {
+          const cEstadoId = (c.estadoId || c.padreId || '').toString().trim();
+          return cEstadoId === String(estadoObj._id);
+        });
+        console.log('🔍 Estrategia 2 (estadoId/padreId):', ciudadDelEstado ? ciudadDelEstado.valor : 'no encontrado');
+      }
+    }
+
+    // 🔍 ESTRATEGIA 3: Match por estado como objeto embebido
+    if (!ciudadDelEstado) {
+      ciudadDelEstado = ciudades.find((c: any) => {
+        const estadoObj = c.estado;
+        if (!estadoObj) return false;
+        if (typeof estadoObj === 'string') {
+          return estadoObj.trim().toUpperCase() === estadoNormalizado;
+        }
+        if (typeof estadoObj === 'object') {
+          return (estadoObj.valor || '').toString().trim().toUpperCase() === estadoNormalizado;
+        }
+        return false;
+      });
+      console.log('🔍 Estrategia 3 (estado embebido):', ciudadDelEstado ? ciudadDelEstado.valor : 'no encontrado');
+    }
+
+    if (ciudadDelEstado) {
+      console.log('✅ Ciudad asignada automáticamente:', ciudadDelEstado.valor);
+      setCiudadSeleccionada(ciudadDelEstado.valor);
+      setFieldErrors(prev => ({ ...prev, city: false }));
+    } else {
+      console.warn('⚠️ No se encontró ciudad para el estado:', nuevoEstado);
+      console.warn('⚠️ Muestra de 5 ciudades:', ciudades.slice(0, 5).map((c: any) => ({
+        valor: c.valor,
+        padreNombre: c.padreNombre,
+        estadoId: c.estadoId,
+        padreId: c.padreId,
+        estado: c.estado,
+      })));
+      setCiudadSeleccionada("");
+    }
+  } else {
+    setCiudadSeleccionada("");
+  }
+}, [ciudades, estadosList]);
 
   const handleIdCircuitoChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setIdCircuitoValue(e.target.value);
@@ -368,10 +460,11 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
     const payload: any = {
       tipoServicio,
       name: nameValue.trim() || undefined,
+      estado: estadoSeleccionado || undefined, // ✅ NUEVO
       city: ciudadSeleccionada || undefined,
       tipoCliente: tipoClienteSeleccionado || undefined,
       diagramaRed: imagePreview || undefined,
-      ipNetuno: ipNetuno.trim() || undefined, 
+      ipNetuno: ipNetuno.trim() || undefined,
       producto: tipoServicio === "REDES COMPARTIDAS" ? (productoSeleccionado || undefined) : undefined,
       id_circuito: idCircuitoValue.trim() || undefined,
       id_netuno: idNetunoValue.trim() || undefined,
@@ -419,9 +512,10 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
       setSaving(false);
     }
   }, [
-    saving, initialData, isEditMode, tipoServicio, ciudadSeleccionada, 
-    tipoClienteSeleccionado, productoSeleccionado, imagePreview, vlanValue, 
-    ipNetuno, contratoValue, proveedorOUMId, isMetrolan, triggerNotification, 
+    saving, initialData, isEditMode, tipoServicio, ciudadSeleccionada,
+    estadoSeleccionado, // ✅ NUEVO
+    tipoClienteSeleccionado, productoSeleccionado, imagePreview, vlanValue,
+    ipNetuno, contratoValue, proveedorOUMId, isMetrolan, triggerNotification,
     onClose, onSuccess, nameValue, idCircuitoValue, idNetunoValue, idRBSValue,
     idDOGValue, nodoAValue, nodoBValue, nodoOLTValue, serialONTValue, proveedorValue
   ]);
@@ -442,10 +536,23 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
     return base;
   }, [listaBase, proveedorNotFound, proveedorOUMId]);
 
-  const safeCiudadValue = React.useMemo(() => {
+  const ciudadesFiltradas = React.useMemo(() => {
     const lista = Array.isArray(ciudades) ? ciudades : [];
-    return lista.some(c => c.valor === ciudadSeleccionada) ? ciudadSeleccionada : "";
-  }, [ciudades, ciudadSeleccionada]);
+    if (!estadoSeleccionado) return lista;
+    return lista.filter((c: any) => {
+      const ciudadEstado = typeof c.estado === 'object' ? c.estado?.valor : c.estado;
+      return ciudadEstado === estadoSeleccionado;
+    });
+  }, [ciudades, estadoSeleccionado]);
+
+  const safeEstadoValue = React.useMemo(() => {
+    const lista = Array.isArray(estadosList) ? estadosList : [];
+    return lista.some(e => e.valor === estadoSeleccionado) ? estadoSeleccionado : "";
+  }, [estadosList, estadoSeleccionado]);
+
+  const safeCiudadValue = React.useMemo(() => {
+    return ciudadesFiltradas.some(c => c.valor === ciudadSeleccionada) ? ciudadSeleccionada : "";
+  }, [ciudadesFiltradas, ciudadSeleccionada]);
 
   const safeTipoClienteValue = React.useMemo(() => {
     const lista = Array.isArray(tipoClienteList) ? tipoClienteList : [];
@@ -524,26 +631,55 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
               </Grid>
 
               <Grid size={{ xs: 12, md: 6 }}>
-                {renderLabel(tipoServicio === "IU" ? "Nombre del enlace" : "Nombre del Cliente", true)}
-                <TextField 
-                  fullWidth 
-                  name="name" 
-                  value={nameValue} 
-                  onChange={handleNameChange} 
-                  size="small" 
+                {renderLabel(tipoServicio === "ENLACE" ? "Nombre del enlace" : "Nombre del Cliente", true)}
+                <TextField
+                  fullWidth
+                  name="name"
+                  value={nameValue}
+                  onChange={handleNameChange}
+                  size="small"
                   error={getErrorProp("name")}
                   helperText={getErrorProp("name") ? "Campo obligatorio" : ""}
                 />
               </Grid>
 
+              {/* ✅ NUEVO: Campo Estado geográfico */}
               <Grid size={6}>
-                {renderLabel("Ciudad", true)}
-                <TextField select fullWidth name="city" value={safeCiudadValue} onChange={(e) => { setCiudadSeleccionada(e.target.value); setFieldErrors(prev => ({ ...prev, city: false })); }} size="small" error={getErrorProp("city")} helperText={getErrorProp("city") ? "Campo obligatorio" : ""}>
-                  <MenuItem value=""><em>Seleccione una ciudad</em></MenuItem>
-                  {(Array.isArray(ciudades) ? ciudades : []).map((c) => (
-                    <MenuItem key={c._id || c.valor} value={c.valor}>{c.valor}</MenuItem>
+                {renderLabel("Estado", true)}
+                <TextField
+                  select
+                  fullWidth
+                  name="estado"
+                  value={safeEstadoValue}
+                  onChange={handleEstadoChange}
+                  size="small"
+                  error={getErrorProp("estado")}
+                  helperText={getErrorProp("estado") ? "Campo obligatorio" : ""}
+                >
+                  <MenuItem value=""><em>Seleccione un estado</em></MenuItem>
+                  {(Array.isArray(estadosList) ? estadosList : []).map((e) => (
+                    <MenuItem key={e._id || e.valor} value={e.valor}>{e.valor}</MenuItem>
                   ))}
                 </TextField>
+              </Grid>
+
+              <Grid size={6}>
+                {renderLabel("Ciudad", true)}
+                <TextField
+                  fullWidth
+                  name="city"
+                  value={safeCiudadValue}
+                  size="small"
+                  disabled
+                  error={getErrorProp("city")}
+                  helperText={getErrorProp("city") ? "Campo obligatorio" : (!estadoSeleccionado ? "Seleccione primero un estado" : "Ciudad asignada automáticamente")}
+                  sx={{
+                    '& .MuiInputBase-input.Mui-disabled': {
+                      WebkitTextFillColor: '#64748b',
+                      bgcolor: '#f8fafc',
+                    },
+                  }}
+                />
               </Grid>
 
               <Grid size={6}>
@@ -601,11 +737,11 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
                   </Grid>
                   <Grid size={6}>
                     {renderLabel("NODO A", true)}
-                    <TextField name="nodoA" label="" fullWidth value={nodoAValue} onChange={handleNodoAChange} size="small" error={getErrorProp("nodoA")} helperText={getErrorProp("nodoA") ? "Campo obligatorio" : ""} />
+                    <TextField name="nodoA" label="" fullWidth value={nodoAValue} onChange={handleNodoAChange} size="small" error={getErrorProp("nodoA")} helperText={getErrorProp("nodoA") ? "Campo obligatorio" : "💡 Registrar preferiblemente la troncal"} sx={{ '& .MuiFormHelperText-root:not(.Mui-error)': { bgcolor: '#f0f9ff', color: '#0369a1', px: 1, py: 0.5, borderRadius: '4px', fontSize: '0.72rem', fontWeight: 500, mt: 0.5 } }} />
                   </Grid>
                   <Grid size={6}>
                     {renderLabel("NODO B", true)}
-                    <TextField name="nodoB" label="" fullWidth value={nodoBValue} onChange={handleNodoBChange} size="small" error={getErrorProp("nodoB")} helperText={getErrorProp("nodoB") ? "Campo obligatorio" : ""} />
+                    <TextField name="nodoB" label="" fullWidth value={nodoBValue} onChange={handleNodoBChange} size="small" error={getErrorProp("nodoB")} helperText={getErrorProp("nodoB") ? "Campo obligatorio" : "💡 Registrar preferiblemente el equipo de entrega"} sx={{ '& .MuiFormHelperText-root:not(.Mui-error)': { bgcolor: '#fffb001c', color: '#979090', px: 1, py: 0.5, borderRadius: '4px', fontSize: '0.72rem', fontWeight: 500, mt: 0.5 } }} />
                   </Grid>
                   <Grid size={6}>
                     {renderLabel("IP NETUNO", true)}
@@ -633,12 +769,12 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
                     <TextField name="serialONT" label="" fullWidth value={serialONTValue} onChange={handleSerialONTChange} size="small" error={getErrorProp("serialONT")} helperText={getErrorProp("serialONT") ? "Campo obligatorio" : ""} />
                   </Grid>
                   <Grid size={6}>
-                    {renderLabel("Nodo A y Puerto", true)}
-                    <TextField name="nodoA" label="" fullWidth value={nodoAValue} onChange={handleNodoAChange} size="small" error={getErrorProp("nodoA")} helperText={getErrorProp("nodoA") ? "Campo obligatorio" : ""} />
+                    {renderLabel("Nodo A", true)}
+                    <TextField name="nodoA" label="" fullWidth value={nodoAValue} onChange={handleNodoAChange} size="small" error={getErrorProp("nodoA")} helperText={getErrorProp("nodoA") ? "Campo obligatorio" : "💡 Registrar preferiblemente la troncal"} sx={{ '& .MuiFormHelperText-root:not(.Mui-error)': { bgcolor: '#f0f9ff', color: '#0369a1', px: 1, py: 0.5, borderRadius: '4px', fontSize: '0.72rem', fontWeight: 500, mt: 0.5 } }} />
                   </Grid>
                   <Grid size={6}>
                     {renderLabel("Nodo B", true)}
-                    <TextField name="nodoB" label="" fullWidth value={nodoBValue} onChange={handleNodoBChange} size="small" error={getErrorProp("nodoB")} helperText={getErrorProp("nodoB") ? "Campo obligatorio" : ""} />
+                    <TextField name="nodoB" label="" fullWidth value={nodoBValue} onChange={handleNodoBChange} size="small" error={getErrorProp("nodoB")} helperText={getErrorProp("nodoB") ? "Campo obligatorio" : "💡 Registrar preferiblemente el equipo de entrega"} sx={{ '& .MuiFormHelperText-root:not(.Mui-error)': { bgcolor: '#fffb001c', color: '#979090', px: 1, py: 0.5, borderRadius: '4px', fontSize: '0.72rem', fontWeight: 500, mt: 0.5 } }} />
                   </Grid>
                   <Grid size={6}>
                     {renderLabel("Nodo OLT", true)}
@@ -647,7 +783,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
                 </>
               )}
 
-              {tipoServicio === "IU" && (
+              {tipoServicio === "ENLACE" && (
                 <>
                   <Grid size={6}>
                     {renderLabel("ID Circuito", true)}
@@ -658,12 +794,13 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
                     <TextField name="vlan" label="" fullWidth value={vlanValue} onChange={handleVlanChange} size="small" inputProps={{ maxLength: 20 }} error={getErrorProp("vlan")} helperText={getErrorProp("vlan") ? "Campo obligatorio" : ""} />
                   </Grid>
                   <Grid size={6}>
-                    {renderLabel("Nodo A y Puerto", true)}
-                    <TextField name="nodoA" label="" fullWidth value={nodoAValue} onChange={handleNodoAChange} size="small" error={getErrorProp("nodoA")} helperText={getErrorProp("nodoA") ? "Campo obligatorio" : ""} />
+                    {renderLabel("Nodo A ", true)}
+                    <TextField name="nodoA" label="" fullWidth value={nodoAValue} onChange={handleNodoAChange} size="small" error={getErrorProp("nodoA")} helperText={getErrorProp("nodoA") ? "Campo obligatorio" : "💡 Registrar preferiblemente la troncal"} sx={{ '& .MuiFormHelperText-root:not(.Mui-error)': { bgcolor: '#f0f9ff', color: '#0369a1', px: 1, py: 0.5, borderRadius: '4px', fontSize: '0.72rem', fontWeight: 500, mt: 0.5 } }} />
+
                   </Grid>
                   <Grid size={6}>
                     {renderLabel("Nodo B", true)}
-                    <TextField name="nodoB" label="" fullWidth value={nodoBValue} onChange={handleNodoBChange} size="small" error={getErrorProp("nodoB")} helperText={getErrorProp("nodoB") ? "Campo obligatorio" : ""} />
+                    <TextField name="nodoB" label="" fullWidth value={nodoBValue} onChange={handleNodoBChange} size="small" error={getErrorProp("nodoB")} helperText={getErrorProp("nodoB") ? "Campo obligatorio" : "💡 Registrar preferiblemente el equipo de entrega"} sx={{ '& .MuiFormHelperText-root:not(.Mui-error)': { bgcolor: '#fffb001c', color: '#979090', px: 1, py: 0.5, borderRadius: '4px', fontSize: '0.72rem', fontWeight: 500, mt: 0.5 } }} />
                   </Grid>
                 </>
               )}
@@ -687,12 +824,12 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
                     <TextField name="vlan" label="" fullWidth value={vlanValue} onChange={handleVlanChange} size="small" inputProps={{ maxLength: 20 }} error={getErrorProp("vlan")} helperText={getErrorProp("vlan") ? "Campo obligatorio" : ""} />
                   </Grid>
                   <Grid size={6}>
-                    {renderLabel("Nodo A y puerto", true)}
-                    <TextField name="nodoA" label="" fullWidth value={nodoAValue} onChange={handleNodoAChange} size="small" error={getErrorProp("nodoA")} helperText={getErrorProp("nodoA") ? "Campo obligatorio" : ""} />
+                    {renderLabel("Nodo A", true)}
+                    <TextField name="nodoA" label="" fullWidth value={nodoAValue} onChange={handleNodoAChange} size="small" error={getErrorProp("nodoA")} helperText={getErrorProp("nodoA") ? "Campo obligatorio" : "💡 Registrar preferiblemente la troncal"} sx={{ '& .MuiFormHelperText-root:not(.Mui-error)': { bgcolor: '#f0f9ff', color: '#0369a1', px: 1, py: 0.5, borderRadius: '4px', fontSize: '0.72rem', fontWeight: 500, mt: 0.5 } }} />
                   </Grid>
                   <Grid size={6}>
                     {renderLabel("Nodo B", true)}
-                    <TextField name="nodoB" label="" fullWidth value={nodoBValue} onChange={handleNodoBChange} size="small" error={getErrorProp("nodoB")} helperText={getErrorProp("nodoB") ? "Campo obligatorio" : ""} />
+                    <TextField name="nodoB" label="" fullWidth value={nodoBValue} onChange={handleNodoBChange} size="small" error={getErrorProp("nodoB")} helperText={getErrorProp("nodoB") ? "Campo obligatorio" : "💡 Registrar preferiblemente el equipo de entrega"} sx={{ '& .MuiFormHelperText-root:not(.Mui-error)': { bgcolor: '#fffb001c', color: '#979090', px: 1, py: 0.5, borderRadius: '4px', fontSize: '0.72rem', fontWeight: 500, mt: 0.5 } }} />
                   </Grid>
                   <Grid size={6}>
                     {renderLabel("Nodo OLT", true)}
@@ -717,7 +854,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
                   </Grid>
                   <Grid size={6}>
                     {renderLabel("Nodo A", true)}
-                    <TextField name="nodoA" label="" fullWidth value={nodoAValue} onChange={handleNodoAChange} size="small" error={getErrorProp("nodoA")} helperText={getErrorProp("nodoA") ? "Campo obligatorio" : ""} />
+                    <TextField name="nodoA" label="" fullWidth value={nodoAValue} onChange={handleNodoAChange} size="small" error={getErrorProp("nodoA")} helperText={getErrorProp("nodoA") ? "Campo obligatorio" : "💡 Registrar preferiblemente la troncal"} sx={{ '& .MuiFormHelperText-root:not(.Mui-error)': { bgcolor: '#f0f9ff', color: '#0369a1', px: 1, py: 0.5, borderRadius: '4px', fontSize: '0.72rem', fontWeight: 500, mt: 0.5 } }} />
                   </Grid>
                   <Grid size={6}>
                     {renderLabel("VLAN", true)}

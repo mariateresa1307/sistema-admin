@@ -42,7 +42,6 @@ export const IncidenciasChart = ({ barData, pieData }: Props) => {
 
   return (
     <Grid container spacing={3} sx={{ mb: 4 }}>
-      {/* ✅ Gráfico de Barras: Top Servicios (por nombre) */}
       <Grid size={{ xs: 12, lg: 6 }}>
         <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'divider', borderRadius: 3, height: '100%' }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>

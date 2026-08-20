@@ -26,7 +26,7 @@ export default function RBSPage() {
   const [loading, setLoading] = useState(true);
   const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 10 });
   const [searchParams, setSearchParams] = useState<SearchParams | null>(null);
-  
+
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // ✅ Mapas de lookup para evitar consultas N+1
@@ -47,8 +47,8 @@ export default function RBSPage() {
     const loadLookupMaps = async () => {
       try {
         const [resProveedores, resTipoCliente] = await Promise.all([
-          getMiscellaneous({ categoria: "PROVEEDOR", limit: 9999 }),
-          getMiscellaneous({ categoria: "TIPO_CLIENTE", limit: 9999 }),
+          getMiscellaneous({ categoria: "PROVEEDOR", limit: 999 }),
+          getMiscellaneous({ categoria: "TIPO_CLIENTE", limit: 999 }),
         ]);
 
         const proveedores = normalizeToArray(resProveedores);
@@ -83,16 +83,13 @@ export default function RBSPage() {
     try {
       const backendPage = paginationModel.page + 1;
 
-      let excludeTipo = undefined;
-      let tipoServicioParam = undefined;
+      let excludeTipo: string | undefined = undefined;
+      let tipoServicioParam: string | undefined = undefined;
 
-      if (tabValue === 0) {
-        excludeTipo = "IU";
-      } else if (tabValue === 1) {
-        tipoServicioParam = "IU"; 
-      }
+      if (tabValue === 0) excludeTipo = "ENLACE";
+      else if (tabValue === 1) tipoServicioParam = "ENLACE";
 
-      if (searchParams?.field === 'tipoServicio' && searchParams.value) {
+      if (searchParams?.field === "tipoServicio" && searchParams.value) {
         tipoServicioParam = searchParams.value;
         excludeTipo = undefined;
       }
@@ -105,12 +102,15 @@ export default function RBSPage() {
       if (tipoServicioParam) apiParams.tipoServicio = tipoServicioParam;
       if (excludeTipo) apiParams.excludeTipo = excludeTipo;
 
-      // ✅ Lógica de búsqueda (incluye soporte para nodos en el backend)
-      if (searchParams?.field === 'nodos' && searchParams.value) {
+      if (searchParams?.field === "nodos" && searchParams.value) {
         apiParams.nodos = searchParams.value;
-      } else if (searchParams?.field === 'status' && searchParams.value) {
+      } else if (searchParams?.field === "status" && searchParams.value) {
         apiParams.status = searchParams.value;
-      } else if (searchParams?.field && searchParams.field !== 'tipoServicio' && searchParams.field !== 'status' && searchParams.field !== 'nodos' && searchParams.value) {
+      } else if (
+        searchParams?.field &&
+        !["tipoServicio", "status", "nodos"].includes(searchParams.field) &&
+        searchParams.value
+      ) {
         apiParams.search = searchParams.value;
       }
 
@@ -126,9 +126,15 @@ export default function RBSPage() {
     } finally {
       setLoading(false);
     }
-  }, [paginationModel.page, paginationModel.pageSize, tabValue, searchParams, refreshTrigger]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paginationModel.page, paginationModel.pageSize, tabValue, searchParams]);
 
-  useEffect(() => { fetchServices(); }, [fetchServices]);
+  // ✅ Único useEffect que dispara el fetch (incluye refreshTrigger)
+  useEffect(() => {
+    fetchServices();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchServices, refreshTrigger]);
+
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -164,7 +170,7 @@ export default function RBSPage() {
     switch (row.tipoServicio) {
       case "METROLAN": return `VLAN: ${row.vlan} | NodoA: ${row.nodoA || "-"}`;
       case "RBS": return `ID RBS: ${row.idRBS} | Serial: ${row.serialONT || "-"}`;
-      case "IU": return `ID: ${row.id_circuito} | Proveedor: ${getTipoClienteNombre(row.tipoCliente)}`;
+      case "ENLACE": return `ID: ${row.id_circuito} | Proveedor: ${getTipoClienteNombre(row.tipoCliente)}`;
       case "DOG": return `Circuito: ${row.id_circuito} | Contrato: ${row.contrato || "-"}`;
       case "REDES COMPARTIDAS": return `VLAN: ${row.vlan} | Equipo: ${row.nodoA || "-"}`;
       default: return "N/A";
@@ -195,9 +201,9 @@ export default function RBSPage() {
     { field: "tipoServicio", headerName: "Tipo", width: 100 },
     { field: "name", headerName: "Nombre del Enlace", flex: 1 },
     { field: "id_circuito", headerName: "ID Circuito", width: 150 },
-    { 
-      field: "proveedorDelServicioCompartido", 
-      headerName: "Proveedor", 
+    {
+      field: "proveedorDelServicioCompartido",
+      headerName: "Proveedor",
       width: 200,
       renderCell: (params) => getProveedorNombre(params.value),
     },
@@ -224,7 +230,7 @@ export default function RBSPage() {
           <Tabs value={tabValue} onChange={handleTabChange} aria-label="service tabs"
             sx={{ "& .MuiTab-root": { textTransform: "none", fontWeight: 600, fontSize: "1rem" } }}>
             <Tab label="Servicios" />
-            <Tab label="Enlaces IU" />
+            <Tab label="Enlaces" />
           </Tabs>
         </Box>
 
@@ -270,14 +276,31 @@ export default function RBSPage() {
         open={isDetailOpen}
         onClose={() => {
           setIsDetailOpen(false);
-          setRefreshTrigger(prev => prev + 1);
         }}
-        service={selectedService ? { ...selectedService, id_circuito: selectedService.id_circuito || "" } as any : null}
-        onEditClick={() => { setIsDetailOpen(false); setIsDialogOpen(true); }}
-        onDeleteSuccess={() => {
+        service={
+          selectedService
+            ? ({ ...selectedService, id_circuito: selectedService.id_circuito || "" } as any)
+            : null
+        }
+        onEditClick={() => {
           setIsDetailOpen(false);
-          setRefreshTrigger(prev => prev + 1);
+          setIsDialogOpen(true);
         }}
+        onDeleteSuccess={() => {
+    // ✅ Actualiza la fila localmente al instante
+    if (selectedService?._id) {
+      const id = String(selectedService._id);
+      const nuevoStatus = selectedService.status === "Activo" ? "Inactivo" : "Activo";
+      setRows((prev) =>
+        prev.map((r) =>
+          String((r as any)._id) === id ? { ...r, status: nuevoStatus } : r
+        )
+      );
+    }
+    setIsDetailOpen(false);
+    setSelectedService(null);
+    setRefreshTrigger((prev) => prev + 1);
+  }}
       />
     </>
   );

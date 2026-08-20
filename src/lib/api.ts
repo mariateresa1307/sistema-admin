@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL, 
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000',
   withCredentials: true,
 });
 
@@ -88,7 +88,14 @@ export default api;
 export const getMiscellaneousById = (id: string) => api.get(`/miscellaneous/${id}`);
 
 // ENDPOINTS DE USUARIOS
-export const getUsers = (search?: string, params?: any) =>  api.get(`/user${search ? `?search=${search}` : ''}`, { params });
+export const getUsers = (
+  params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    isActive?: boolean;
+  }
+) => api.get("/user", { params });
 export const createUser = (data: any) => api.post('/user', data);
 export const updateUser = (id: string, data: any) => api.put(`/user/${id}`, data);
 export const deleteUser = (id: string) => api.delete(`/user/${id}`);

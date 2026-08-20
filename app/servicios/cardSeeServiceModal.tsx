@@ -62,23 +62,23 @@ export const CardSeeServiceModal = ({
     open: false,
     title: "",
     message: "",
-    onConfirm: () => {},
+    onConfirm: () => { },
     type: "warning" as "warning" | "info" | "success",
   });
 
 
   const normalizeToArray = (response: any): any[] => {
     if (!response?.data) return [];
-    
+
     // Si response.data ya es el array directamente
     if (Array.isArray(response.data)) return response.data;
-    
+
     // Si response.data tiene estructura paginada { data: [...], total: X }
     if (Array.isArray(response.data.data)) return response.data.data;
-    
+
     // Si response.data tiene estructura { results: [...] }
     if (Array.isArray(response.data.results)) return response.data.results;
-    
+
     // Fallback: array vacío
     return [];
   };
@@ -153,6 +153,7 @@ export const CardSeeServiceModal = ({
       title: isActivo ? "Desactivar Servicio" : "Reactivar Servicio",
       message: `¿Estás seguro de que deseas ${accionTexto} el servicio "${service.name}"? El registro se marcará como "${nuevoEstado}".`,
       type: "warning",
+
       onConfirm: async () => {
         setConfirmDialog((prev) => ({ ...prev, open: false }));
         try {
@@ -165,10 +166,23 @@ export const CardSeeServiceModal = ({
               },
             }),
           );
-          onClose();
-          if (onDeleteSuccess) onDeleteSuccess();
+
+          
+          if (onDeleteSuccess) {
+            onDeleteSuccess();
+          } else {
+            onClose();
+          }
         } catch (error: any) {
           console.error(`❌ [SeeModal] Error al ${accionTexto} servicio:`, error);
+          window.dispatchEvent(
+            new CustomEvent("app-notification", {
+              detail: {
+                message: `Error al ${accionTexto} el servicio`,
+                severity: "error",
+              },
+            }),
+          );
         }
       },
     });
@@ -211,7 +225,7 @@ export const CardSeeServiceModal = ({
           { label: "NODO B", value: s.nodoB },
           { label: "NODO OLT", value: s.nodoOLT },
         ];
-      case "IU":
+      case "ENLACE":
         return [
           { label: "NOMBRE DE ENLACE", value: s.name },
           { label: "VLAN", value: s.vlan },
@@ -231,12 +245,12 @@ export const CardSeeServiceModal = ({
       case "REDES COMPARTIDAS":
         return [
           { label: "NOMBRE CLIENTE", value: s.name },
-           { label: "TIPO CLIENTE", value: loadingTipoCliente ? "Cargando..." : tipoClienteNombre || "—" },
+          { label: "TIPO CLIENTE", value: loadingTipoCliente ? "Cargando..." : tipoClienteNombre || "—" },
           { label: "CONTRATO", value: s.contrato },
           { label: "VLAN", value: s.vlan },
           { label: "NODO A", value: s.nodoA },
           { label: "IP NETUNO", value: s.ipNetuno },
-          
+
         ];
       default:
         return [];

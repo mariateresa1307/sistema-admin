@@ -1,8 +1,9 @@
 'use client';
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Paper, Typography, Chip, TablePagination, Box, TextField, MenuItem, Stack
+  Paper, Typography, Chip, TablePagination, Box, TextField, MenuItem, Stack,
+  CircularProgress
 } from '@mui/material';
 import { Search as SearchIcon } from '@mui/icons-material';
 import dayjs from 'dayjs';
@@ -14,17 +15,16 @@ interface Props {
   onRowClick: (row: IncidenciaPorServicio) => void;
 }
 
-// ✅ Columnas actualizadas: Tipo - Total - Abiertas - Cerradas - Última Incidencia
 const HEADERS = [
-  { key: 'tipoServicio', label: 'Tipo' },
-  { key: 'abiertas', label: 'Abiertas' },
-  { key: 'cerradas', label: 'Cerradas' },
-  { key: 'totalIncidencias', label: 'Total' },
-  { key: 'ultimaIncidencia', label: 'Última Incidencia' },
+  { key: 'tipoServicio', label: 'Tipo de Servicio', align: 'left' as const },
+  { key: 'totalIncidencias', label: 'Total', align: 'center' as const },
+  { key: 'abiertas', label: 'Abiertas', align: 'center' as const },
+  { key: 'cerradas', label: 'Cerradas', align: 'center' as const },
+  { key: 'ultimaIncidencia', label: 'Última Incidencia', align: 'center' as const },
 ];
 
-// ✅ Eliminada búsqueda por nombre de servicio
 const SEARCH_FIELDS = [
+  { value: 'tipoServicio', label: 'Tipo de Servicio' },
   { value: 'caseNumber', label: 'Número de Caso' },
 ];
 
@@ -34,23 +34,40 @@ export const ReportTable = ({ data, loading, onRowClick }: Props) => {
   const [searchField, setSearchField] = useState('tipoServicio');
   const [searchTerm, setSearchTerm] = useState('');
 
-  const filteredData = useMemo(() => {
-    if (!searchTerm.trim()) return data;
-    const term = searchTerm.toLowerCase();
+  // 🔍 LOG DE DIAGNÓSTICO: muestra la estructura real de los datos
+  useEffect(() => {
+    if (data && data.length > 0) {
+      console.log('📊 [ReportTable] Estructura de datos recibida:', data[0]);
+      console.log('📊 [ReportTable] Todos los registros:', data);
+    }
+  }, [data]);
 
-    return data.filter((row) => {
+  // ✅ Normalización defensiva: maneja múltiples formatos posibles del backend
+const normalizedData = useMemo(() => {
+  return data.map((row, index) => ({
+    ...row,
+    tipoServicio: row.tipoServicio || 'Sin Tipo',
+    _key: `${row.tipoServicio}-${index}`, // ✅ índice garantiza unicidad
+  }));
+}, [data]);
+
+  const filteredData = useMemo(() => {
+    if (!searchTerm.trim()) return normalizedData;
+    const term = searchTerm.toLowerCase().trim();
+
+    return normalizedData.filter((row) => {
       switch (searchField) {
         case 'tipoServicio':
           return row.tipoServicio.toLowerCase().includes(term);
         case 'caseNumber':
-          return row.tickets.some((ticket) =>
+          return row.tickets?.some((ticket) =>
             ticket.caseNumber.toLowerCase().includes(term)
-          );
+          ) ?? false;
         default:
           return true;
       }
     });
-  }, [data, searchField, searchTerm]);
+  }, [normalizedData, searchField, searchTerm]);
 
   const paginatedData = useMemo(() => {
     const start = page * rowsPerPage;
@@ -74,15 +91,28 @@ export const ReportTable = ({ data, loading, onRowClick }: Props) => {
     setPage(0);
   }, []);
 
+  const handleSearchFieldChange = useCallback((value: string) => {
+    setSearchField(value);
+    setSearchTerm('');
+    setPage(0);
+  }, []);
+
+  const formatDate = (date: string | Date | null): string => {
+    if (!date) return 'N/A';
+    return dayjs(date).format('DD/MM/YYYY HH:mm');
+  };
+
   return (
     <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3, overflow: 'hidden' }}>
+      {/* Barra de búsqueda */}
       <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', bgcolor: '#f8fafc' }}>
         <Stack direction="row" spacing={2} alignItems="center">
           <TextField
             select
             size="small"
+            label="Buscar por"
             value={searchField}
-            onChange={(e) => setSearchField(e.target.value)}
+            onChange={(e) => handleSearchFieldChange(e.target.value)}
             sx={{ minWidth: 200 }}
           >
             {SEARCH_FIELDS.map((field) => (
@@ -104,6 +134,7 @@ export const ReportTable = ({ data, loading, onRowClick }: Props) => {
         </Stack>
       </Box>
 
+      {/* Tabla */}
       <TableContainer>
         <Table>
           <TableHead>
@@ -111,6 +142,7 @@ export const ReportTable = ({ data, loading, onRowClick }: Props) => {
               {HEADERS.map((header) => (
                 <TableCell
                   key={header.key}
+                  align={header.align}
                   sx={{
                     fontWeight: 700,
                     color: '#fff',
@@ -128,22 +160,25 @@ export const ReportTable = ({ data, loading, onRowClick }: Props) => {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={HEADERS.length} align="center" sx={{ py: 4 }}>
-                  <Typography color="text.secondary">Cargando datos...</Typography>
+                <TableCell colSpan={HEADERS.length} align="center" sx={{ py: 6 }}>
+                  <Stack alignItems="center" spacing={1}>
+                    <CircularProgress size={24} />
+                    <Typography color="text.secondary">Cargando datos...</Typography>
+                  </Stack>
                 </TableCell>
               </TableRow>
             ) : paginatedData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={HEADERS.length} align="center" sx={{ py: 4 }}>
+                <TableCell colSpan={HEADERS.length} align="center" sx={{ py: 6 }}>
                   <Typography color="text.secondary">
                     {searchTerm ? 'No se encontraron resultados para la búsqueda' : 'No hay datos disponibles'}
                   </Typography>
                 </TableCell>
               </TableRow>
             ) : (
-              paginatedData.map((row) => (
+              paginatedData.map((row, index) => (
                 <TableRow
-                  key={`${row.tipoServicio}-${row.ultimaIncidencia}`}
+                  key={`${row.tipoServicio}-${index}`}   // ✅ único siempre
                   hover
                   onClick={() => onRowClick(row)}
                   sx={{
@@ -152,38 +187,60 @@ export const ReportTable = ({ data, loading, onRowClick }: Props) => {
                     transition: 'background-color 0.15s ease',
                   }}
                 >
+                  {/* Tipo de Servicio */}
                   <TableCell>
                     <Chip
                       label={row.tipoServicio}
                       size="small"
                       variant="outlined"
-                      sx={{ fontWeight: 600, fontSize: '0.72rem' }}
-                    />
-                  </TableCell>
-                
-                  <TableCell>
-                    <Chip
-                      label={row.abiertas}
-                      size="small"
-                      sx={{ bgcolor: '#ffebee', color: '#c62828', fontWeight: 700 }}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={row.cerradas}
-                      size="small"
-                      sx={{ bgcolor: '#e8f5e9', color: '#2e7d32', fontWeight: 700 }}
+                      sx={{
+                        fontWeight: 600,
+                        fontSize: '0.75rem',
+                        borderColor: '#080769',
+                        color: '#080769'
+                      }}
                     />
                   </TableCell>
 
-                    <TableCell>
+                  {/* Total */}
+                  <TableCell align="center">
                     <Typography variant="body2" sx={{ fontWeight: 700, color: '#080769' }}>
                       {row.totalIncidencias}
                     </Typography>
                   </TableCell>
-                  <TableCell>
+
+                  {/* Abiertas */}
+                  <TableCell align="center">
+                    <Chip
+                      label={row.abiertas}
+                      size="small"
+                      sx={{
+                        bgcolor: '#ffebee',
+                        color: '#c62828',
+                        fontWeight: 700,
+                        minWidth: 40
+                      }}
+                    />
+                  </TableCell>
+
+                  {/* Cerradas */}
+                  <TableCell align="center">
+                    <Chip
+                      label={row.cerradas}
+                      size="small"
+                      sx={{
+                        bgcolor: '#e8f5e9',
+                        color: '#2e7d32',
+                        fontWeight: 700,
+                        minWidth: 40
+                      }}
+                    />
+                  </TableCell>
+
+                  {/* Última Incidencia */}
+                  <TableCell align="center">
                     <Typography variant="body2" sx={{ color: '#64748b', fontSize: '0.85rem' }}>
-                      {dayjs(row.ultimaIncidencia).format('DD/MM/YYYY HH:mm')}
+                      {formatDate(row.ultimaIncidencia)}
                     </Typography>
                   </TableCell>
                 </TableRow>
@@ -193,6 +250,7 @@ export const ReportTable = ({ data, loading, onRowClick }: Props) => {
         </Table>
       </TableContainer>
 
+      {/* Paginación */}
       <TablePagination
         component="div"
         count={filteredData.length}
@@ -203,7 +261,11 @@ export const ReportTable = ({ data, loading, onRowClick }: Props) => {
         rowsPerPageOptions={[10, 25, 50, 100]}
         labelRowsPerPage="Filas por página"
         labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
-        sx={{ borderTop: '1px solid', borderColor: 'divider', '& .MuiTablePagination-toolbar': { fontSize: '0.85rem' } }}
+        sx={{
+          borderTop: '1px solid',
+          borderColor: 'divider',
+          '& .MuiTablePagination-toolbar': { fontSize: '0.85rem' }
+        }}
       />
     </Paper>
   );

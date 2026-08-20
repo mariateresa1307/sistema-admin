@@ -54,6 +54,7 @@ export interface TicketRecord {
   fechaAsignacionOpA?: string;
   createdAt?: Date;
   updatedAt?: Date;
+  escaladoPor?: string; 
 }
 
 export interface TicketFormData {
@@ -95,6 +96,7 @@ export interface TicketFormData {
   severidad: string;
   imputable: string;
   afectacion: boolean;
+  escaladoPor?: string;
 }
 
 export const initialFormState: TicketFormData = {
@@ -136,6 +138,7 @@ export const initialFormState: TicketFormData = {
   severidad: '',
   imputable: '',
   afectacion: false,
+  escaladoPor: '', 
   
 };
 
@@ -281,6 +284,7 @@ export const mapTicketToFormData = (
     estatus: ticket.status || '',
     turnoAsignado: ticket.turnoAsignado === 'NOCTURNO' ? 'NOCTURNO' : 'DIURNO',
     operador: ticket.operador || '',
+    escaladoPor: ticket.escaladoPor || '',
     
   };
 };
@@ -321,6 +325,7 @@ export const mapFormToUpdatePayload = (form: TicketFormData & Record<string, unk
   operador: form.operador,
   severidad: form.severidad,
   imputable: form.imputable,
+  escaladoPor: form.escaladoPor,  
   tDeteccion: form.tDeteccion as number | undefined,
   tAtencion: form.tAtencion as number | undefined,
   tEscalado: form.tEscalado as number | undefined,

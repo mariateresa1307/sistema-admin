@@ -1,22 +1,14 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import dayjs, { Dayjs } from 'dayjs';
+import duration from 'dayjs/plugin/duration';
 import { getService, getTickets, getMiscellaneous } from '@/lib/api';
 import { Service } from 'app/utils/types';
-import duration from 'dayjs/plugin/duration'; // ✅ 1. Importar el plugin
 
-dayjs.extend(duration); 
-export interface IncidenciaPorServicio {
-  tipoServicio: string;
-  servicioId: string;
-  servicioNombre: string;
-  totalIncidencias: number;
-  abiertas: number;
-  cerradas: number;
-  ultimaIncidencia: string;
-  serviciosCount: number;
-  tickets: TicketAsociado[];
-}
+dayjs.extend(duration);
 
+/* ============================================================ */
+/*  TIPOS                                                        */
+/* ============================================================ */
 export interface TicketAsociado {
   _id: string;
   caseNumber: string;
@@ -33,6 +25,18 @@ export interface TicketAsociado {
   proveedorDelServicioCompartido?: string;
 }
 
+export interface IncidenciaPorServicio {
+  tipoServicio: string;
+  servicioId: string;
+  servicioNombre: string;
+  totalIncidencias: number;
+  abiertas: number;
+  cerradas: number;
+  ultimaIncidencia: string;
+  serviciosCount: number;
+  tickets: TicketAsociado[];
+}
+
 export interface IncidenciaPorProveedor {
   ticketId: string;
   caseNumber: string;
@@ -43,7 +47,7 @@ export interface IncidenciaPorProveedor {
   horaInicioFalla: string;
   horaDeteccionNoc: string;
   horaInicioAtencion: string;
-  horaFinAfectacion: string; 
+  horaFinAfectacion: string;
   duracionAfectacion: string;
   causaRaiz: string;
   solucionCaso: string;
@@ -58,7 +62,6 @@ export interface IncidenciaTotales {
   servicios: number;
 }
 
-// ✅ Tipo para gráfico de barras (por nombre de servicio)
 export interface ServicioChartData {
   nombre: string;
   total: number;
@@ -66,7 +69,6 @@ export interface ServicioChartData {
   cerradas: number;
 }
 
-// ✅ Tipo para gráfico de torta (por tipo de servicio)
 export interface TipoServicioChartData {
   name: string;
   value: number;
@@ -82,7 +84,7 @@ interface UseIncidenciasDataReturn {
   filters: IncidenciaFilters;
   setFilters: React.Dispatch<React.SetStateAction<IncidenciaFilters>>;
   data: IncidenciaPorServicio[];
-  dataPorProveedor: IncidenciaPorProveedor[]; 
+  dataPorProveedor: IncidenciaPorProveedor[];
   servicioChartData: ServicioChartData[];
   tipoServicioChartData: TipoServicioChartData[];
   servicioChartDataPorProveedor: ServicioChartData[];
@@ -93,9 +95,61 @@ interface UseIncidenciasDataReturn {
   error: string | null;
   loadData: () => Promise<void>;
   clearError: () => void;
-  proveedores: any[]; 
+  proveedores: any[];
 }
 
+/* ============================================================ */
+/*  HELPERS PUROS (sin efectos secundarios)                      */
+/* ============================================================ */
+
+/** Extrae datos planos de una respuesta API (maneja varios formatos). */
+const extractData = <T = any>(res: any): T[] => {
+  if (!res?.data) return [];
+  if (Array.isArray(res.data)) return res.data;
+  if (Array.isArray(res.data.data)) return res.data.data;
+  if (Array.isArray(res.data.results)) return res.data.results;
+  return [];
+};
+
+/** Construye un Map id → valor a partir de datos miscellaneous. */
+const buildMap = (data: any[]): Map<string, string> => {
+  const map = new Map<string, string>();
+  data.forEach((item: any) => {
+    if (item?._id && item?.valor) map.set(String(item._id), item.valor);
+  });
+  return map;
+};
+
+/** Calcula duración legible entre dos fechas. */
+const calcularDuracion = (inicio: any, fin: any): string => {
+  if (!inicio || !fin) return 'N/A';
+  const i = dayjs(inicio);
+  const f = dayjs(fin);
+  if (!i.isValid() || !f.isValid()) return 'N/A';
+
+  const diffMs = f.diff(i);
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+  const hoursRemaining = diffHours % 24;
+  const minsRemaining = diffMins % 60;
+
+  if (diffDays > 0) return `${diffDays}d ${hoursRemaining}h ${minsRemaining}min`;
+  if (diffHours > 0) return `${diffHours}h ${minsRemaining}min`;
+  return `${diffMins}min`;
+};
+
+/** Resuelve el nombre del servicio desde el objeto o fallback. */
+const getServicioNombre = (servicio: any): string =>
+  servicio?.name || servicio?.id_circuito || servicio?.id_netuno || 'Servicio desconocido';
+
+/** Resuelve el tipo de servicio con fallback seguro. */
+const getTipoServicio = (servicio: any): string =>
+  servicio?.tipoServicio?.trim() || 'Sin Tipo';
+
+/* ============================================================ */
+/*  HOOK PRINCIPAL                                               */
+/* ============================================================ */
 export const useIncidenciasData = (): UseIncidenciasDataReturn => {
   const [filters, setFilters] = useState<IncidenciaFilters>({
     tipoServicio: '',
@@ -103,21 +157,17 @@ export const useIncidenciasData = (): UseIncidenciasDataReturn => {
     mes: dayjs(),
   });
   const [data, setData] = useState<IncidenciaPorServicio[]>([]);
-  const [dataPorProveedor, setDataPorProveedor] = useState<IncidenciaPorProveedor[]>([]); // ✅ NUEVO
+  const [dataPorProveedor, setDataPorProveedor] = useState<IncidenciaPorProveedor[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [proveedores, setProveedores] = useState<any[]>([]);
 
+  // Cargar proveedores al montar
   useEffect(() => {
     const loadProveedores = async () => {
       try {
         const res = await getMiscellaneous({ categoria: 'PROVEEDOR', limit: 9999 });
-        const proveedoresData = Array.isArray(res?.data)
-          ? res.data
-          : Array.isArray(res?.data?.data)
-            ? res.data.data
-            : [];
-        setProveedores(proveedoresData);
+        setProveedores(extractData(res));
       } catch (err) {
         console.error('❌ Error cargando proveedores:', err);
       }
@@ -137,77 +187,43 @@ export const useIncidenciasData = (): UseIncidenciasDataReturn => {
         getMiscellaneous({ categoria: 'SOLUCION_CASO', limit: 9999 }),
       ]);
 
-      const services: Service[] = servicesRes?.data?.data ?? [];
-      const allTickets: any[] = ticketsRes?.data?.data ?? [];
-      const causasMap = new Map<string, string>();
-      const causasData = Array.isArray(causasRes?.data) ? causasRes.data : (Array.isArray(causasRes?.data?.data) ? causasRes.data.data : []);
-      causasData.forEach((c: any) => causasMap.set(c._id, c.valor));
+      const services: Service[] = extractData(servicesRes);
+      const allTickets: any[] = extractData(ticketsRes);
+      const causasMap = buildMap(extractData(causasRes));
+      const solucionesMap = buildMap(extractData(solucionesRes));
 
-      const solucionesMap = new Map<string, string>();
-      const solucionesData = Array.isArray(solucionesRes?.data) ? solucionesRes.data : (Array.isArray(solucionesRes?.data?.data) ? solucionesRes.data.data : []);
-      solucionesData.forEach((s: any) => solucionesMap.set(s._id, s.valor));
-
-      const tickets = allTickets.filter((ticket) =>
-        dayjs(ticket.createdAt).isSame(filters.mes, 'month'),
+      const tickets = allTickets.filter((t) =>
+        dayjs(t.createdAt).isSame(filters.mes, 'month'),
       );
 
       const serviceMap = new Map<string, Service>();
-      services.forEach((service) => serviceMap.set(String(service._id), service));
+      services.forEach((s) => serviceMap.set(String(s._id), s));
 
       const proveedoresMap = new Map<string, string>();
-      proveedores.forEach((p) => {
-        proveedoresMap.set(p._id, p.valor);
-      });
+      proveedores.forEach((p) => proveedoresMap.set(p._id, p.valor));
 
+      // Maps de agrupación
       const incidenciasPorProveedorMap = new Map<string, IncidenciaPorProveedor>();
       const servicioMap = new Map<string, any>();
       const tipoMap = new Map<string, any>();
 
       tickets.forEach((ticket) => {
-        const afectados = Array.isArray(ticket.serviciosAfectados)
-          ? ticket.serviciosAfectados
-          : [];
+        const afectados = Array.isArray(ticket.serviciosAfectados) ? ticket.serviciosAfectados : [];
 
         afectados.forEach((item: any) => {
           const id = typeof item === 'string' ? item : String(item?._id ?? '');
           if (!id) return;
 
           const servicio = typeof item === 'object' && item !== null ? item : serviceMap.get(id);
-          const tipoServicio = servicio?.tipoServicio || 'N/A';
-          const servicioNombre = servicio?.name || servicio?.id_circuito || 'Servicio desconocido';
+          const tipoServicio = getTipoServicio(servicio);
+          const servicioNombre = getServicioNombre(servicio);
           const proveedorId = String(servicio?.proveedorDelServicioCompartido || servicio?.ultimaMilla || '');
           const proveedorNombre = proveedoresMap.get(proveedorId) || 'Sin proveedor';
-          const causaRaizId = ticket.causaRaiz;
-          const solucionId = ticket.SolucionCaso || ticket.solucionCaso; // Maneja ambas posibles mayúsculas
-          const causaRaizNombre = causaRaizId ? (causasMap.get(causaRaizId) || causaRaizId) : 'Sin especificar';
+          const causaRaizNombre = ticket.causaRaiz ? (causasMap.get(ticket.causaRaiz) || ticket.causaRaiz) : 'Sin especificar';
+          const solucionId = ticket.SolucionCaso || ticket.solucionCaso;
           const solucionNombre = solucionId ? (solucionesMap.get(solucionId) || solucionId) : 'Sin especificar';
+          const duracionAfectacion = calcularDuracion(ticket.horaInicioFalla, ticket.horaFinAfectacion);
 
-           let duracionAfectacion = 'N/A';
-          if (ticket.horaInicioFalla && ticket.horaFinAfectacion) {
-            const inicio = dayjs(ticket.horaInicioFalla);
-            const fin = dayjs(ticket.horaFinAfectacion);
-            
-            if (inicio.isValid() && fin.isValid()) {
-              const diffMs = fin.diff(inicio); // Diferencia en milisegundos
-              const diffMins = Math.floor(diffMs / 60000);
-              const diffHours = Math.floor(diffMins / 60);
-              const diffDays = Math.floor(diffHours / 24);
-              
-              const hoursRemaining = diffHours % 24;
-              const minsRemaining = diffMins % 60;
-              
-              if (diffDays > 0) {
-                duracionAfectacion = `${diffDays}d ${hoursRemaining}h ${minsRemaining}min`;
-              } else if (diffHours > 0) {
-                duracionAfectacion = `${diffHours}h ${minsRemaining}min`;
-              } else {
-                duracionAfectacion = `${diffMins}min`;
-              }
-            }
-          }
-
-
-        
           const ticketResumen: TicketAsociado = {
             _id: String(ticket._id ?? ''),
             caseNumber: ticket.caseNumber || 'S/N',
@@ -224,10 +240,10 @@ export const useIncidenciasData = (): UseIncidenciasDataReturn => {
             proveedorDelServicioCompartido: servicio?.proveedorDelServicioCompartido,
           };
 
-          //  a vista por proveedor (clave única por ticket + servicio)
-          const key = `${ticket._id}-${id}`;
-          if (!incidenciasPorProveedorMap.has(key)) {
-            incidenciasPorProveedorMap.set(key, {
+          // Vista por proveedor (clave única)
+          const keyProv = `${ticket._id}-${id}`;
+          if (!incidenciasPorProveedorMap.has(keyProv)) {
+            incidenciasPorProveedorMap.set(keyProv, {
               ticketId: String(ticket._id),
               caseNumber: ticket.caseNumber || 'S/N',
               subject: ticket.subject || 'Sin asunto',
@@ -238,7 +254,7 @@ export const useIncidenciasData = (): UseIncidenciasDataReturn => {
               horaDeteccionNoc: ticket.horaDeteccionNoc || 'N/A',
               horaInicioAtencion: ticket.horaInicioAtencion || 'N/A',
               horaFinAfectacion: ticket.horaFinAfectacion || 'N/A',
-               duracionAfectacion: duracionAfectacion, 
+              duracionAfectacion,
               causaRaiz: causaRaizNombre,
               solucionCaso: solucionNombre,
               status: ticket.status || 'N/A',
@@ -246,9 +262,10 @@ export const useIncidenciasData = (): UseIncidenciasDataReturn => {
             });
           }
 
-          // ✅ Agrupar por servicio individual
+          // Agrupación por servicio individual
           if (!servicioMap.has(id)) {
             servicioMap.set(id, {
+              id,
               nombre: servicioNombre,
               tipoServicio,
               tickets: [],
@@ -258,25 +275,24 @@ export const useIncidenciasData = (): UseIncidenciasDataReturn => {
               ultimaIncidencia: ticket.createdAt,
             });
           }
-
-          const servicioEntry = servicioMap.get(id)!;
+          const servicioEntry = servicioMap.get(id);
           servicioEntry.totalIncidencias += 1;
-
           if (String(ticket.status).toLowerCase() === 'cerrado') {
             servicioEntry.cerradas += 1;
           } else {
             servicioEntry.abiertas += 1;
           }
-
           if (dayjs(ticket.createdAt).isAfter(dayjs(servicioEntry.ultimaIncidencia))) {
             servicioEntry.ultimaIncidencia = ticket.createdAt;
           }
-
           servicioEntry.tickets.push(ticketResumen);
 
-          // ✅ Agrupar por tipo de servicio
+          // Agrupación por tipo de servicio
           if (!tipoMap.has(tipoServicio)) {
             tipoMap.set(tipoServicio, {
+              tipoServicio,
+              servicioId: id,
+              servicioNombre,
               tickets: [],
               serviciosSet: new Set(),
               totalIncidencias: 0,
@@ -285,73 +301,69 @@ export const useIncidenciasData = (): UseIncidenciasDataReturn => {
               ultimaIncidencia: ticket.createdAt,
             });
           }
-
-          const tipoEntry = tipoMap.get(tipoServicio)!;
+          const tipoEntry = tipoMap.get(tipoServicio);
           tipoEntry.serviciosSet.add(id);
           tipoEntry.totalIncidencias += 1;
-
           if (String(ticket.status).toLowerCase() === 'cerrado') {
             tipoEntry.cerradas += 1;
           } else {
             tipoEntry.abiertas += 1;
           }
-
           if (dayjs(ticket.createdAt).isAfter(dayjs(tipoEntry.ultimaIncidencia))) {
             tipoEntry.ultimaIncidencia = ticket.createdAt;
           }
-
           tipoEntry.tickets.push({ ...ticketResumen });
         });
       });
 
-      let result: IncidenciaPorServicio[] = Array.from(tipoMap.entries()).map(
-        ([tipoServicio, value]) => ({
-          tipoServicio,
-          servicioId: value.servicioId ?? '',
-          servicioNombre: value.servicioNombre ?? '',
-          totalIncidencias: value.totalIncidencias,
-          abiertas: value.abiertas,
-          cerradas: value.cerradas,
-          ultimaIncidencia: value.ultimaIncidencia,
-          serviciosCount: value.serviciosSet.size,
-          tickets: value.tickets,
-        })
-      );
+      // Construir resultado final
+      let result: IncidenciaPorServicio[] = Array.from(tipoMap.values()).map((value) => ({
+        tipoServicio: value.tipoServicio,
+        servicioId: value.servicioId,
+        servicioNombre: value.servicioNombre,
+        totalIncidencias: value.totalIncidencias,
+        abiertas: value.abiertas,
+        cerradas: value.cerradas,
+        ultimaIncidencia: value.ultimaIncidencia,
+        serviciosCount: value.serviciosSet.size,
+        tickets: value.tickets,
+      }));
 
+      // Aplicar filtros
       if (filters.tipoServicio) {
         result = result.filter((item) => item.tipoServicio === filters.tipoServicio);
       }
-
-      // Si hay filtro de proveedor, también filtramos la vista agrupada
       if (filters.proveedor) {
-        result = result.filter((item) => {
-          return item.tickets.some((ticket) => {
+        result = result.filter((item) =>
+          item.tickets.some((ticket) => {
             const proveedorId = ticket.proveedorDelServicioCompartido || ticket.ultimaMilla;
             return proveedorId === filters.proveedor;
-          });
-        });
-      }
-
-      result.sort((a, b) => b.totalIncidencias - a.totalIncidencias);
-      setData(result);
-
-      // ✅ 2. Procesar datos detallados por proveedor (Vista al seleccionar proveedor)
-      let resultPorProveedor = Array.from(incidenciasPorProveedorMap.values());
-
-      if (filters.proveedor) {
-        const proveedorNombreFiltro = proveedores.find(p => p._id === filters.proveedor)?.valor?.toLowerCase() || '';
-        resultPorProveedor = resultPorProveedor.filter(
-          (item) => item.proveedorNombre.toLowerCase().includes(proveedorNombreFiltro)
+          }),
         );
       }
 
-      // Ordenar por fecha de creación (más reciente primero)
-      resultPorProveedor.sort((a, b) =>
-        dayjs(b.createdAt).valueOf() - dayjs(a.createdAt).valueOf()
-      );
+      result.sort((a, b) => b.totalIncidencias - a.totalIncidencias);
 
+      // 🔍 LOG DE DIAGNÓSTICO
+      console.log('📊 [useIncidenciasData] Resultado final:', result);
+      if (result.length > 0) {
+        console.log('📊 [useIncidenciasData] Primer registro:', result[0]);
+        console.log('📊 [useIncidenciasData] tiposServicio únicos:', result.map((r) => r.tipoServicio));
+      }
+
+      setData(result);
+
+      // Vista por proveedor
+      let resultPorProveedor = Array.from(incidenciasPorProveedorMap.values());
+      if (filters.proveedor) {
+        const proveedorNombreFiltro =
+          proveedores.find((p) => p._id === filters.proveedor)?.valor?.toLowerCase() || '';
+        resultPorProveedor = resultPorProveedor.filter((item) =>
+          item.proveedorNombre.toLowerCase().includes(proveedorNombreFiltro),
+        );
+      }
+      resultPorProveedor.sort((a, b) => dayjs(b.createdAt).valueOf() - dayjs(a.createdAt).valueOf());
       setDataPorProveedor(resultPorProveedor);
-
     } catch (err) {
       console.error('❌ [useIncidenciasData] Error:', err);
       setError('Error al cargar los datos de incidencias');
@@ -366,33 +378,28 @@ export const useIncidenciasData = (): UseIncidenciasDataReturn => {
     loadData();
   }, [loadData]);
 
-    const servicioChartData = useMemo<ServicioChartData[]>(() => {
-    if (data.length === 0) return [];
+  /* ============================================================ */
+  /*  MEMOS PARA GRÁFICAS Y TOTALES                                */
+  /* ============================================================ */
 
-    // Agrupar todos los tickets de los grupos por servicio individual
-    const servicioMap = new Map<string, { nombre: string; total: number; abiertas: number; cerradas: number }>();
+  const servicioChartData = useMemo<ServicioChartData[]>(() => {
+    if (data.length === 0) return [];
+    const map = new Map<string, { nombre: string; total: number; abiertas: number; cerradas: number }>();
 
     data.forEach((grupo) => {
       grupo.tickets.forEach((ticket) => {
-        const nombreServicio = ticket.servicioNombre || 'Servicio desconocido';
-
-        if (!servicioMap.has(nombreServicio)) {
-          servicioMap.set(nombreServicio, { nombre: nombreServicio, total: 0, abiertas: 0, cerradas: 0 });
+        const nombre = ticket.servicioNombre || 'Servicio desconocido';
+        if (!map.has(nombre)) {
+          map.set(nombre, { nombre, total: 0, abiertas: 0, cerradas: 0 });
         }
-
-        const entry = servicioMap.get(nombreServicio)!;
+        const entry = map.get(nombre)!;
         entry.total += 1;
-
-        if (String(ticket.status).toLowerCase() === 'cerrado') {
-          entry.cerradas += 1;
-        } else {
-          entry.abiertas += 1;
-        }
+        if (String(ticket.status).toLowerCase() === 'cerrado') entry.cerradas += 1;
+        else entry.abiertas += 1;
       });
     });
 
-    // Truncar nombres largos y ordenar por incidencia (top 10, igual que la vista por proveedor)
-    return Array.from(servicioMap.values())
+    return Array.from(map.values())
       .map((v) => ({
         nombre: v.nombre.length > 25 ? `${v.nombre.substring(0, 25)}...` : v.nombre,
         total: v.total,
@@ -403,52 +410,48 @@ export const useIncidenciasData = (): UseIncidenciasDataReturn => {
       .slice(0, 10);
   }, [data]);
 
-  const tipoServicioChartData = useMemo<TipoServicioChartData[]>(() => {
-    return data.map(item => ({ name: item.tipoServicio, value: item.totalIncidencias }));
-  }, [data]);
+  const tipoServicioChartData = useMemo<TipoServicioChartData[]>(
+    () => data.map((item) => ({ name: item.tipoServicio, value: item.totalIncidencias })),
+    [data],
+  );
 
-   // ✅ NUEVO: Totales para la vista por proveedor
   const totalesPorProveedor = useMemo<IncidenciaTotales>(() => {
     if (!filters.proveedor) return { total: 0, abiertas: 0, cerradas: 0, servicios: 0 };
-    
-    const serviciosUnicos = new Set(dataPorProveedor.map(item => item.servicioNombre));
-    
+    const serviciosUnicos = new Set(dataPorProveedor.map((i) => i.servicioNombre));
     return {
       total: dataPorProveedor.length,
-      abiertas: dataPorProveedor.filter(item => item.status.toLowerCase() !== 'cerrado').length,
-      cerradas: dataPorProveedor.filter(item => item.status.toLowerCase() === 'cerrado').length,
+      abiertas: dataPorProveedor.filter((i) => i.status.toLowerCase() !== 'cerrado').length,
+      cerradas: dataPorProveedor.filter((i) => i.status.toLowerCase() === 'cerrado').length,
       servicios: serviciosUnicos.size,
     };
   }, [dataPorProveedor, filters.proveedor]);
 
   const tipoServicioChartDataPorProveedor = useMemo<TipoServicioChartData[]>(() => {
     if (!filters.proveedor) return [];
-    const tipoMap = new Map<string, number>();
+    const map = new Map<string, number>();
     dataPorProveedor.forEach((item) => {
-      tipoMap.set(item.tipoServicio, (tipoMap.get(item.tipoServicio) || 0) + 1);
+      map.set(item.tipoServicio, (map.get(item.tipoServicio) || 0) + 1);
     });
-    return Array.from(tipoMap.entries())
+    return Array.from(map.entries())
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
   }, [dataPorProveedor, filters.proveedor]);
+
   const servicioChartDataPorProveedor = useMemo<ServicioChartData[]>(() => {
     if (!filters.proveedor) return [];
-    const servicioMap = new Map<string, { nombre: string; total: number; abiertas: number; cerradas: number }>();
-    
+    const map = new Map<string, { nombre: string; total: number; abiertas: number; cerradas: number }>();
+
     dataPorProveedor.forEach((item) => {
-      if (!servicioMap.has(item.servicioNombre)) {
-        servicioMap.set(item.servicioNombre, { nombre: item.servicioNombre, total: 0, abiertas: 0, cerradas: 0 });
+      if (!map.has(item.servicioNombre)) {
+        map.set(item.servicioNombre, { nombre: item.servicioNombre, total: 0, abiertas: 0, cerradas: 0 });
       }
-      const entry = servicioMap.get(item.servicioNombre)!;
+      const entry = map.get(item.servicioNombre)!;
       entry.total += 1;
-      if (item.status.toLowerCase() === 'cerrado') {
-        entry.cerradas += 1;
-      } else {
-        entry.abiertas += 1;
-      }
+      if (item.status.toLowerCase() === 'cerrado') entry.cerradas += 1;
+      else entry.abiertas += 1;
     });
 
-    return Array.from(servicioMap.values())
+    return Array.from(map.values())
       .map((v) => ({
         nombre: v.nombre.length > 20 ? `${v.nombre.substring(0, 20)}...` : v.nombre,
         total: v.total,
@@ -458,7 +461,6 @@ export const useIncidenciasData = (): UseIncidenciasDataReturn => {
       .sort((a, b) => b.total - a.total)
       .slice(0, 10);
   }, [dataPorProveedor, filters.proveedor]);
-
 
   const totales = useMemo<IncidenciaTotales>(
     () => ({
@@ -476,17 +478,17 @@ export const useIncidenciasData = (): UseIncidenciasDataReturn => {
     filters,
     setFilters,
     data,
-    dataPorProveedor, // ✅ NUEVO
+    dataPorProveedor,
     servicioChartData,
     tipoServicioChartData,
+    servicioChartDataPorProveedor,
+    tipoServicioChartDataPorProveedor,
+    totalesPorProveedor,
     totales,
     loading,
     error,
     loadData,
     clearError,
-    proveedores, // ✅ NUEVO
-    servicioChartDataPorProveedor,
-    tipoServicioChartDataPorProveedor,
-    totalesPorProveedor,
+    proveedores,
   };
 };

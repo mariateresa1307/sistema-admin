@@ -49,16 +49,16 @@ export const AllUsersTab = () => {
   });
 
   // ========== FETCH DE USUARIOS (modo paginado con retrocompat) ==========
-  const fetchUsuarios = useCallback(async () => {
+  const fetchUsuarios = useCallback(async (pageNum: number, pageSize: number, search: string) => {
     setLoading(true);
     try {
       const params: any = {
-        page: pagination.page + 1,
-        limit: pagination.pageSize,
+        page: pageNum + 1,
+        limit: pageSize,
       };
 
-      if (searchTerm.trim()) {
-        params.search = searchTerm.trim();
+      if (search.trim()) {
+        params.search = search.trim();
       }
 
       const response = await getUsers(params);
@@ -92,6 +92,12 @@ export const AllUsersTab = () => {
     } finally {
       setLoading(false);
     }
+  }, []); // ✅ Sin dependencias, recibe los valores como parámetros
+
+  // ✅ useEffect con dependencias directas
+  useEffect(() => {
+    fetchUsuarios(pagination.page, pagination.pageSize, searchTerm);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pagination.page, pagination.pageSize, searchTerm]);
 
   const handlePaginationModelChange = (model: { page: number; pageSize: number }) => {
@@ -102,16 +108,19 @@ export const AllUsersTab = () => {
     }));
   };
 
-  const handleSearch = useCallback((params: any) => {
-    const value = typeof params === 'string' ? params : (params?.search ?? params?.value ?? '');
-    setSearchTerm(value);
-    setPagination(prev => ({ ...prev, page: 0 }));
-  }, []);
+const handleSearch = useCallback((params: any) => {
+  let value = "";
+  if (typeof params === "string") value = params;
+  else if (typeof params?.value === "string") value = params.value;
+  else if (typeof params?.search === "string") value = params.search;
+  setSearchTerm(value);
+  setPagination(prev => ({ ...prev, page: 0 }));
+}, []);
 
   const handleDeleteUser = useCallback(async (userId: string) => {
     try {
       await deleteUser(userId);
-      await fetchUsuarios();
+      await fetchUsuarios(pagination.page, pagination.pageSize, searchTerm);
       setIsDetailOpen(false);
       setSelectedUser(null);
       setNotification({ open: true, message: "Usuario eliminado exitosamente", severity: "success" });
@@ -122,7 +131,7 @@ export const AllUsersTab = () => {
         severity: "error",
       });
     }
-  }, [fetchUsuarios]);
+  }, [fetchUsuarios, pagination.page, pagination.pageSize, searchTerm]);
 
   const columns: GridColDef[] = [
     {
@@ -217,7 +226,7 @@ export const AllUsersTab = () => {
   };
 
   const handleFormSubmit = async () => {
-    await fetchUsuarios();
+    await fetchUsuarios(pagination.page, pagination.pageSize, searchTerm);
     setSelectedUser(null);
     setNotification({
       open: true,
@@ -225,10 +234,6 @@ export const AllUsersTab = () => {
       severity: "success",
     });
   };
-
-  useEffect(() => {
-    fetchUsuarios();
-  }, [fetchUsuarios]);
 
   return (
     <>
