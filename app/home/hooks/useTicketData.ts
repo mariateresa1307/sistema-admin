@@ -73,7 +73,7 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
 
     try {
       const [operadoresRes, ciudadesRes, causasRes, grupoDestinoRes, tipoClienteRes, localidadesRes] = await Promise.all([
-        getUsers(undefined, { isActive: true }),
+        getUsers({ isActive: true }),
         getMiscellaneous({ categoria: 'CIUDAD', limit: 999 }),
         getMiscellaneous({ categoria: CATEGORIA.CAUSA_RAIZ, limit: 999 }),
         getMiscellaneous({ categoria: 'GRUPO_DESTINO', limit: 999 }),
