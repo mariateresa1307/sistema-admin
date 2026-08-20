@@ -68,23 +68,23 @@ export const useMiscellaneous = ({
   const fetchItems = useCallback(async () => {
     setLoading(true);
     try {
-      const params: any = { 
-        categoria, 
+      const params: any = {
+        categoria,
         limit: fetchAll ? 900 : pageSize, // ✅ Usar 9999 si fetchAll es true
       };
-      
+
       if (!fetchAll) {
         params.page = page;
       }
-      
+
       if (searchValue) params.valor = searchValue;
       if (padreId) params.padreId = padreId;
-      
+
       const response = await getMiscellaneous(params);
-      
+
       const data = response.data?.data || (Array.isArray(response.data) ? response.data : []);
       const total = response.data?.total || data.length;
-      
+
       setRows(data);
       setTotalItems(total);
     } catch (error) {
@@ -137,10 +137,13 @@ export const useMiscellaneous = ({
     await Promise.all(promises);
   }, [categoria, fetchByCategoria]);
 
-  useEffect(() => {
-    fetchItems();
-    fetchRelatedData();
-  }, [fetchItems, fetchRelatedData]);
+useEffect(() => {
+  fetchItems();
+}, [fetchItems]);
+
+useEffect(() => {
+  fetchRelatedData();
+}, [fetchRelatedData]);
 
   const deleteItem = useCallback(async (item: MiscellaneousItem): Promise<boolean> => {
     try {

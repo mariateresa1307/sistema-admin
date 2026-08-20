@@ -94,6 +94,12 @@ export default function CustomDataGrid({
   const isApiSearch = Boolean(onSearch);
   const skipInitialSearch = useRef(true);
 
+  const onSearchRef = useRef(onSearch);
+useEffect(() => {
+  onSearchRef.current = onSearch;
+}, [onSearch]);
+
+
   const isUserStatusField = useMemo(() => searchField === 'isActive', [searchField]);
   const isStatusField = useMemo(() => searchField === 'status', [searchField]);
   const isTipoServicioField = useMemo(() => searchField === 'tipoServicio', [searchField]);
@@ -140,17 +146,17 @@ export default function CustomDataGrid({
     return () => clearTimeout(timer);
   }, [searchTerm, searchField, handleSearch, debounceMs]);
 
-  useEffect(() => {
-    if (!onSearch) return;
-    if (skipInitialSearch.current) {
-      skipInitialSearch.current = false;
-      return;
-    }
-    const timer = setTimeout(() => {
-      onSearch({ field: searchField, value: searchTerm });
-    }, debounceMs);
-    return () => clearTimeout(timer);
-  }, [searchTerm, searchField, onSearch, debounceMs]);
+useEffect(() => {
+  if (!onSearchRef.current) return;
+  if (skipInitialSearch.current) { 
+    skipInitialSearch.current = false; 
+    return; 
+  }
+  const timer = setTimeout(() => { 
+    onSearchRef.current?.({ field: searchField, value: searchTerm }); 
+  }, debounceMs);
+  return () => clearTimeout(timer);
+}, [searchTerm, searchField, debounceMs]); //
 
   const safePageSizeOptions = useMemo(() => {
     const currentSize = paginationModel?.pageSize ?? pageSizeOptions[0] ?? 10;
@@ -312,7 +318,7 @@ export default function CustomDataGrid({
         paginationModel={paginationModel}
         onPaginationModelChange={onPaginationModelChange}
         pageSizeOptions={safePageSizeOptions}
-        rowCount={rowCount ?? 0}
+        rowCount={paginationMode === 'server' ? (rowCount ?? 0) : undefined}
         paginationMode={paginationMode}
         disableRowSelectionOnClick
         sx={baseSx}

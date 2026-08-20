@@ -29,11 +29,9 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
   const [tipoClienteList, setTipoClienteList] = React.useState<ConfiguracionInterface[]>([]);
   const [proveedoresList, setProveedoresList] = React.useState<ConfiguracionInterface[]>([]);
   const [ultimaMillaList, setUltimaMillaList] = React.useState<ConfiguracionInterface[]>([]);
-  // ✅ NUEVO: Lista de estados geográficos
   const [estadosList, setEstadosList] = React.useState<ConfiguracionInterface[]>([]);
   const [isMiscLoaded, setIsMiscLoaded] = React.useState(false);
   const [ciudadSeleccionada, setCiudadSeleccionada] = React.useState<string>("");
-  // ✅ NUEVO: Estado geográfico seleccionado
   const [estadoSeleccionado, setEstadoSeleccionado] = React.useState<string>("");
   const [tipoClienteSeleccionado, setTipoClienteSeleccionado] = React.useState<string>('');
   const [productoSeleccionado, setProductoSeleccionado] = React.useState<string>('');
@@ -42,7 +40,6 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
   const [contratoValue, setContratoValue] = React.useState<string>("");
   const [ipNetuno, setIpNetuno] = React.useState<string>("");
 
-  // validación 
   const [nameValue, setNameValue] = React.useState<string>("");
   const [idCircuitoValue, setIdCircuitoValue] = React.useState<string>("");
   const [idNetunoValue, setIdNetunoValue] = React.useState<string>("");
@@ -68,72 +65,49 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
   };
 
   React.useEffect(() => {
-  if (!isOpen || isMiscLoaded) return;
-  let isMounted = true;
+    if (!isOpen || isMiscLoaded) return;
+    let isMounted = true;
 
-  const cargarMiscellaneous = async () => {
-    try {
-      const [resCiudades, resTiposCliente, resProveedores, resUltimaMilla, resEstados] = await Promise.all([
-        getMiscellaneous({ categoria: 'CIUDAD', limit: 9999 }),
-        getMiscellaneous({ categoria: 'TIPO_CLIENTE', limit: 9999 }),
-        getMiscellaneous({ categoria: 'PROVEEDOR', limit: 9999 }),
-        getMiscellaneous({ categoria: 'ULTIMA_MILLA', limit: 9999 }),
-        getMiscellaneous({ categoria: 'ESTADO', limit: 9999 }),
-      ]);
+    const cargarMiscellaneous = async () => {
+      try {
+        const [resCiudades, resTiposCliente, resProveedores, resUltimaMilla, resEstados] = await Promise.all([
+          getMiscellaneous({ categoria: 'CIUDAD', limit: 9999 }),
+          getMiscellaneous({ categoria: 'TIPO_CLIENTE', limit: 9999 }),
+          getMiscellaneous({ categoria: 'PROVEEDOR', limit: 9999 }),
+          getMiscellaneous({ categoria: 'ULTIMA_MILLA', limit: 9999 }),
+          getMiscellaneous({ categoria: 'ESTADO', limit: 9999 }),
+        ]);
 
-      if (isMounted) {
-        const ciudadesData = normalizeToArray(resCiudades);
-        const tiposClienteData = normalizeToArray(resTiposCliente);
-        const proveedoresData = normalizeToArray(resProveedores);
-        const ultimaMillaData = normalizeToArray(resUltimaMilla);
-        const estadosData = normalizeToArray(resEstados);
-
-        // 🔍 LOGS DEFINITIVOS DE DIAGNÓSTICO
-        console.log('=== 📊 DIAGNÓSTICO DE CARGA ===');
-        console.log('🏙️ Ciudades cargadas:', ciudadesData.length);
-        console.log('🏙️ Primera ciudad:', ciudadesData[0]);
-        console.log('🗺️ Estados cargados:', estadosData.length);
-        console.log('🗺️ Primer estado:', estadosData[0]);
-        
-        // Verificar que cada array tiene la categoría correcta
-        console.log('✅ ¿Todas las ciudades tienen categoria=CIUDAD?:', 
-          ciudadesData.every((c: any) => c.categoria === 'CIUDAD'));
-        console.log('✅ ¿Todos los estados tienen categoria=ESTADO?:', 
-          estadosData.every((e: any) => e.categoria === 'ESTADO'));
-        console.log('❌ ¿Hay estados con categoria=CIUDAD? (BUG):', 
-          estadosData.some((e: any) => e.categoria === 'CIUDAD'));
-        
-        console.log('===============================');
-
-        setCiudades(ciudadesData);
-        setTipoClienteList(tiposClienteData);
-        setProveedoresList(proveedoresData);
-        setUltimaMillaList(ultimaMillaData);
-        setEstadosList(estadosData);
-        setIsMiscLoaded(true);
+        if (isMounted) {
+          setCiudades(normalizeToArray(resCiudades));
+          setTipoClienteList(normalizeToArray(resTiposCliente));
+          setProveedoresList(normalizeToArray(resProveedores));
+          setUltimaMillaList(normalizeToArray(resUltimaMilla));
+          setEstadosList(normalizeToArray(resEstados));
+          setIsMiscLoaded(true);
+        }
+      } catch (error) {
+        console.error("Error cargando datos:", error);
+        if (isMounted) {
+          setCiudades([]);
+          setTipoClienteList([]);
+          setProveedoresList([]);
+          setUltimaMillaList([]);
+          setEstadosList([]);
+          setIsMiscLoaded(true);
+        }
       }
-    } catch (error) {
-      console.error("Error cargando datos:", error);
-      if (isMounted) {
-        setCiudades([]);
-        setTipoClienteList([]);
-        setProveedoresList([]);
-        setUltimaMillaList([]);
-        setEstadosList([]);
-        setIsMiscLoaded(true);
-      }
-    }
-  };
+    };
 
-  cargarMiscellaneous();
-  return () => { isMounted = false; };
-}, [isOpen, isMiscLoaded]);
+    cargarMiscellaneous();
+    return () => { isMounted = false; };
+  }, [isOpen, isMiscLoaded]);
 
   React.useEffect(() => {
     if (!isOpen || !initialData || !initialData._id) {
       setTipoServicio("RBS");
       setCiudadSeleccionada("");
-      setEstadoSeleccionado(""); // ✅ NUEVO
+      setEstadoSeleccionado("");
       setTipoClienteSeleccionado("");
       setProductoSeleccionado("");
       setVlanValue("");
@@ -160,7 +134,6 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
     const currentTipo = initialData.tipoServicio || "RBS";
     setTipoServicio(currentTipo);
 
-    // ✅ NUEVO: inicializar estado desde el servicio existente
     const estadoVal = typeof initialData.estado === 'object' && initialData.estado?.valor
       ? initialData.estado.valor
       : (typeof initialData.estado === 'string' ? initialData.estado : "");
@@ -234,7 +207,6 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
   const isMetrolan = tipoServicio === "METROLAN";
   const isEditMode = Boolean(initialData?._id);
 
-  //  validación completa
   const validateForm = (): boolean => {
     const errors: Record<string, boolean> = {};
     const camposFaltantes: string[] = [];
@@ -249,14 +221,12 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
       }
     };
 
-    // Campos comunes obligatorios
     checkRequired(nameValue, "name", "Nombre");
-    checkRequired(estadoSeleccionado, "estado", "Estado"); // ✅ NUEVO
+    checkRequired(estadoSeleccionado, "estado", "Estado");
     checkRequired(ciudadSeleccionada, "city", "Ciudad");
     checkRequired(tipoClienteSeleccionado, "tipoCliente", "Tipo de Cliente");
     checkRequired(proveedorOUMId, "proveedor", isMetrolan ? "Última Milla" : "Proveedor");
 
-    // Campos específicos por tipo de servicio
     if (tipoServicio === "METROLAN") {
       checkRequired(idCircuitoValue, "id_circuito", "ID Circuito");
       checkRequired(contratoValue, "contrato", "Contrato");
@@ -339,81 +309,38 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
     setFieldErrors(prev => ({ ...prev, name: false }));
   }, []);
 
-const handleEstadoChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-  const nuevoEstado = e.target.value;
-  setEstadoSeleccionado(nuevoEstado);
-  setFieldErrors(prev => ({ ...prev, estado: false }));
+  const handleEstadoChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const nuevoEstado = e.target.value;
+    setEstadoSeleccionado(nuevoEstado);
+    setFieldErrors(prev => ({ ...prev, estado: false }));
 
-  console.log('🎯 [handleEstadoChange] Estado seleccionado:', nuevoEstado);
-
-  if (!nuevoEstado) {
-    setCiudadSeleccionada("");
-    return;
-  }
-
-  // Buscar el objeto del estado completo para obtener su _id
-  const estadoObj = estadosList.find(
-    (e: any) => (e.valor || '').toString().trim().toUpperCase() === nuevoEstado.trim().toUpperCase()
-  );
-
-  console.log('🔍 Estado objeto encontrado:', estadoObj);
-  console.log('🔍 Total ciudades para buscar:', ciudades.length);
-
-  let ciudadDelEstado: any = null;
-
-  // ESTRATEGIA 1: Match por padreNombre (case-insensitive, sin espacios extra)
-  ciudadDelEstado = ciudades.find((c: any) => {
-    const padreNombre = (c.padreNombre || '').toString().trim().toUpperCase();
-    const estadoNorm = nuevoEstado.trim().toUpperCase();
-    return padreNombre === estadoNorm;
-  });
-
-  if (ciudadDelEstado) {
-    console.log('✅ Match por padreNombre:', ciudadDelEstado.valor);
-  }
-
-  // ESTRATEGIA 2: Match por estadoId comparado con _id del estado
-  if (!ciudadDelEstado && estadoObj) {
-    const estadoId = String(estadoObj._id);
-    ciudadDelEstado = ciudades.find((c: any) => {
-      const cEstadoId = (c.estadoId || c.padreId || '').toString().trim();
-      return cEstadoId === estadoId;
-    });
-    if (ciudadDelEstado) {
-      console.log('✅ Match por estadoId/padreId:', ciudadDelEstado.valor);
+    // Sin estado → limpiar ciudad
+    if (!nuevoEstado) {
+      setCiudadSeleccionada("");
+      return;
     }
-  }
 
-  // ESTRATEGIA 3: Búsqueda parcial (por si hay acentos o espacios)
-  if (!ciudadDelEstado) {
-    const estadoNorm = nuevoEstado.trim().toUpperCase();
-    ciudadDelEstado = ciudades.find((c: any) => {
+    // Filtrar ciudades del nuevo estado
+    const ciudadesDelEstado = ciudades.filter((c: any) => {
       const padreNombre = (c.padreNombre || '').toString().trim().toUpperCase();
-      return padreNombre.includes(estadoNorm) || estadoNorm.includes(padreNombre);
+      return padreNombre === nuevoEstado.trim().toUpperCase();
     });
-    if (ciudadDelEstado) {
-      console.log('✅ Match parcial:', ciudadDelEstado.valor);
+
+    if (ciudadesDelEstado.length === 1) {
+      // ✅ UNA sola ciudad: cargarla automáticamente
+      setCiudadSeleccionada(ciudadesDelEstado[0].valor);
+      setFieldErrors(prev => ({ ...prev, city: false }));
+    } else {
+      // ✅ VARIAS ciudades (o ninguna): el usuario debe seleccionar
+      setCiudadSeleccionada("");
     }
-  }
+  }, [ciudades]);
 
-  if (ciudadDelEstado) {
-    console.log('🎉 CIUDAD ASIGNADA:', ciudadDelEstado.valor);
-    setCiudadSeleccionada(ciudadDelEstado.valor);
+  // ✅ NUEVO: handler para cambio de ciudad
+  const handleCiudadChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setCiudadSeleccionada(e.target.value);
     setFieldErrors(prev => ({ ...prev, city: false }));
-  } else {
-    console.warn('⚠️ NO se encontró ciudad para estado:', nuevoEstado);
-    console.warn('⚠️ Muestra de ciudades (primeras 5):', 
-      ciudades.slice(0, 5).map((c: any) => ({
-        valor: c.valor,
-        padreNombre: c.padreNombre,
-        estadoId: c.estadoId,
-        padreId: c.padreId,
-      }))
-    );
-    setCiudadSeleccionada("");
-  }
-}, [ciudades, estadosList]);
-
+  }, []);
 
   const handleIdCircuitoChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setIdCircuitoValue(e.target.value);
@@ -463,7 +390,6 @@ const handleEstadoChange = React.useCallback((e: React.ChangeEvent<HTMLInputElem
   const handleSave = React.useCallback(async () => {
     if (saving) return;
 
-    // ✅ VALIDACIÓN: No permitir guardar si hay campos vacíos
     if (!validateForm()) return;
 
     const serviceId = initialData?._id;
@@ -484,7 +410,7 @@ const handleEstadoChange = React.useCallback((e: React.ChangeEvent<HTMLInputElem
     const payload: any = {
       tipoServicio,
       name: nameValue.trim() || undefined,
-      estado: estadoSeleccionado || undefined, // ✅ NUEVO
+      estado: estadoSeleccionado || undefined,
       city: ciudadSeleccionada || undefined,
       tipoCliente: tipoClienteSeleccionado || undefined,
       diagramaRed: imagePreview || undefined,
@@ -537,8 +463,7 @@ const handleEstadoChange = React.useCallback((e: React.ChangeEvent<HTMLInputElem
     }
   }, [
     saving, initialData, isEditMode, tipoServicio, ciudadSeleccionada,
-    estadoSeleccionado, // ✅ NUEVO
-    tipoClienteSeleccionado, productoSeleccionado, imagePreview, vlanValue,
+    estadoSeleccionado, tipoClienteSeleccionado, productoSeleccionado, imagePreview, vlanValue,
     ipNetuno, contratoValue, proveedorOUMId, isMetrolan, triggerNotification,
     onClose, onSuccess, nameValue, idCircuitoValue, idNetunoValue, idRBSValue,
     idDOGValue, nodoAValue, nodoBValue, nodoOLTValue, serialONTValue, proveedorValue
@@ -560,12 +485,14 @@ const handleEstadoChange = React.useCallback((e: React.ChangeEvent<HTMLInputElem
     return base;
   }, [listaBase, proveedorNotFound, proveedorOUMId]);
 
+  // ✅ CORREGIDO: filtra ciudades por padreNombre (campo real en la BD)
   const ciudadesFiltradas = React.useMemo(() => {
     const lista = Array.isArray(ciudades) ? ciudades : [];
-    if (!estadoSeleccionado) return lista;
+    if (!estadoSeleccionado) return [];
+
     return lista.filter((c: any) => {
-      const ciudadEstado = typeof c.estado === 'object' ? c.estado?.valor : c.estado;
-      return ciudadEstado === estadoSeleccionado;
+      const padreNombre = (c.padreNombre || '').toString().trim().toUpperCase();
+      return padreNombre === estadoSeleccionado.trim().toUpperCase();
     });
   }, [ciudades, estadoSeleccionado]);
 
@@ -574,22 +501,18 @@ const handleEstadoChange = React.useCallback((e: React.ChangeEvent<HTMLInputElem
     return lista.some(e => e.valor === estadoSeleccionado) ? estadoSeleccionado : "";
   }, [estadosList, estadoSeleccionado]);
 
-// ✅ SIMPLIFICADO: usa ciudadSeleccionada directamente si existe, sino ""
-const safeCiudadValue = React.useMemo(() => {
-  if (!ciudadSeleccionada) return "";
-  // Verifica que la ciudad esté en la lista filtrada o en ciudades totales
-  const existe = ciudadesFiltradas.some(c => c.valor === ciudadSeleccionada) ||
-                 ciudades.some(c => c.valor === ciudadSeleccionada);
-  return existe ? ciudadSeleccionada : "";
-}, [ciudadesFiltradas, ciudadSeleccionada, ciudades]);
-
+  const safeCiudadValue = React.useMemo(() => {
+    if (!ciudadSeleccionada) return "";
+    const existe = ciudadesFiltradas.some(c => c.valor === ciudadSeleccionada) ||
+      ciudades.some(c => c.valor === ciudadSeleccionada);
+    return existe ? ciudadSeleccionada : "";
+  }, [ciudadesFiltradas, ciudadSeleccionada, ciudades]);
 
   const safeTipoClienteValue = React.useMemo(() => {
     const lista = Array.isArray(tipoClienteList) ? tipoClienteList : [];
     return lista.some(c => String(c._id) === tipoClienteSeleccionado) ? tipoClienteSeleccionado : "";
   }, [tipoClienteList, tipoClienteSeleccionado]);
 
-  //  Helper con asterisco si es requerido
   const renderLabel = (text: string, isRequired: boolean = false) => (
     <Typography sx={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 0.3 }}>
       {text}
@@ -597,7 +520,6 @@ const safeCiudadValue = React.useMemo(() => {
     </Typography>
   );
 
-  // Helper para obtener error 
   const getErrorProp = (fieldName: string) => fieldErrors[fieldName] === true;
 
   return (
@@ -661,7 +583,7 @@ const safeCiudadValue = React.useMemo(() => {
               </Grid>
 
               <Grid size={{ xs: 12, md: 6 }}>
-                {renderLabel(tipoServicio === "ENLACE" ? "Nombre del enlace" : "Nombre del Cliente", true)}
+                {renderLabel(tipoServicio === "ENLACE" ? "Nombre del enlace" : "Nombre del Servicio", true)}
                 <TextField
                   fullWidth
                   name="name"
@@ -673,7 +595,6 @@ const safeCiudadValue = React.useMemo(() => {
                 />
               </Grid>
 
-              {/* ✅ NUEVO: Campo Estado geográfico */}
               <Grid size={6}>
                 {renderLabel("Estado", true)}
                 <TextField
@@ -693,23 +614,51 @@ const safeCiudadValue = React.useMemo(() => {
                 </TextField>
               </Grid>
 
+              {/* ✅ CAMBIADO: Ciudad ahora es un SELECT con las ciudades del estado seleccionado */}
               <Grid size={6}>
                 {renderLabel("Ciudad", true)}
                 <TextField
+                  select
                   fullWidth
                   name="city"
                   value={safeCiudadValue}
+                  onChange={handleCiudadChange}
                   size="small"
-                  disabled
+                  disabled={!estadoSeleccionado}
                   error={getErrorProp("city")}
-                  helperText={getErrorProp("city") ? "Campo obligatorio" : (!estadoSeleccionado ? "Seleccione primero un estado" : "Ciudad asignada automáticamente")}
+                  helperText={
+                    getErrorProp("city")
+                      ? "Campo obligatorio"
+                      : !estadoSeleccionado
+                        ? "Seleccione primero un estado"
+                        : ciudadesFiltradas.length === 1
+                          ? "  "
+                          : `🔽 ${ciudadesFiltradas.length} ciudades disponibles, seleccione una`
+                  }
                   sx={{
-                    '& .MuiInputBase-input.Mui-disabled': {
-                      WebkitTextFillColor: '#64748b',
-                      bgcolor: '#f8fafc',
+                    // ✅ Estilos condicionales para el helperText
+                    '& .MuiFormHelperText-root': {
+                      // Color por defecto (gris)
+                      color: '#64748b',
+                      // Si hay error, usar color rojo (MUI lo maneja automáticamente)
+                      // Si hay ciudades disponibles, usar azul
+                      ...((!getErrorProp("city") && estadoSeleccionado && ciudadesFiltradas.length > 1) && {
+                        color: '#2563eb',
+                        fontWeight: 500,
+                      }),
+                      // Si no hay estado seleccionado, usar naranja
+                      ...((!getErrorProp("city") && !estadoSeleccionado) && {
+                        color: '#d97706',
+                        fontStyle: 'italic',
+                      }),
                     },
                   }}
-                />
+                >
+                  <MenuItem value=""><em>Seleccione una ciudad</em></MenuItem>
+                  {ciudadesFiltradas.map((c) => (
+                    <MenuItem key={c._id || c.valor} value={c.valor}>{c.valor}</MenuItem>
+                  ))}
+                </TextField>
               </Grid>
 
               <Grid size={6}>
