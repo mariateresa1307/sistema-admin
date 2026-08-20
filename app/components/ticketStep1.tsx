@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Grid, TextField, MenuItem, Autocomplete, Switch, Typography, Stack, createFilterOptions } from '@mui/material';
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import { TIPO_INCIDENCIA, TIPO_CLIENTE, TICKET_STATUS } from 'app/utils/constants';
@@ -8,7 +8,6 @@ import { TicketFormData, ServicioAfectado } from '../utils/ticketHelpers';
 import { useTicketData } from '../home/hooks/useTicketData';
 import ElementoModal from '../components/elementoTicketModal';
 
-// ✅ Limita el desplegable a 15 opciones para rendimiento, pero permite búsqueda escrita directa
 const filterOptions = createFilterOptions({
   limit: 15,
 });
@@ -40,8 +39,6 @@ export const TicketStep1 = React.memo(
     onServiciosAfectadosChange,
   }: TicketStep1Props) => {
     const [openServicioModal, setOpenServicioModal] = useState(false);
-
-    // ✅ Blindaje de arrays
     const tipoClienteArray = Array.isArray(data?.tipoCliente) ? data.tipoCliente : [];
     const categoriaRedArray = Array.isArray(data?.categoriaRed) ? data.categoriaRed : [];
     const subcategoriasArray = Array.isArray(data?.subcategorias) ? data.subcategorias : [];
@@ -57,8 +54,63 @@ export const TicketStep1 = React.memo(
     const isResidencial = selectedTipoCliente?.valor === TIPO_CLIENTE.RESIDENCIAL;
     const isClosed = form.estatus === TICKET_STATUS.CERRADO || form.estatus === 'CERRADO';
     const isLoading = data?.loading;
+    const localidadesFiltradas = useMemo(() => {
+      if (!form.ciudad) return [];
 
-    // ✅ EFECTO: Si es Falla Masiva Y hay afectación, cargar TODOS los servicios para poder buscarlos
+      const ciudadObj = ciudadesOptionsArray.find(
+        (c: any) => c.valor === form.ciudad || String(c._id) === String(form.ciudad)
+      );
+
+      if (!ciudadObj) return [];
+
+      const ciudadId = String(ciudadObj._id);
+      const ciudadNombre = ciudadObj.valor;
+
+      // Filtrar localidades donde padreId sea el id de la ciudad
+      // o donde padreNombre sea el nombre de la ciudad
+      return localidadesOptionsArray.filter((loc: any) => {
+        const locPadreId = typeof loc.padreId === 'object'
+          ? String(loc.padreId?._id ?? '')
+          : String(loc.padreId || '');
+
+        const locPadreNombre = (loc.padreNombre || '').toString().trim().toUpperCase();
+        const ciudadNombreNorm = ciudadNombre.toString().trim().toUpperCase();
+
+        return locPadreId === ciudadId || locPadreNombre === ciudadNombreNorm;
+      });
+    }, [localidadesOptionsArray, ciudadesOptionsArray, form.ciudad]);
+
+    const estadoResuelto = useMemo(() => {
+      if (!form.ciudad) return '';
+      const ciudadObj = ciudadesOptionsArray.find(
+        (c: any) => c.valor === form.ciudad || String(c._id) === String(form.ciudad)
+      );
+      if (!ciudadObj) return '';
+      return ciudadObj.padreNombre || '';
+    }, [ciudadesOptionsArray, form.ciudad]);
+
+    useEffect(() => {
+      if (!form.ciudad) {
+        // Si no hay ciudad, limpiar localidad y estado
+        if (form.localidad) onFieldChange('localidad', '');
+        if (form.estado) onFieldChange('estado', '');
+        return;
+      }
+
+      if (form.localidad) {
+        const pertenece = localidadesFiltradas.some(
+          (loc: any) => loc.valor === form.localidad
+        );
+        if (!pertenece) {
+          onFieldChange('localidad', '');
+        }
+      }
+
+      if (estadoResuelto && form.estado !== estadoResuelto) {
+        onFieldChange('estado', estadoResuelto);
+      }
+    }, [form.ciudad, localidadesFiltradas, estadoResuelto, form.localidad, form.estado, onFieldChange]);
+
     useEffect(() => {
       if (isFallaMasiva && form.afectacion === true && data.loadAllServicios) {
         data.loadAllServicios();
@@ -278,7 +330,7 @@ export const TicketStep1 = React.memo(
                 disabled
                 label="Estado"
                 name="estado"
-                value={form.estado ?? ''}
+                value={estadoResuelto}  // ✅ Usar el valor resuelto en lugar de form.estado
                 size="small"
                 sx={{ bgcolor: '#f0f4f8' }}
               />
@@ -297,10 +349,10 @@ export const TicketStep1 = React.memo(
               >
                 {isLoading ? (
                   <MenuItem value="" disabled>Cargando...</MenuItem>
-                ) : localidadesOptionsArray.length === 0 ? (
+                ) : localidadesFiltradas.length === 0 ? (  // ✅ Usar lista filtrada
                   <MenuItem value="" disabled>No hay localidades para esta ciudad</MenuItem>
                 ) : (
-                  localidadesOptionsArray.map((loc: any) => (
+                  localidadesFiltradas.map((loc: any) => (  // ✅ Usar lista filtrada
                     <MenuItem key={loc._id || loc.valor} value={loc.valor}>
                       {loc.valor}
                     </MenuItem>
@@ -312,7 +364,6 @@ export const TicketStep1 = React.memo(
         )}
 
         {/* ✅ Servicios Afectados: Se muestra si NO es residencial Y afectacion es true */}
-        {/* Esto cubre exactamente: "se muestra en falla masiva si afectacion es true" */}
         {!isResidencial && form.afectacion === true && (
           <Grid size={{ xs: 12, sm: 4 }}>
             <Autocomplete
@@ -395,7 +446,7 @@ export const TicketStep1 = React.memo(
           <TextField fullWidth label="Bitácora" name="bitacora" multiline maxRows={4} value={form.bitacora ?? ''} onChange={handleChange} size="small" disabled={isClosed} />
         </Grid>
 
-        {/* Afectación: Se muestra siempre, pero en Falla Masiva activa la carga de todos los servicios */}
+        {/* Afectación */}
         <Grid size={{ xs: 12, sm: 4 }}>
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
             <Switch

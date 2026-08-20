@@ -32,7 +32,7 @@ const TABS_CONFIG: TabConfig[] = [
   { label: "Categoría Red", icon: <CategoryIcon />, categoria: "CATEGORIA_RED" },
   { label: "Subcategoría", icon: <BuildIcon />, categoria: "SUBCATEGORIA" },
   { label: "Detalle", icon: <BuildIcon />, categoria: "DETALLE" },
-  { label: "Ciudad / Estado", icon: <LocationCityIcon />, categoria: "CIUDAD" },
+  { label: "Ciudades - Estados - Localidades", icon: <LocationCityIcon />, categoria: "CIUDAD" },
   { label: "Causa Raíz", icon: <BugReportIcon />, categoria: "CAUSA_RAIZ" },
   { label: "Solución Caso", icon: <CheckCircleIcon />, categoria: "SOLUCION_CASO" },
   { label: "Tipo Cliente", icon: <PeopleIcon />, categoria: "TIPO_CLIENTE" },
@@ -46,6 +46,8 @@ export default function MiscellaneousPage() {
   const currentCategoria = TABS_CONFIG[tabValue].categoria;
   const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 10 });
   const [searchValue, setSearchValue] = useState<string | undefined>(undefined);
+  const [searchField, setSearchField] = useState<string>('valor');
+  const [filtroPadreId, setFiltroPadreId] = useState<string | undefined>(undefined);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<MiscellaneousItem | null>(null);
@@ -56,6 +58,9 @@ export default function MiscellaneousPage() {
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<MiscellaneousItem | null>(null);
   const [soluciones, setSoluciones] = useState<MiscellaneousItem[]>([]);
   const [causasRaiz, setCausasRaiz] = useState<MiscellaneousItem[]>([]);
+
+  // ✅ Determinar si necesitamos traer todos los registros (para búsqueda por localidad/estado)
+  const needsFetchAll = currentCategoria === 'CIUDAD' && (searchField === 'localidades' || searchField === 'padreNombre');
 
   const {
     rows,
@@ -71,21 +76,23 @@ export default function MiscellaneousPage() {
     getLocalidadesByCiudad,
     getSubcategoriasByCategoria,
     localidades,
-    ciudades, 
+    ciudades,
   } = useMiscellaneous({
     categoria: currentCategoria,
-    page: paginationModel.page + 1, 
+    page: paginationModel.page + 1,
     pageSize: paginationModel.pageSize,
-    searchValue,
+    searchValue: searchField === 'valor' ? searchValue : undefined,
+    padreId: searchField === 'padreNombre' ? filtroPadreId : undefined,
+    fetchAll: needsFetchAll,
   });
 
   useEffect(() => {
-     const loadSoluciones = async () => {
+    const loadSoluciones = async () => {
       try {
         const response = await getMiscellaneous({ categoria: 'SOLUCION_CASO', limit: 9999 });
         const rawData = response?.data;
-        const solucionesData = Array.isArray(rawData?.data) 
-          ? rawData.data 
+        const solucionesData = Array.isArray(rawData?.data)
+          ? rawData.data
           : (Array.isArray(rawData) ? rawData : []);
         setSoluciones(solucionesData.filter((s: MiscellaneousItem) => s.activo !== false));
       } catch (error) {
@@ -93,12 +100,12 @@ export default function MiscellaneousPage() {
       }
     };
 
-     const loadCausasRaiz = async () => {
+    const loadCausasRaiz = async () => {
       try {
         const response = await getMiscellaneous({ categoria: 'CAUSA_RAIZ', limit: 9999 });
         const rawData = response?.data;
-        const causasData = Array.isArray(rawData?.data) 
-          ? rawData.data 
+        const causasData = Array.isArray(rawData?.data)
+          ? rawData.data
           : (Array.isArray(rawData) ? rawData : []);
         setCausasRaiz(causasData.filter((c: MiscellaneousItem) => c.activo !== false));
       } catch (error) {
@@ -115,6 +122,8 @@ export default function MiscellaneousPage() {
     setSelectedItem(null);
     setPaginationModel({ page: 0, pageSize: 10 });
     setSearchValue(undefined);
+    setSearchField('valor');
+    setFiltroPadreId(undefined);
   };
 
   const handleCellClick = (params: GridCellParams) => {
@@ -139,9 +148,7 @@ export default function MiscellaneousPage() {
     await deleteItem(item);
   };
 
-  const handleOpenEstados = () => {
-    setEstadosDialogOpen(true);
-  };
+  const handleOpenEstados = () => setEstadosDialogOpen(true);
 
   const handleAgregarEstado = async (valor: string) => {
     await addItem({
@@ -156,16 +163,12 @@ export default function MiscellaneousPage() {
   };
 
   const handleOpenLocalidades = (ciudad: MiscellaneousItem) => {
-    console.log('🏙️ Abriendo modal para ciudad:', ciudad);
     setCiudadSeleccionada(ciudad);
     setLocalidadesDialogOpen(true);
   };
 
   const handleAgregarLocalidad = async (valor: string) => {
-    if (!ciudadSeleccionada) {
-      console.error('❌ No hay ciudad seleccionada');
-      return;
-    }
+    if (!ciudadSeleccionada) return;
     try {
       const success = await addItem({
         categoria: 'LOCALIDAD',
@@ -174,12 +177,7 @@ export default function MiscellaneousPage() {
         padreNombre: ciudadSeleccionada.valor,
         activo: true,
       });
-      
-      console.log('✅ Resultado de agregar localidad:', success);
-      
-      if (success) {
-        await fetchRelatedData();
-      }
+      if (success) await fetchRelatedData();
     } catch (error) {
       console.error("Error al agregar localidad:", error);
     }
@@ -188,15 +186,12 @@ export default function MiscellaneousPage() {
   const handleEliminarLocalidad = async (localidad: MiscellaneousItem) => {
     try {
       const success = await deleteItem(localidad);
-      if (success) {
-        await fetchRelatedData();
-      }
+      if (success) await fetchRelatedData();
     } catch (error) {
       console.error("Error al eliminar localidad:", error);
     }
   };
 
-  // Handlers para Subcategorías
   const handleOpenSubcategorias = (categoria?: MiscellaneousItem) => {
     setCategoriaSeleccionada(categoria ?? null);
     setSubcategoriasDialogOpen(true);
@@ -204,7 +199,6 @@ export default function MiscellaneousPage() {
 
   const handleAgregarSubcategoria = async (valor: string) => {
     if (!categoriaSeleccionada) return;
-    
     try {
       await addItem({
         categoria: 'SUBCATEGORIA',
@@ -225,39 +219,96 @@ export default function MiscellaneousPage() {
   const estados = useMemo(() => getEstados(), [getEstados]);
 
   const handleSearch = useCallback((params: { field?: string; value?: string } | null) => {
-    setSearchValue(params?.value || undefined);
+    const field = params?.field || 'valor';
+    const value = params?.value || '';
+
+    setSearchField(field);
     setPaginationModel({ page: 0, pageSize: 10 });
-  }, []);
+
+    // Caso 1: Búsqueda por Ciudad (campo valor)
+    if (field === 'valor') {
+      setSearchValue(value || undefined);
+      setFiltroPadreId(undefined);
+      return;
+    }
+
+    // Caso 2: Búsqueda por Estado (campo padreNombre)
+    if (currentCategoria === 'CIUDAD' && field === 'padreNombre') {
+      if (!value) {
+        setFiltroPadreId(undefined);
+        setSearchValue(undefined);
+        return;
+      }
+
+      const term = value.toLowerCase().trim();
+      const estadoEncontrado = estados.find(e =>
+        e.activo !== false && (e.valor || '').toLowerCase().includes(term)
+      );
+
+      if (estadoEncontrado) {
+        setFiltroPadreId(String(estadoEncontrado._id || estadoEncontrado.id));
+        setSearchValue(undefined);
+      } else {
+        setFiltroPadreId(undefined);
+        setSearchValue(value);
+      }
+      return;
+    }
+
+    // Caso 3: Búsqueda por Localidades y otros
+    setFiltroPadreId(undefined);
+    setSearchValue(value || undefined);
+  }, [currentCategoria, estados]);
 
   const filteredRows = useMemo(() => {
     let rowsFiltradas = rows;
 
     if (currentCategoria === 'CIUDAD') {
+      // Enriquecer ciudades con el nombre del estado
       rowsFiltradas = rowsFiltradas.map(ciudad => {
         const estadoId = ciudad.padreId || ciudad.estadoId;
         const estadoPadre = estados.find(
           est => (est._id || est.id) === estadoId && est.activo !== false
         );
-
         return {
           ...ciudad,
           padreNombre: estadoPadre?.valor || ciudad.padreNombre || 'Sin estado'
         };
       });
+
+      // Filtrado client-side por texto en localidad
+      if (searchField === 'localidades' && searchValue) {
+        const term = searchValue.toLowerCase().trim();
+        rowsFiltradas = rowsFiltradas.filter(ciudad => {
+          const ciudadId = String(ciudad._id || ciudad.id);
+          const localidadesDeLaCiudad = localidades.filter(l => {
+            const lPadreId = typeof l.padreId === 'object'
+              ? String((l.padreId as any)?._id ?? '')
+              : String(l.padreId || '');
+            return lPadreId === ciudadId;
+          });
+          return localidadesDeLaCiudad.some(l =>
+            (l.valor || '').toLowerCase().includes(term)
+          );
+        });
+      }
+
+      // Filtrado client-side por texto en nombre de estado (cuando no se pudo resolver padreId)
+      if (searchField === 'padreNombre' && searchValue && !filtroPadreId) {
+        const term = searchValue.toLowerCase().trim();
+        rowsFiltradas = rowsFiltradas.filter(ciudad =>
+          (ciudad.padreNombre || '').toLowerCase().includes(term)
+        );
+      }
     }
 
     if (currentCategoria === 'CAUSA_RAIZ') {
       return rowsFiltradas.map(causa => {
         const causaId = causa._id || causa.id;
-
         const solucionesAsociadas = soluciones.filter(
           sol => (sol.causaId === causaId || sol.padreId === causaId) && sol.activo !== false
         );
-
-        return {
-          ...causa,
-          solucionesAsociadas: solucionesAsociadas
-        };
+        return { ...causa, solucionesAsociadas };
       });
     }
 
@@ -267,16 +318,12 @@ export default function MiscellaneousPage() {
         const causaRaizAsociada = causasRaiz.find(
           causa => (causa._id || causa.id) === causaId && causa.activo !== false
         );
-
-        return {
-          ...solucion,
-          causaRaizAsociada: causaRaizAsociada || null
-        };
+        return { ...solucion, causaRaizAsociada: causaRaizAsociada || null };
       });
     }
 
     return rowsFiltradas;
-  }, [rows, currentCategoria, soluciones, causasRaiz, estados]);
+  }, [rows, currentCategoria, soluciones, causasRaiz, estados, localidades, searchValue, searchField, filtroPadreId]);
 
   const localidadesParaDetalle = useMemo(() => {
     if (!selectedItem?._id || selectedItem.categoria !== 'CIUDAD') return [];
@@ -300,7 +347,6 @@ export default function MiscellaneousPage() {
 
   return (
     <>
-      {/* Notificación */}
       <Snackbar
         open={notification.open}
         autoHideDuration={4000}
@@ -318,7 +364,6 @@ export default function MiscellaneousPage() {
       </Snackbar>
 
       <ContainerBox title="Configuración del Sistema">
-        {/* Tabs */}
         <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
           <Tabs
             value={tabValue}
@@ -343,7 +388,6 @@ export default function MiscellaneousPage() {
           </Tabs>
         </Box>
 
-        {/* Botón Gestionar Estados (solo en CIUDAD) */}
         {currentCategoria === 'CIUDAD' && (
           <Box sx={{
             mb: 2, p: 1.5, bgcolor: '#e3f2fd', borderRadius: 2,
@@ -364,8 +408,7 @@ export default function MiscellaneousPage() {
           </Box>
         )}
 
-        {/*  Tabla con paginado  */}
-       <MiscellaneousTable
+        <MiscellaneousTable
           rows={filteredRows}
           localidades={localidades}
           loading={loading}
@@ -376,18 +419,17 @@ export default function MiscellaneousPage() {
           onOpenLocalidades={handleOpenLocalidades}
           onOpenSubcategorias={handleOpenSubcategorias}
           onSearch={handleSearch}
-          paginationMode="server"
-          rowCount={totalItems}
+          paginationMode={needsFetchAll ? "client" : "server"}
+          rowCount={needsFetchAll ? undefined : totalItems}
           paginationModel={paginationModel}
           onPaginationModelChange={(newModel) => setPaginationModel(newModel)}
           pageSizeOptions={[10, 25, 50]}
+          excludeSearchFields={['gestionarLocalidades', 'gestionarSubcategorias', 'activo']}
         />
       </ContainerBox>
 
-      {/* Botón flotante */}
       <FloatingAddButton onClick={() => { setSelectedItem(null); setIsDialogOpen(true); }} />
 
-      {/* Modal Crear/Editar */}
       <MiscellaneousModal
         isOpen={isDialogOpen}
         onClose={() => {
@@ -401,7 +443,6 @@ export default function MiscellaneousPage() {
         categoria={currentCategoria}
       />
 
-      {/* Modal Detalle */}
       <CardSeeMiscellaneousModal
         open={isDetailOpen}
         onClose={() => {
@@ -417,7 +458,6 @@ export default function MiscellaneousPage() {
         causasRaiz={causasRaiz}
       />
 
-      {/* Modal Estados */}
       <EstadosDialog
         open={estadosDialogOpen}
         onClose={() => setEstadosDialogOpen(false)}
@@ -426,7 +466,6 @@ export default function MiscellaneousPage() {
         onEliminar={handleEliminarEstado}
       />
 
-      {/* Modal Localidades */}
       <LocalidadesDialog
         open={localidadesDialogOpen}
         onClose={() => {
@@ -439,7 +478,6 @@ export default function MiscellaneousPage() {
         onEliminar={handleEliminarLocalidad}
       />
 
-      {/* Modal Subcategorías */}
       <SubcategoriasDialog
         open={subcategoriasDialogOpen}
         onClose={() => setSubcategoriasDialogOpen(false)}

@@ -30,6 +30,8 @@ interface MiscellaneousTableProps {
   paginationModel?: { page: number; pageSize: number };
   onPaginationModelChange?: (model: { page: number; pageSize: number }) => void;
   pageSizeOptions?: number[];
+  selectFieldOptions?: Record<string, Array<{ value: string; label: string }>>;
+  excludeSearchFields?: string[];
 }
 
 export const MiscellaneousTable = ({
@@ -48,6 +50,8 @@ export const MiscellaneousTable = ({
   paginationModel,
   onPaginationModelChange,
   pageSizeOptions = [10, 25, 50],
+  excludeSearchFields = [],
+  
 }: MiscellaneousTableProps) => {
   const getLocalidadesByCiudad = (ciudadId: string) => {
     if (!ciudadId) return [];
@@ -82,7 +86,7 @@ export const MiscellaneousTable = ({
 
     baseColumns.push({
       field: "valor",
-      headerName: "Nombre",
+      headerName: "Ciudad",
       flex: 1,
       minWidth: 200,
       renderCell: (params) => (
@@ -193,7 +197,7 @@ export const MiscellaneousTable = ({
 
       baseColumns.push({
         field: "activo",
-        headerName: "Estado",
+        headerName: "Status",
         width: 120,
         align: "center",
         headerAlign: "center",
@@ -706,6 +710,7 @@ export const MiscellaneousTable = ({
         paginationModel={paginationModel}
         onPaginationModelChange={onPaginationModelChange}
         pageSizeOptions={pageSizeOptions}
+        excludeSearchFields={excludeSearchFields}
       />
     </Box>
   );

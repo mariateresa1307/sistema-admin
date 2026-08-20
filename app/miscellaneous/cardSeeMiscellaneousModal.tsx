@@ -169,14 +169,37 @@ export const CardSeeMiscellaneousModal = ({
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ type: "spring", duration: 0.35 }}
-              style={{ width: '100%', maxWidth: '650px', outline: 'none' }}
+              style={{ width: '100%', maxWidth: '800px', outline: 'none' }}
             >
               <Paper
                 elevation={0}
                 sx={{
-                  p: 4, borderRadius: '18px', border: '1px solid #eaedf1',
+                  p: 4, 
+                  borderRadius: '18px', 
+                  border: '1px solid #eaedf1',
                   boxShadow: '0px 10px 40px rgba(0,0,0,0.06), 0px 20px 70px rgba(0,0,20,0.04)',
-                  bgcolor: '#ffffff', position: 'relative', overflow: 'hidden'
+                  bgcolor: '#ffffff', 
+                  position: 'relative', 
+                  overflowY: 'auto',
+                   overflowX: 'hidden',
+                   maxHeight: '90vh',
+
+                    '&::-webkit-scrollbar': {
+      width: '8px',
+    },
+
+    '&::-webkit-scrollbar-track': {
+      background: '#f1f5f9',
+      borderRadius: '4px',
+    },
+     '&::-webkit-scrollbar-thumb': {
+      background: '#cbd5e1',
+      borderRadius: '4px',
+      '&:hover': {
+        background: '#94a3b8',
+      },
+    },
+
                 }}
               >
                 {/* Top border based on status */}

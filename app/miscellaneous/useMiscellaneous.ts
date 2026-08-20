@@ -30,13 +30,17 @@ interface UseMiscellaneousProps {
   page?: number;
   pageSize?: number;
   searchValue?: string;
+  padreId?: string;
+  fetchAll?: boolean;
 }
 
-export const useMiscellaneous = ({ 
-  categoria, 
-  page = 1, 
-  pageSize = 10, 
-  searchValue 
+export const useMiscellaneous = ({
+  categoria,
+  page = 1,
+  pageSize = 10,
+  searchValue,
+  padreId,
+  fetchAll = false,
 }: UseMiscellaneousProps) => {
   const [rows, setRows] = useState<MiscellaneousItem[]>([]);
   const [totalItems, setTotalItems] = useState(0);
@@ -64,12 +68,19 @@ export const useMiscellaneous = ({
   const fetchItems = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await getMiscellaneous({ 
+      const params: any = { 
         categoria, 
-        page, 
-        limit: pageSize,
-        valor: searchValue 
-      });
+        limit: fetchAll ? 900 : pageSize, // ✅ Usar 9999 si fetchAll es true
+      };
+      
+      if (!fetchAll) {
+        params.page = page;
+      }
+      
+      if (searchValue) params.valor = searchValue;
+      if (padreId) params.padreId = padreId;
+      
+      const response = await getMiscellaneous(params);
       
       const data = response.data?.data || (Array.isArray(response.data) ? response.data : []);
       const total = response.data?.total || data.length;
@@ -84,11 +95,12 @@ export const useMiscellaneous = ({
     } finally {
       setLoading(false);
     }
-  }, [categoria, page, pageSize, searchValue, showNotification]);
+  }, [categoria, page, pageSize, searchValue, padreId, fetchAll, showNotification]); // ✅ fetchAll agregado
+
 
   const fetchByCategoria = useCallback(async (cat: string) => {
     try {
-      const response = await getMiscellaneous({ categoria: cat, limit: 9999 });
+      const response = await getMiscellaneous({ categoria: cat, limit: 900 });
       const data = response.data?.data || (Array.isArray(response.data) ? response.data : []);
       return data;
     } catch (error) {
@@ -194,7 +206,7 @@ export const useMiscellaneous = ({
 
   return {
     rows,
-    totalItems, 
+    totalItems,
     loading,
     notification,
     closeNotification,

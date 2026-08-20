@@ -68,44 +68,66 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
   };
 
   React.useEffect(() => {
-    if (!isOpen || isMiscLoaded) return;
-    let isMounted = true;
+  if (!isOpen || isMiscLoaded) return;
+  let isMounted = true;
 
-    const cargarMiscellaneous = async () => {
-      try {
-        // ✅ NUEVO: agregada categoría ESTADO
-        const [resCiudades, resTiposCliente, resProveedores, resUltimaMilla, resEstados] = await Promise.all([
-          getMiscellaneous({ categoria: 'CIUDAD', limit: 9999 }),
-          getMiscellaneous({ categoria: 'TIPO_CLIENTE', limit: 9999 }),
-          getMiscellaneous({ categoria: 'PROVEEDOR', limit: 9999 }),
-          getMiscellaneous({ categoria: 'ULTIMA_MILLA', limit: 9999 }),
-          getMiscellaneous({ categoria: 'ESTADO', limit: 9999 }),
-        ]);
+  const cargarMiscellaneous = async () => {
+    try {
+      const [resCiudades, resTiposCliente, resProveedores, resUltimaMilla, resEstados] = await Promise.all([
+        getMiscellaneous({ categoria: 'CIUDAD', limit: 9999 }),
+        getMiscellaneous({ categoria: 'TIPO_CLIENTE', limit: 9999 }),
+        getMiscellaneous({ categoria: 'PROVEEDOR', limit: 9999 }),
+        getMiscellaneous({ categoria: 'ULTIMA_MILLA', limit: 9999 }),
+        getMiscellaneous({ categoria: 'ESTADO', limit: 9999 }),
+      ]);
 
-        if (isMounted) {
-          setCiudades(normalizeToArray(resCiudades));
-          setTipoClienteList(normalizeToArray(resTiposCliente));
-          setProveedoresList(normalizeToArray(resProveedores));
-          setUltimaMillaList(normalizeToArray(resUltimaMilla));
-          setEstadosList(normalizeToArray(resEstados)); // ✅ NUEVO
-          setIsMiscLoaded(true);
-        }
-      } catch (error) {
-        console.error("Error cargando datos:", error);
-        if (isMounted) {
-          setCiudades([]);
-          setTipoClienteList([]);
-          setProveedoresList([]);
-          setUltimaMillaList([]);
-          setEstadosList([]); // ✅ NUEVO
-          setIsMiscLoaded(true);
-        }
+      if (isMounted) {
+        const ciudadesData = normalizeToArray(resCiudades);
+        const tiposClienteData = normalizeToArray(resTiposCliente);
+        const proveedoresData = normalizeToArray(resProveedores);
+        const ultimaMillaData = normalizeToArray(resUltimaMilla);
+        const estadosData = normalizeToArray(resEstados);
+
+        // 🔍 LOGS DEFINITIVOS DE DIAGNÓSTICO
+        console.log('=== 📊 DIAGNÓSTICO DE CARGA ===');
+        console.log('🏙️ Ciudades cargadas:', ciudadesData.length);
+        console.log('🏙️ Primera ciudad:', ciudadesData[0]);
+        console.log('🗺️ Estados cargados:', estadosData.length);
+        console.log('🗺️ Primer estado:', estadosData[0]);
+        
+        // Verificar que cada array tiene la categoría correcta
+        console.log('✅ ¿Todas las ciudades tienen categoria=CIUDAD?:', 
+          ciudadesData.every((c: any) => c.categoria === 'CIUDAD'));
+        console.log('✅ ¿Todos los estados tienen categoria=ESTADO?:', 
+          estadosData.every((e: any) => e.categoria === 'ESTADO'));
+        console.log('❌ ¿Hay estados con categoria=CIUDAD? (BUG):', 
+          estadosData.some((e: any) => e.categoria === 'CIUDAD'));
+        
+        console.log('===============================');
+
+        setCiudades(ciudadesData);
+        setTipoClienteList(tiposClienteData);
+        setProveedoresList(proveedoresData);
+        setUltimaMillaList(ultimaMillaData);
+        setEstadosList(estadosData);
+        setIsMiscLoaded(true);
       }
-    };
+    } catch (error) {
+      console.error("Error cargando datos:", error);
+      if (isMounted) {
+        setCiudades([]);
+        setTipoClienteList([]);
+        setProveedoresList([]);
+        setUltimaMillaList([]);
+        setEstadosList([]);
+        setIsMiscLoaded(true);
+      }
+    }
+  };
 
-    cargarMiscellaneous();
-    return () => { isMounted = false; };
-  }, [isOpen, isMiscLoaded]);
+  cargarMiscellaneous();
+  return () => { isMounted = false; };
+}, [isOpen, isMiscLoaded]);
 
   React.useEffect(() => {
     if (!isOpen || !initialData || !initialData._id) {
@@ -322,74 +344,76 @@ const handleEstadoChange = React.useCallback((e: React.ChangeEvent<HTMLInputElem
   setEstadoSeleccionado(nuevoEstado);
   setFieldErrors(prev => ({ ...prev, estado: false }));
 
-  if (nuevoEstado) {
-    // 🔍 LOG DE DIAGNÓSTICO: ver estructura real de las ciudades
-    console.log('🔍 [handleEstadoChange] Estado seleccionado:', nuevoEstado);
-    console.log('🔍 [handleEstadoChange] Total ciudades cargadas:', ciudades.length);
-    if (ciudades.length > 0) {
-      console.log('🔍 [handleEstadoChange] Primera ciudad (estructura completa):', ciudades[0]);
-      console.log('🔍 [handleEstadoChange] Primera ciudad (padreNombre):', (ciudades[0] as any).padreNombre);
-      console.log('🔍 [handleEstadoChange] Primera ciudad (estadoId):', (ciudades[0] as any).estadoId);
-      console.log('🔍 [handleEstadoChange] Primera ciudad (padreId):', (ciudades[0] as any).padreId);
-    }
+  console.log('🎯 [handleEstadoChange] Estado seleccionado:', nuevoEstado);
 
-    const estadoNormalizado = nuevoEstado.trim().toUpperCase();
+  if (!nuevoEstado) {
+    setCiudadSeleccionada("");
+    return;
+  }
 
-    // 🔍 ESTRATEGIA 1: Match por padreNombre (case-insensitive)
-    let ciudadDelEstado = ciudades.find((c: any) => {
-      const padreNombre = (c.padreNombre || '').toString().trim().toUpperCase();
-      return padreNombre === estadoNormalizado;
+  // Buscar el objeto del estado completo para obtener su _id
+  const estadoObj = estadosList.find(
+    (e: any) => (e.valor || '').toString().trim().toUpperCase() === nuevoEstado.trim().toUpperCase()
+  );
+
+  console.log('🔍 Estado objeto encontrado:', estadoObj);
+  console.log('🔍 Total ciudades para buscar:', ciudades.length);
+
+  let ciudadDelEstado: any = null;
+
+  // ESTRATEGIA 1: Match por padreNombre (case-insensitive, sin espacios extra)
+  ciudadDelEstado = ciudades.find((c: any) => {
+    const padreNombre = (c.padreNombre || '').toString().trim().toUpperCase();
+    const estadoNorm = nuevoEstado.trim().toUpperCase();
+    return padreNombre === estadoNorm;
+  });
+
+  if (ciudadDelEstado) {
+    console.log('✅ Match por padreNombre:', ciudadDelEstado.valor);
+  }
+
+  // ESTRATEGIA 2: Match por estadoId comparado con _id del estado
+  if (!ciudadDelEstado && estadoObj) {
+    const estadoId = String(estadoObj._id);
+    ciudadDelEstado = ciudades.find((c: any) => {
+      const cEstadoId = (c.estadoId || c.padreId || '').toString().trim();
+      return cEstadoId === estadoId;
     });
-
-    console.log('🔍 Estrategia 1 (padreNombre):', ciudadDelEstado ? ciudadDelEstado.valor : 'no encontrado');
-
-    // 🔍 ESTRATEGIA 2: Match por estadoId comparando con _id de estadosList
-    if (!ciudadDelEstado) {
-      const estadoObj = estadosList.find(e => e.valor.trim().toUpperCase() === estadoNormalizado);
-      if (estadoObj) {
-        ciudadDelEstado = ciudades.find((c: any) => {
-          const cEstadoId = (c.estadoId || c.padreId || '').toString().trim();
-          return cEstadoId === String(estadoObj._id);
-        });
-        console.log('🔍 Estrategia 2 (estadoId/padreId):', ciudadDelEstado ? ciudadDelEstado.valor : 'no encontrado');
-      }
-    }
-
-    // 🔍 ESTRATEGIA 3: Match por estado como objeto embebido
-    if (!ciudadDelEstado) {
-      ciudadDelEstado = ciudades.find((c: any) => {
-        const estadoObj = c.estado;
-        if (!estadoObj) return false;
-        if (typeof estadoObj === 'string') {
-          return estadoObj.trim().toUpperCase() === estadoNormalizado;
-        }
-        if (typeof estadoObj === 'object') {
-          return (estadoObj.valor || '').toString().trim().toUpperCase() === estadoNormalizado;
-        }
-        return false;
-      });
-      console.log('🔍 Estrategia 3 (estado embebido):', ciudadDelEstado ? ciudadDelEstado.valor : 'no encontrado');
-    }
-
     if (ciudadDelEstado) {
-      console.log('✅ Ciudad asignada automáticamente:', ciudadDelEstado.valor);
-      setCiudadSeleccionada(ciudadDelEstado.valor);
-      setFieldErrors(prev => ({ ...prev, city: false }));
-    } else {
-      console.warn('⚠️ No se encontró ciudad para el estado:', nuevoEstado);
-      console.warn('⚠️ Muestra de 5 ciudades:', ciudades.slice(0, 5).map((c: any) => ({
+      console.log('✅ Match por estadoId/padreId:', ciudadDelEstado.valor);
+    }
+  }
+
+  // ESTRATEGIA 3: Búsqueda parcial (por si hay acentos o espacios)
+  if (!ciudadDelEstado) {
+    const estadoNorm = nuevoEstado.trim().toUpperCase();
+    ciudadDelEstado = ciudades.find((c: any) => {
+      const padreNombre = (c.padreNombre || '').toString().trim().toUpperCase();
+      return padreNombre.includes(estadoNorm) || estadoNorm.includes(padreNombre);
+    });
+    if (ciudadDelEstado) {
+      console.log('✅ Match parcial:', ciudadDelEstado.valor);
+    }
+  }
+
+  if (ciudadDelEstado) {
+    console.log('🎉 CIUDAD ASIGNADA:', ciudadDelEstado.valor);
+    setCiudadSeleccionada(ciudadDelEstado.valor);
+    setFieldErrors(prev => ({ ...prev, city: false }));
+  } else {
+    console.warn('⚠️ NO se encontró ciudad para estado:', nuevoEstado);
+    console.warn('⚠️ Muestra de ciudades (primeras 5):', 
+      ciudades.slice(0, 5).map((c: any) => ({
         valor: c.valor,
         padreNombre: c.padreNombre,
         estadoId: c.estadoId,
         padreId: c.padreId,
-        estado: c.estado,
-      })));
-      setCiudadSeleccionada("");
-    }
-  } else {
+      }))
+    );
     setCiudadSeleccionada("");
   }
 }, [ciudades, estadosList]);
+
 
   const handleIdCircuitoChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setIdCircuitoValue(e.target.value);
@@ -550,9 +574,15 @@ const handleEstadoChange = React.useCallback((e: React.ChangeEvent<HTMLInputElem
     return lista.some(e => e.valor === estadoSeleccionado) ? estadoSeleccionado : "";
   }, [estadosList, estadoSeleccionado]);
 
-  const safeCiudadValue = React.useMemo(() => {
-    return ciudadesFiltradas.some(c => c.valor === ciudadSeleccionada) ? ciudadSeleccionada : "";
-  }, [ciudadesFiltradas, ciudadSeleccionada]);
+// ✅ SIMPLIFICADO: usa ciudadSeleccionada directamente si existe, sino ""
+const safeCiudadValue = React.useMemo(() => {
+  if (!ciudadSeleccionada) return "";
+  // Verifica que la ciudad esté en la lista filtrada o en ciudades totales
+  const existe = ciudadesFiltradas.some(c => c.valor === ciudadSeleccionada) ||
+                 ciudades.some(c => c.valor === ciudadSeleccionada);
+  return existe ? ciudadSeleccionada : "";
+}, [ciudadesFiltradas, ciudadSeleccionada, ciudades]);
+
 
   const safeTipoClienteValue = React.useMemo(() => {
     const lista = Array.isArray(tipoClienteList) ? tipoClienteList : [];

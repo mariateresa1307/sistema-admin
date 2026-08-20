@@ -10,6 +10,8 @@ import { TableSkeleton } from './skeletons';
 
 export type SearchParams = { field: string; value: string };
 
+export type SelectFieldOption = { value: string; label: string };
+
 interface CustomDataGridProps extends Omit<DataGridProps, 'rows' | 'sx'> {
   rows: Array<any>;
   columns: Array<GridColDef>;
@@ -22,25 +24,27 @@ interface CustomDataGridProps extends Omit<DataGridProps, 'rows' | 'sx'> {
   rowCount?: number;
   paginationMode?: 'client' | 'server';
   sx?: SxProps<Theme>;
+  excludeSearchFields?: string[];
 }
 
 export default function CustomDataGrid({
-  rows, 
+  rows,
   columns: rawColumns = [],
-  loading, 
-  onSearch, 
+  loading,
+  onSearch,
   debounceMs = 400,
-  paginationModel, 
-  onPaginationModelChange, 
+  paginationModel,
+  onPaginationModelChange,
   pageSizeOptions = [10, 25, 50],
-  rowCount, 
+  rowCount,
   paginationMode = 'server',
-  sx: externalSx = {}, 
+  sx: externalSx = {},
+  excludeSearchFields = [],
   ...restProps
 }: CustomDataGridProps) {
-  
-  const columns = Array.isArray(rawColumns) 
-    ? rawColumns.filter((col): col is GridColDef => Boolean(col) && typeof col === 'object') 
+
+  const columns = Array.isArray(rawColumns)
+    ? rawColumns.filter((col): col is GridColDef => Boolean(col) && typeof col === 'object')
     : [];
 
   useEffect(() => {
@@ -53,37 +57,48 @@ export default function CustomDataGrid({
 
   const dropdownOptions = useMemo(() => {
     if (!Array.isArray(columns) || columns.length === 0) return [];
-    
-    const caseNumberCol = columns.find(col => col.field === 'caseNumber');
-    const otherCols = columns.filter(col => col.field !== 'caseNumber');
-    
-    let options = caseNumberCol ? [caseNumberCol, ...otherCols] : columns;
+
+    const DEFAULT_EXCLUDED = [
+      'gestionarLocalidades',
+      'gestionarSubcategorias',
+      'acciones',
+      'activo',
+    ];
+    const excluded = new Set([...DEFAULT_EXCLUDED, ...excludeSearchFields]);
+    const searchableCols = columns.filter(col => !excluded.has(col.field));
+    const caseNumberCol = searchableCols.find(col => col.field === 'caseNumber');
+    const otherCols = searchableCols.filter(col => col.field !== 'caseNumber');
+    let options = caseNumberCol ? [caseNumberCol, ...otherCols] : searchableCols;
+
 
     if (isServiciosModule) {
       if (!options.some(opt => opt.field === 'nodos')) {
         options = [{ field: 'nodos', headerName: 'Nodos' }, ...options];
       }
     }
-    
+
     return options;
-  }, [columns, isServiciosModule]);
+  }, [columns, isServiciosModule, excludeSearchFields]);
 
   const [isMounted, setIsMounted] = useState(false);
   const [searchField, setSearchField] = useState<string>(
-    columns.find(col => col.field === 'caseNumber')?.field || 
-    columns.find(col => col.field === 'name')?.field || 
+    columns.find(col => col.field === 'caseNumber' && !excludeSearchFields.includes('caseNumber'))?.field ||
+    columns.find(col => col.field === 'name' && !excludeSearchFields.includes('name'))?.field ||
+    columns.find(col => !excludeSearchFields.includes(col.field))?.field ||
     columns[0]?.field || ""
   );
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState(rows);
   const [isSearching, setIsSearching] = useState(false);
-  
+
   const isApiSearch = Boolean(onSearch);
   const skipInitialSearch = useRef(true);
 
   const isUserStatusField = useMemo(() => searchField === 'isActive', [searchField]);
   const isStatusField = useMemo(() => searchField === 'status', [searchField]);
   const isTipoServicioField = useMemo(() => searchField === 'tipoServicio', [searchField]);
+
+
   const isSelectSearchField = isUserStatusField || isStatusField || isTipoServicioField;
 
   useEffect(() => { setIsMounted(true); }, []);
@@ -127,12 +142,12 @@ export default function CustomDataGrid({
 
   useEffect(() => {
     if (!onSearch) return;
-    if (skipInitialSearch.current) { 
-      skipInitialSearch.current = false; 
-      return; 
+    if (skipInitialSearch.current) {
+      skipInitialSearch.current = false;
+      return;
     }
-    const timer = setTimeout(() => { 
-      onSearch({ field: searchField, value: searchTerm }); 
+    const timer = setTimeout(() => {
+      onSearch({ field: searchField, value: searchTerm });
     }, debounceMs);
     return () => clearTimeout(timer);
   }, [searchTerm, searchField, onSearch, debounceMs]);
@@ -143,7 +158,7 @@ export default function CustomDataGrid({
   }, [pageSizeOptions, paginationModel?.pageSize]);
 
   const displayRows = isApiSearch ? rows : searchResults;
-  
+
   if (!isMounted || columns.length === 0) {
     return (
       <Box sx={{ p: 4, textAlign: 'center', color: 'text.secondary', border: '1px dashed #cbd5e1', borderRadius: '12px' }}>
@@ -152,43 +167,21 @@ export default function CustomDataGrid({
     );
   }
 
-  
-    if (loading && displayRows.length === 0) {
+
+  if (loading && displayRows.length === 0) {
     return (
-      <Box  key="skeleton-view">
+      <Box key="skeleton-view">
         <Box key="grid-view" sx={{ display: "flex", gap: 2, mb: 2, alignItems: "center", flexWrap: "wrap" }}>
-          <TextField
-            disabled
-            value=""               // ✅ controlled desde el inicio
-            label="Buscar por"
-            size="small"
-            sx={{ minWidth: 150 }}
-          />
-          <TextField
-            disabled
-            value=""               
-            placeholder="Cargando datos..."
-            size="small"
-            fullWidth
-            sx={{ maxWidth: 500 }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon sx={{ color: '#cbd5e1' }} />
-                </InputAdornment>
-              ),
-            }}
+          <TextField disabled value="" label="Buscar por" size="small" sx={{ minWidth: 150 }} />
+          <TextField disabled value="" placeholder="Cargando datos..." size="small" fullWidth sx={{ maxWidth: 500 }}
+            InputProps={{ startAdornment: (<InputAdornment position="start"><SearchIcon sx={{ color: '#cbd5e1' }} /></InputAdornment>) }}
           />
         </Box>
-
-        <TableSkeleton
-          rows={Math.min(paginationModel?.pageSize || 8, 15)}
-          withSearch={false}
-        />
+        <TableSkeleton rows={Math.min(paginationModel?.pageSize || 8, 15)} withSearch={false} />
       </Box>
     );
   }
-      
+
 
   const renderStatusMenuItems = () => {
     const items = [<MenuItem key="all" value="">Todos</MenuItem>];
@@ -206,18 +199,18 @@ export default function CustomDataGrid({
   const baseSx: SxProps<Theme> = {
     borderRadius: "12px",
     border: '1px solid #eaedf1',
-    "& .MuiDataGrid-columnHeaders": { 
+    "& .MuiDataGrid-columnHeaders": {
       backgroundColor: "#080769 !important",
       color: "#FFFFFF !important",
       borderBottom: '2px solid #06054a',
     },
-    "& .MuiDataGrid-columnHeader": { 
-      backgroundColor: "#080769 !important", 
+    "& .MuiDataGrid-columnHeader": {
+      backgroundColor: "#080769 !important",
       color: "#FFFFFF !important",
       fontWeight: 700,
     },
-    "& .MuiDataGrid-columnHeaderTitle": { 
-      fontWeight: 700, 
+    "& .MuiDataGrid-columnHeaderTitle": {
+      fontWeight: 700,
       color: "#FFFFFF !important",
     },
     "& .MuiDataGrid-row:hover": {
@@ -226,15 +219,81 @@ export default function CustomDataGrid({
     ...externalSx,
   };
 
+  const renderSearchInput = () => {
+    if (isTipoServicioField) {
+      return (
+        <TextField
+          select
+          size="small"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          sx={{ minWidth: 200, flex: 1, maxWidth: 500 }}
+          label="Filtrar por tipo"
+        >
+          <MenuItem value="">Todos</MenuItem>
+          <MenuItem value="RBS">RBS</MenuItem>
+          <MenuItem value="METROLAN">METROLAN</MenuItem>
+          <MenuItem value="DOG">DOG</MenuItem>
+          <MenuItem value="REDES COMPARTIDAS">REDES COMPARTIDAS</MenuItem>
+        </TextField>
+      );
+    }
+
+    if (isStatusField) {
+      return (
+        <TextField
+          select
+          size="small"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          sx={{ minWidth: 200, maxWidth: 500, flex: 1 }}
+          label="Filtrar por estado"
+        >
+          {renderStatusMenuItems()}
+        </TextField>
+      );
+    }
+
+    if (isUserStatusField) {
+      return (
+        <TextField
+          select
+          size="small"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          sx={{ minWidth: 200, maxWidth: 500, flex: 1 }}
+          label="Filtrar por estado"
+        >
+          <MenuItem value="">Todos</MenuItem>
+          <MenuItem value="true">Activo</MenuItem>
+          <MenuItem value="false">Inactivo</MenuItem>
+        </TextField>
+      );
+    }
+    const searchFieldLabel = columns.find(c => c.field === searchField)?.headerName || searchField;
+
+    return (
+      <TextField
+        fullWidth
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        placeholder={`Buscar ${searchField === 'nodos' ? 'Nodo (A, B u OLT)' : searchFieldLabel}...`}
+        size="small"
+        InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment> }}
+        sx={{ maxWidth: 500 }}
+      />
+    );
+  };
+
   return (
     <Box>
       <Box sx={{ display: "flex", gap: 2, mb: 2, alignItems: "center", flexWrap: "wrap" }}>
         <TextField
-          select 
+          select
           value={searchField}
           onChange={(e) => { setSearchField(e.target.value); setSearchTerm(""); }}
-          label="Buscar por" 
-          size="small" 
+          label="Buscar por"
+          size="small"
           sx={{ minWidth: 150 }}
         >
           {dropdownOptions.map((col) => (
@@ -242,55 +301,7 @@ export default function CustomDataGrid({
           ))}
         </TextField>
 
-        {isTipoServicioField ? (
-          <TextField 
-            select 
-            size="small" 
-            value={searchTerm} 
-            onChange={(e) => setSearchTerm(e.target.value)} 
-            sx={{ minWidth: 200, flex: 1, maxWidth: 500 }} 
-            label="Filtrar por tipo"
-          >
-            <MenuItem value="">Todos</MenuItem>
-            <MenuItem value="RBS">RBS</MenuItem>
-            <MenuItem value="METROLAN">METROLAN</MenuItem>
-            <MenuItem value="DOG">DOG</MenuItem>
-            <MenuItem value="REDES COMPARTIDAS">REDES COMPARTIDAS</MenuItem>
-          </TextField>
-        ) : isStatusField ? (
-          <TextField 
-            select 
-            size="small" 
-            value={searchTerm} 
-            onChange={(e) => setSearchTerm(e.target.value)} 
-            sx={{ minWidth: 200, maxWidth: 500, flex: 1 }} 
-            label="Filtrar por estado"
-          >
-            {renderStatusMenuItems()}
-          </TextField>
-        ) : isUserStatusField ? (
-          <TextField 
-            select 
-            size="small" 
-            value={searchTerm} 
-            onChange={(e) => setSearchTerm(e.target.value)} 
-            sx={{ minWidth: 200, maxWidth: 500, flex: 1 }} 
-            label="Filtrar por estado"
-          >
-            <MenuItem value="true">Activo</MenuItem>
-            <MenuItem value="false">Inactivo</MenuItem>
-          </TextField>
-        ) : (
-          <TextField
-            fullWidth 
-            value={searchTerm} 
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder={`Buscar ${searchField === 'nodos' ? 'Nodo (A, B u OLT)' : searchField}...`} 
-            size="small"
-            InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment> }}
-            sx={{ maxWidth: 500 }}
-          />
-        )}
+        {renderSearchInput()}
       </Box>
 
       <DataGrid
