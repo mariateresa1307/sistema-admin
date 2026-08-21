@@ -330,7 +330,7 @@ export const TicketStep1 = React.memo(
             value={form.ciudad ?? ''}
             onChange={(e) => onCiudadChange(e.target.value)}
             size="small"
-            disabled={isLoading}
+            disabled={isClosed || isLoading}
           >
             {isLoading ? (
               <MenuItem value="" disabled>Cargando...</MenuItem>

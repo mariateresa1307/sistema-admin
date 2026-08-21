@@ -385,6 +385,7 @@ useEffect(() => {
             select
             fullWidth
             required
+            disabled={isClosed}
             label="Operador Asignado"
             value={form.operatorAsignado ?? ''}
             onChange={(e) => onFieldChange('operatorAsignado', e.target.value)}
