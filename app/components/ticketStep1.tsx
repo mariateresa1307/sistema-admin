@@ -47,6 +47,13 @@ export const TicketStep1 = React.memo(
     const localidadesOptionsArray = Array.isArray(data?.localidadesOptions) ? data.localidadesOptions : [];
     const serviciosAfectadosArray = Array.isArray(data?.serviciosAfectados) ? (data.serviciosAfectados as ServicioAfectado[]) : [];
 
+    // ✅ NUEVO: lista completa de localidades como respaldo
+    const todasLocalidadesArray = Array.isArray((data as any)?.todasLasLocalidades)
+      ? (data as any).todasLasLocalidades
+      : [];
+    const localidadesBase = todasLocalidadesArray.length > 0 ? todasLocalidadesArray : localidadesOptionsArray;
+    const todasLocalidadesCargadas = todasLocalidadesArray.length > 0;
+
     const isFallaMasiva = form.tipoIncidencia === TIPO_INCIDENCIA.FALLA_MASIVA;
     const showTipoClienteInput = !isFallaMasiva;
     
@@ -54,19 +61,6 @@ export const TicketStep1 = React.memo(
     const isResidencial = selectedTipoCliente?.valor === TIPO_CLIENTE.RESIDENCIAL;
     const isClosed = form.estatus === TICKET_STATUS.CERRADO || form.estatus === 'CERRADO';
     const isLoading = data?.loading;
-
- console.log('🔍 [TicketStep1] Total localidades cargadas:', localidadesOptionsArray.length);
-    console.log('🔍 [TicketStep1] Ciudad seleccionada:', form.ciudad);
-
-if (localidadesOptionsArray.length > 0) {
-      console.log('🔍 [TicketStep1] Primera localidad (estructura):', localidadesOptionsArray[0]);
-      console.log('🔍 [TicketStep1] Muestra de 5 localidades:', localidadesOptionsArray.slice(0, 5).map((l: any) => ({
-        valor: l.valor,
-        padreId: l.padreId,
-        padreNombre: l.padreNombre,
-        ciudadId: l.ciudadId,
-      })));
-    }
 
     const localidadesFiltradas = useMemo(() => {
       if (!form.ciudad) return [];
@@ -80,19 +74,32 @@ if (localidadesOptionsArray.length > 0) {
       const ciudadId = String(ciudadObj._id);
       const ciudadNombre = ciudadObj.valor;
 
-      // Filtrar localidades donde padreId sea el id de la ciudad
-      // o donde padreNombre sea el nombre de la ciudad
-      return localidadesOptionsArray.filter((loc: any) => {
+      // ✅ Usar localidadesBase en lugar de localidadesOptionsArray
+      return localidadesBase.filter((loc: any) => {
         const locPadreId = typeof loc.padreId === 'object'
           ? String(loc.padreId?._id ?? '')
           : String(loc.padreId || '');
 
+        const locCiudadId = typeof loc.ciudadId === 'object'
+          ? String(loc.ciudadId?._id ?? '')
+          : String(loc.ciudadId || '');
+
         const locPadreNombre = (loc.padreNombre || '').toString().trim().toUpperCase();
         const ciudadNombreNorm = ciudadNombre.toString().trim().toUpperCase();
 
-        return locPadreId === ciudadId || locPadreNombre === ciudadNombreNorm;
+        return locPadreId === ciudadId || locCiudadId === ciudadId || locPadreNombre === ciudadNombreNorm;
       });
-    }, [localidadesOptionsArray, ciudadesOptionsArray, form.ciudad]);
+    }, [localidadesBase, ciudadesOptionsArray, form.ciudad]);
+
+    // ✅ NUEVO: valor normalizado para el select (manejo de mayúsculas/minúsculas)
+    const localidadDisplayValue = useMemo(() => {
+      if (!form.localidad) return '';
+      const norm = (form.localidad || '').toString().trim().toUpperCase();
+      const match = localidadesFiltradas.find(
+        (loc: any) => (loc.valor || '').toString().trim().toUpperCase() === norm
+      );
+      return match ? match.valor : form.localidad;
+    }, [form.localidad, localidadesFiltradas]);
 
     const estadoResuelto = useMemo(() => {
       if (!form.ciudad) return '';
@@ -103,17 +110,21 @@ if (localidadesOptionsArray.length > 0) {
       return ciudadObj.padreNombre || '';
     }, [ciudadesOptionsArray, form.ciudad]);
 
+    // ✅ MODIFICADO: no validar mientras las localidades estén cargando
     useEffect(() => {
       if (!form.ciudad) {
-        // Si no hay ciudad, limpiar localidad y estado
         if (form.localidad) onFieldChange('localidad', '');
         if (form.estado) onFieldChange('estado', '');
         return;
       }
 
+      // No validar ni limpiar la localidad hasta que las localidades estén cargadas
+      if (!todasLocalidadesCargadas) return;
+
       if (form.localidad) {
+        const norm = (form.localidad || '').toString().trim().toUpperCase();
         const pertenece = localidadesFiltradas.some(
-          (loc: any) => loc.valor === form.localidad
+          (loc: any) => (loc.valor || '').toString().trim().toUpperCase() === norm
         );
         if (!pertenece) {
           onFieldChange('localidad', '');
@@ -123,7 +134,7 @@ if (localidadesOptionsArray.length > 0) {
       if (estadoResuelto && form.estado !== estadoResuelto) {
         onFieldChange('estado', estadoResuelto);
       }
-    }, [form.ciudad, localidadesFiltradas, estadoResuelto, form.localidad, form.estado, onFieldChange]);
+    }, [form.ciudad, localidadesFiltradas, estadoResuelto, form.localidad, form.estado, onFieldChange, todasLocalidadesCargadas]);
 
     useEffect(() => {
       if (isFallaMasiva && form.afectacion === true && data.loadAllServicios) {
@@ -319,7 +330,7 @@ if (localidadesOptionsArray.length > 0) {
             value={form.ciudad ?? ''}
             onChange={(e) => onCiudadChange(e.target.value)}
             size="small"
-            disabled={isClosed || isLoading}
+            disabled={isLoading}
           >
             {isLoading ? (
               <MenuItem value="" disabled>Cargando...</MenuItem>
@@ -344,7 +355,7 @@ if (localidadesOptionsArray.length > 0) {
                 disabled
                 label="Estado"
                 name="estado"
-                value={estadoResuelto}  // ✅ Usar el valor resuelto en lugar de form.estado
+                value={estadoResuelto}
                 size="small"
                 sx={{ bgcolor: '#f0f4f8' }}
               />
@@ -356,17 +367,17 @@ if (localidadesOptionsArray.length > 0) {
                 required
                 label="Localidad"
                 name="localidad"
-                value={form.localidad ?? ''}
+                value={localidadDisplayValue}
                 onChange={handleChange}
                 size="small"
                 disabled={isClosed || isLoading}
               >
                 {isLoading ? (
                   <MenuItem value="" disabled>Cargando...</MenuItem>
-                ) : localidadesFiltradas.length === 0 ? (  // ✅ Usar lista filtrada
+                ) : localidadesFiltradas.length === 0 ? (
                   <MenuItem value="" disabled>No hay localidades para esta ciudad</MenuItem>
                 ) : (
-                  localidadesFiltradas.map((loc: any) => (  // ✅ Usar lista filtrada
+                  localidadesFiltradas.map((loc: any) => (
                     <MenuItem key={loc._id || loc.valor} value={loc.valor}>
                       {loc.valor}
                     </MenuItem>

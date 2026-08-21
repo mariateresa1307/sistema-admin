@@ -20,7 +20,7 @@ export interface UseTicketDataReturn {
   solucionesCaso: ConfiguracionInterface[];
   ciudadesOptions: any[];
   localidadesOptions: any[];
-  todasLasLocalidades: any[]; // ✅ NUEVO: lista completa sin filtrar
+  todasLasLocalidades: any[]; 
   serviciosAfectados: any[];
   grupoDestino: ConfiguracionInterface[];
   loading: boolean;
@@ -75,11 +75,11 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
     try {
       const [operadoresRes, ciudadesRes, causasRes, grupoDestinoRes, tipoClienteRes, localidadesRes] = await Promise.all([
         getUsers({ isActive: true }),
-        getMiscellaneous({ categoria: 'CIUDAD', limit: 9999 }),        // ✅ 9999
+        getMiscellaneous({ categoria: 'CIUDAD', limit: 999 }),       
         getMiscellaneous({ categoria: CATEGORIA.CAUSA_RAIZ, limit: 999 }),
         getMiscellaneous({ categoria: 'GRUPO_DESTINO', limit: 999 }),
         getMiscellaneous({ categoria: 'TIPO_CLIENTE', limit: 999 }),
-        getMiscellaneous({ categoria: 'LOCALIDAD', limit: 9999 }),     // ✅ 9999
+        getMiscellaneous({ categoria: 'LOCALIDAD', limit: 999 }),    
       ]);
 
       const operadoresData = Array.isArray(operadoresRes.data?.data)
@@ -132,7 +132,6 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
     }
   }, []);
 
-  // ✅ VERSIÓN MEJORADA: resuelve ciudad por ID o nombre y matchea por padreId, ciudadId o padreNombre
   const loadLocalidades = useCallback((ciudadIdOrName: string) => {
     if (!ciudadIdOrName) {
       setLocalidadesOptions([]);
@@ -141,7 +140,6 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
 
     const searchVal = String(ciudadIdOrName).toLowerCase().trim();
 
-    // Resolver el objeto ciudad (por ID o por nombre)
     const ciudadObj = ciudadesOptions.find((c: any) =>
       String(c._id) === searchVal || (c.valor || '').toLowerCase() === searchVal
     );
@@ -153,7 +151,6 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
       const locCiudadId = String(loc.ciudadId || '').toLowerCase();
       const locPadreNombre = String(loc.padreNombre || '').toLowerCase();
 
-      // Match por ID (ciudades antiguas sin padreNombre) o por nombre
       return (
         (ciudadId && (locPadreId === ciudadId || locCiudadId === ciudadId)) ||
         locPadreNombre === ciudadNombre
@@ -305,7 +302,7 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
     solucionesCaso,
     ciudadesOptions,
     localidadesOptions,
-    todasLasLocalidades, // ✅ NUEVO: expuesto
+    todasLasLocalidades, 
     serviciosAfectados,
     grupoDestino,
     loading,
