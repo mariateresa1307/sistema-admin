@@ -54,6 +54,20 @@ export const TicketStep1 = React.memo(
     const isResidencial = selectedTipoCliente?.valor === TIPO_CLIENTE.RESIDENCIAL;
     const isClosed = form.estatus === TICKET_STATUS.CERRADO || form.estatus === 'CERRADO';
     const isLoading = data?.loading;
+
+ console.log('🔍 [TicketStep1] Total localidades cargadas:', localidadesOptionsArray.length);
+    console.log('🔍 [TicketStep1] Ciudad seleccionada:', form.ciudad);
+
+if (localidadesOptionsArray.length > 0) {
+      console.log('🔍 [TicketStep1] Primera localidad (estructura):', localidadesOptionsArray[0]);
+      console.log('🔍 [TicketStep1] Muestra de 5 localidades:', localidadesOptionsArray.slice(0, 5).map((l: any) => ({
+        valor: l.valor,
+        padreId: l.padreId,
+        padreNombre: l.padreNombre,
+        ciudadId: l.ciudadId,
+      })));
+    }
+
     const localidadesFiltradas = useMemo(() => {
       if (!form.ciudad) return [];
 

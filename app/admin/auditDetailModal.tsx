@@ -269,7 +269,6 @@ export const AuditDetailModal = ({ open, onClose, log }: AuditDetailModalProps) 
     return null;
   }, [log?.action, oldValueParsed]);
 
-  // ✅ Las acciones de sesión (login/logout/login_failed) no tienen "cambios" que mostrar
   const isSessionAction = useMemo(() => {
     if (!log?.action) return false;
     const a = String(log.action).toUpperCase();

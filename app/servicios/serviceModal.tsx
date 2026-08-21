@@ -103,8 +103,16 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
     return () => { isMounted = false; };
   }, [isOpen, isMiscLoaded]);
 
+  // ✅ Bandera para evitar que handleEstadoChange limpie la ciudad durante carga inicial
+  const isInitialLoad = React.useRef(true);
+
   React.useEffect(() => {
-    if (!isOpen || !initialData || !initialData._id) {
+    if (!isOpen) {
+      isInitialLoad.current = true;
+      return;
+    }
+
+    if (!initialData || !initialData._id) {
       setTipoServicio("RBS");
       setCiudadSeleccionada("");
       setEstadoSeleccionado("");
@@ -128,20 +136,51 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
       setProveedorOUMId("");
       setProveedorNotFound(false);
       setFieldErrors({});
+      isInitialLoad.current = true;
       return;
     }
+
+    console.log('🔍 [EDIT] initialData recibido:', {
+      estado: initialData.estado,
+      city: initialData.city,
+      tipo: typeof initialData.estado,
+      cityType: typeof initialData.city
+    });
+    console.log('🔍 [EDIT] ciudades cargadas:', ciudades.length);
+    console.log('🔍 [EDIT] estadosList cargados:', estadosList.length);
 
     const currentTipo = initialData.tipoServicio || "RBS";
     setTipoServicio(currentTipo);
 
-    const estadoVal = typeof initialData.estado === 'object' && initialData.estado?.valor
+    // Extraer valor del estado
+    let estadoVal = typeof initialData.estado === 'object' && initialData.estado?.valor
       ? initialData.estado.valor
       : (typeof initialData.estado === 'string' ? initialData.estado : "");
-    setEstadoSeleccionado(estadoVal);
 
-    const cityVal = typeof initialData.city === 'object' && initialData.city?.valor
+    let cityVal = typeof initialData.city === 'object' && initialData.city?.valor
       ? initialData.city.valor
       : (typeof initialData.city === 'string' ? initialData.city : "");
+
+if (cityVal && ciudades.length > 0) {
+  const ciudadObj = ciudades.find((c: any) =>
+    (c.valor || '').toString().trim().toUpperCase() === cityVal.trim().toUpperCase()
+  );
+  if (ciudadObj) {
+    cityVal = ciudadObj.valor;
+  }
+}
+if (!estadoVal && cityVal && ciudades.length > 0) {
+  const ciudadObj = ciudades.find((c: any) =>
+    (c.valor || '').toString().trim().toUpperCase() === cityVal.trim().toUpperCase()
+  );
+  if (ciudadObj?.padreNombre) {
+    estadoVal = ciudadObj.padreNombre;
+    console.log('🔍 [EDIT] Estado derivado de la ciudad:', estadoVal);
+  }
+}
+
+    console.log('🔍 [EDIT] Valores finales:', { estadoVal, cityVal });
+    setEstadoSeleccionado(estadoVal);
     setCiudadSeleccionada(cityVal);
 
     const tcId = typeof initialData.tipoCliente === 'object' ? initialData.tipoCliente?._id : initialData.tipoCliente;
@@ -161,7 +200,6 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
     setNodoOLTValue(initialData.nodoOLT || "");
     setSerialONTValue(initialData.serialONT || "");
     setProveedorValue(initialData.proveedor || "");
-
     setImagePreview(initialData.diagramaRed || null);
     setShowImageSection(Boolean(initialData.diagramaRed));
 
@@ -200,7 +238,15 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
     }
 
     setFieldErrors({});
-  }, [isOpen, initialData, ultimaMillaList, proveedoresList]);
+
+    // Marcar como carga inicial y desmarcar después de un delay
+    isInitialLoad.current = true;
+    const timer = setTimeout(() => {
+      isInitialLoad.current = false;
+    }, 200);
+
+    return () => clearTimeout(timer);
+  }, [isOpen, initialData, ultimaMillaList, proveedoresList, ciudades, estadosList]);
 
   const formRef = React.useRef<HTMLFormElement>(null);
   const labelStyle = React.useMemo(() => ({ fontWeight: 700, fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', mb: 0.5 } as const), []);
@@ -229,7 +275,6 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
 
     if (tipoServicio === "METROLAN") {
       checkRequired(idCircuitoValue, "id_circuito", "ID Circuito");
-      checkRequired(contratoValue, "contrato", "Contrato");
       checkRequired(nodoAValue, "nodoA", "Nodo A");
       checkRequired(nodoBValue, "nodoB", "Nodo B");
       checkRequired(ipNetuno, "ipNetuno", "IP Netuno");
@@ -248,7 +293,6 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
       checkRequired(nodoBValue, "nodoB", "Nodo B");
     } else if (tipoServicio === "DOG") {
       checkRequired(idNetunoValue, "id_netuno", "ID Netuno");
-      checkRequired(contratoValue, "contrato", "Contrato");
       checkRequired(idCircuitoValue, "id_circuito", "ID Circuito");
       checkRequired(vlanValue, "vlan", "VLAN");
       checkRequired(nodoAValue, "nodoA", "Nodo A");
@@ -257,7 +301,6 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
       checkRequired(serialONTValue, "serialONT", "Serial ONT");
     } else if (tipoServicio === "REDES COMPARTIDAS") {
       checkRequired(ipNetuno, "ipNetuno", "IP Netuno");
-      checkRequired(contratoValue, "contrato", "Contrato");
       checkRequired(nodoAValue, "nodoA", "Nodo A");
       checkRequired(vlanValue, "vlan", "VLAN");
       checkRequired(productoSeleccionado, "producto", "Producto");
@@ -314,6 +357,12 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
     setEstadoSeleccionado(nuevoEstado);
     setFieldErrors(prev => ({ ...prev, estado: false }));
 
+    // ✅ Si es carga inicial, no ejecutar lógica de auto-fill
+    if (isInitialLoad.current) {
+      console.log('🔍 [handleEstadoChange] Saltando auto-fill por carga inicial');
+      return;
+    }
+
     // Sin estado → limpiar ciudad
     if (!nuevoEstado) {
       setCiudadSeleccionada("");
@@ -325,6 +374,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
       const padreNombre = (c.padreNombre || '').toString().trim().toUpperCase();
       return padreNombre === nuevoEstado.trim().toUpperCase();
     });
+    console.log('🔍 [handleEstadoChange] Ciudades encontradas:', ciudadesDelEstado.length);
 
     if (ciudadesDelEstado.length === 1) {
       // ✅ UNA sola ciudad: cargarla automáticamente
@@ -336,7 +386,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
     }
   }, [ciudades]);
 
-  // ✅ NUEVO: handler para cambio de ciudad
+  // ✅ Handler para cambio de ciudad
   const handleCiudadChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setCiudadSeleccionada(e.target.value);
     setFieldErrors(prev => ({ ...prev, city: false }));
@@ -485,7 +535,6 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
     return base;
   }, [listaBase, proveedorNotFound, proveedorOUMId]);
 
-  // ✅ CORREGIDO: filtra ciudades por padreNombre (campo real en la BD)
   const ciudadesFiltradas = React.useMemo(() => {
     const lista = Array.isArray(ciudades) ? ciudades : [];
     if (!estadoSeleccionado) return [];
@@ -501,11 +550,15 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
     return lista.some(e => e.valor === estadoSeleccionado) ? estadoSeleccionado : "";
   }, [estadosList, estadoSeleccionado]);
 
-  const safeCiudadValue = React.useMemo(() => {
+ const safeCiudadValue = React.useMemo(() => {
     if (!ciudadSeleccionada) return "";
-    const existe = ciudadesFiltradas.some(c => c.valor === ciudadSeleccionada) ||
-      ciudades.some(c => c.valor === ciudadSeleccionada);
-    return existe ? ciudadSeleccionada : "";
+    const norm = ciudadSeleccionada.toString().trim().toUpperCase();
+
+    const match =
+      ciudadesFiltradas.find((c: any) => (c.valor || '').toString().trim().toUpperCase() === norm) ||
+      ciudades.find((c: any) => (c.valor || '').toString().trim().toUpperCase() === norm);
+
+    return match ? match.valor : "";
   }, [ciudadesFiltradas, ciudadSeleccionada, ciudades]);
 
   const safeTipoClienteValue = React.useMemo(() => {
@@ -614,7 +667,6 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
                 </TextField>
               </Grid>
 
-              {/* ✅ CAMBIADO: Ciudad ahora es un SELECT con las ciudades del estado seleccionado */}
               <Grid size={6}>
                 {renderLabel("Ciudad", true)}
                 <TextField
@@ -636,17 +688,12 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
                           : `🔽 ${ciudadesFiltradas.length} ciudades disponibles, seleccione una`
                   }
                   sx={{
-                    // ✅ Estilos condicionales para el helperText
                     '& .MuiFormHelperText-root': {
-                      // Color por defecto (gris)
                       color: '#64748b',
-                      // Si hay error, usar color rojo (MUI lo maneja automáticamente)
-                      // Si hay ciudades disponibles, usar azul
                       ...((!getErrorProp("city") && estadoSeleccionado && ciudadesFiltradas.length > 1) && {
                         color: '#2563eb',
                         fontWeight: 500,
                       }),
-                      // Si no hay estado seleccionado, usar naranja
                       ...((!getErrorProp("city") && !estadoSeleccionado) && {
                         color: '#d97706',
                         fontStyle: 'italic',
@@ -711,7 +758,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
                     <TextField name="id_circuito" label="" fullWidth value={idCircuitoValue} onChange={handleIdCircuitoChange} size="small" error={getErrorProp("id_circuito")} helperText={getErrorProp("id_circuito") ? "Campo obligatorio" : ""} />
                   </Grid>
                   <Grid size={6}>
-                    {renderLabel("Contrato", true)}
+                    {renderLabel("Contrato")}
                     <TextField name="contrato" label="" fullWidth value={contratoValue} onChange={handleContratoChange} size="small" error={getErrorProp("contrato")} helperText={getErrorProp("contrato") ? "Campo obligatorio" : ""} />
                   </Grid>
                   <Grid size={6}>
@@ -791,8 +838,8 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
                     <TextField name="id_netuno" label="" fullWidth value={idNetunoValue} onChange={handleIdNetunoChange} size="small" error={getErrorProp("id_netuno")} helperText={getErrorProp("id_netuno") ? "Campo obligatorio" : ""} />
                   </Grid>
                   <Grid size={6}>
-                    {renderLabel("Contrato", true)}
-                    <TextField name="contrato" label="" fullWidth value={contratoValue} onChange={handleContratoChange} size="small" error={getErrorProp("contrato")} helperText={getErrorProp("contrato") ? "Campo obligatorio" : ""} />
+                    {renderLabel("Contrato")}
+                    <TextField name="contrato" label="" fullWidth value={contratoValue} onChange={handleContratoChange} size="small" error={getErrorProp("contrato")} helperText={getErrorProp("contrato")} />
                   </Grid>
                   <Grid size={6}>
                     {renderLabel("Circuito", true)}
@@ -828,7 +875,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
                     <TextField name="ipNetuno" label="" fullWidth value={ipNetuno} onChange={handleIpChange} size="small" error={getErrorProp("ipNetuno")} helperText={getErrorProp("ipNetuno") ? "Campo obligatorio" : ""} />
                   </Grid>
                   <Grid size={6}>
-                    {renderLabel("Contrato", true)}
+                    {renderLabel("Contrato")}
                     <TextField name="contrato" label="" fullWidth value={contratoValue} onChange={handleContratoChange} size="small" error={getErrorProp("contrato")} helperText={getErrorProp("contrato") ? "Campo obligatorio" : ""} />
                   </Grid>
                   <Grid size={6}>

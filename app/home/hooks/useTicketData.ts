@@ -20,6 +20,7 @@ export interface UseTicketDataReturn {
   solucionesCaso: ConfiguracionInterface[];
   ciudadesOptions: any[];
   localidadesOptions: any[];
+  todasLasLocalidades: any[]; // ✅ NUEVO: lista completa sin filtrar
   serviciosAfectados: any[];
   grupoDestino: ConfiguracionInterface[];
   loading: boolean;
@@ -33,7 +34,7 @@ export interface UseTicketDataReturn {
   loadLocalidades: (ciudadIdOrName: string) => void;
   loadSolucionesCaso: (causaRaizId: string) => Promise<void>;
   loadServiciosAfectados: (tipoClienteInput: string | ConfiguracionInterface) => Promise<void>;
-  loadAllServicios: () => Promise<void>; // ✅ NUEVA FUNCIÓN
+  loadAllServicios: () => Promise<void>;
   loadCausasRaiz: () => Promise<void>;
   loadGrupoDestino: () => Promise<void>;
 
@@ -74,11 +75,11 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
     try {
       const [operadoresRes, ciudadesRes, causasRes, grupoDestinoRes, tipoClienteRes, localidadesRes] = await Promise.all([
         getUsers({ isActive: true }),
-        getMiscellaneous({ categoria: 'CIUDAD', limit: 999 }),
+        getMiscellaneous({ categoria: 'CIUDAD', limit: 9999 }),        // ✅ 9999
         getMiscellaneous({ categoria: CATEGORIA.CAUSA_RAIZ, limit: 999 }),
         getMiscellaneous({ categoria: 'GRUPO_DESTINO', limit: 999 }),
         getMiscellaneous({ categoria: 'TIPO_CLIENTE', limit: 999 }),
-        getMiscellaneous({ categoria: 'LOCALIDAD', limit: 999 }),
+        getMiscellaneous({ categoria: 'LOCALIDAD', limit: 9999 }),     // ✅ 9999
       ]);
 
       const operadoresData = Array.isArray(operadoresRes.data?.data)
@@ -98,7 +99,10 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
       setCausasRaiz(extractData(causasRes));
       setGrupoDestino(extractData(grupoDestinoRes));
       setTipoCliente(extractData(tipoClienteRes));
-      setTodasLasLocalidades(extractData(localidadesRes));
+      
+      const todas = extractData(localidadesRes);
+      setTodasLasLocalidades(todas);
+      console.log('📦 [useTicketData] Total localidades en BD:', todas.length);
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Error desconocido');
       setError(error);
@@ -128,6 +132,7 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
     }
   }, []);
 
+  // ✅ VERSIÓN MEJORADA: resuelve ciudad por ID o nombre y matchea por padreId, ciudadId o padreNombre
   const loadLocalidades = useCallback((ciudadIdOrName: string) => {
     if (!ciudadIdOrName) {
       setLocalidadesOptions([]);
@@ -135,14 +140,29 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
     }
 
     const searchVal = String(ciudadIdOrName).toLowerCase().trim();
+
+    // Resolver el objeto ciudad (por ID o por nombre)
+    const ciudadObj = ciudadesOptions.find((c: any) =>
+      String(c._id) === searchVal || (c.valor || '').toLowerCase() === searchVal
+    );
+    const ciudadId = ciudadObj ? String(ciudadObj._id) : '';
+    const ciudadNombre = ciudadObj ? (ciudadObj.valor || '').toLowerCase() : searchVal;
+
     const filtradas = todasLasLocalidades.filter((loc: any) => {
-      const locCiudadId = String(loc.ciudadId || loc.padreId || '').toLowerCase();
-      const locCiudadNombre = String(loc.padreNombre || '').toLowerCase();
-      return locCiudadId === searchVal || locCiudadNombre === searchVal || locCiudadNombre.includes(searchVal);
+      const locPadreId = String(loc.padreId || '').toLowerCase();
+      const locCiudadId = String(loc.ciudadId || '').toLowerCase();
+      const locPadreNombre = String(loc.padreNombre || '').toLowerCase();
+
+      // Match por ID (ciudades antiguas sin padreNombre) o por nombre
+      return (
+        (ciudadId && (locPadreId === ciudadId || locCiudadId === ciudadId)) ||
+        locPadreNombre === ciudadNombre
+      );
     });
 
+    console.log('🏘️ [useTicketData] Localidades filtradas para', ciudadIdOrName, ':', filtradas.length);
     setLocalidadesOptions(filtradas);
-  }, [todasLasLocalidades]);
+  }, [todasLasLocalidades, ciudadesOptions]);
 
   const loadSubcategorias = useCallback(async (categoriaId: string) => {
     try {
@@ -226,7 +246,6 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
     }
   }, []);
 
-  // ✅ NUEVA FUNCIÓN: Carga TODOS los servicios sin filtrar por tipo de cliente
   const loadAllServicios = useCallback(async () => {
     setLoading(true);
     try {
@@ -286,6 +305,7 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
     solucionesCaso,
     ciudadesOptions,
     localidadesOptions,
+    todasLasLocalidades, // ✅ NUEVO: expuesto
     serviciosAfectados,
     grupoDestino,
     loading,
@@ -298,7 +318,7 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
     loadLocalidades,
     loadSolucionesCaso,
     loadServiciosAfectados,
-    loadAllServicios, // ✅ Exportada
+    loadAllServicios,
     loadCausasRaiz,
     loadGrupoDestino,
     clearSubcategorias,
