@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import {
   Box, Typography, TextField, MenuItem, Button, Dialog, DialogTitle,
-  DialogContent, DialogActions, Stack, Paper, IconButton,
+  DialogContent, DialogActions, Paper, IconButton,
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import { Download, Search } from '@mui/icons-material';
@@ -19,19 +19,26 @@ import { GrupoC } from '../grupos/grupoC';
 import { GrupoD } from '../grupos/grupoD';
 import { CATEGORIA_RED, TIPO_CLIENTE } from 'app/utils/constants';
 import { ReportePreview } from 'app/utils/types';
+import { exportReporteGrupoAExcel } from '../../utils/exportGrupoA';
+
+// Cards que solo se muestran en la gráfica de torta (no como KPIs)
+const CARDS_SOLO_GRAFICA = [
+  'Incidencias Puntuales',
+  'Incidencias Masivas',
+  'Ventana de Mantenimiento',
+];
 
 export const DashboardOperaciones = () => {
   const [openModal, setOpenModal] = useState(false);
   const [filters, setFilters] = useState({
-    grupo: 'A', 
-    plataforma: 'TODAS', 
-    cliente: 'TODOS', 
-    mes: dayjs(), // ✅ Usar dayjs por defecto (mes actual)
+    grupo: 'A',
+    plataforma: 'TODAS',
+    cliente: 'TODOS',
+    mes: dayjs(),
   });
   const [reportPreview, setReportPreview] = useState<ReportePreview>({});
 
   const handleSearchFilter = () => {
-    // Convertir dayjs a string YYYY-MM para el backend
     const mesString = dayjs(filters.mes).format('YYYY-MM');
     getReportPreview({ ...filters, mes: mesString }).then((resultReport) => {
       setReportPreview(resultReport.data);
@@ -41,6 +48,36 @@ export const DashboardOperaciones = () => {
   const handleMesChange = (newValue: Dayjs | null) => {
     if (newValue) {
       setFilters({ ...filters, mes: newValue });
+    }
+  };
+
+  // ✅ Export usa los tickets que ya vienen en reportPreview.ticketsDetalle
+  const handleExportar = async () => {
+    try {
+      const ticketsDetalle = (reportPreview as any).ticketsDetalle || [];
+
+      if (ticketsDetalle.length === 0) {
+        window.dispatchEvent(new CustomEvent('app-notification', {
+          detail: { message: 'No hay tickets para exportar en este período', severity: 'warning' },
+        }));
+        return;
+      }
+
+      await exportReporteGrupoAExcel({
+        reportPreview,
+        mes: filters.mes,
+        tickets: ticketsDetalle,
+      });
+
+      setOpenModal(false);
+      window.dispatchEvent(new CustomEvent('app-notification', {
+        detail: { message: 'Reporte exportado correctamente', severity: 'success' },
+      }));
+    } catch (err: any) {
+      console.error('Error exportando:', err);
+      window.dispatchEvent(new CustomEvent('app-notification', {
+        detail: { message: err?.message || 'Error al exportar el reporte', severity: 'error' },
+      }));
     }
   };
 
@@ -78,11 +115,11 @@ export const DashboardOperaciones = () => {
       <Paper elevation={0} sx={{ p: 3, mb: 4, border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
         <Grid container spacing={2} alignItems="center">
           <Grid size={{ xs: 12, md: 12, lg: 3 }}>
-            <TextField 
-              fullWidth 
-              label="Grupo KPI" 
-              select 
-              size="medium" 
+            <TextField
+              fullWidth
+              label="Grupo KPI"
+              select
+              size="medium"
               value={filters.grupo}
               onChange={(e) => setFilters({ ...filters, grupo: e.target.value })}
             >
@@ -92,13 +129,13 @@ export const DashboardOperaciones = () => {
               <MenuItem value="D">D - Calidad y mejora</MenuItem>
             </TextField>
           </Grid>
-          
+
           <Grid size={{ xs: 12, md: 12, lg: 2 }}>
-            <TextField 
-              fullWidth 
-              label="Plataforma" 
-              select 
-              size="medium" 
+            <TextField
+              fullWidth
+              label="Plataforma"
+              select
+              size="medium"
               value={filters.plataforma}
               onChange={(e) => setFilters({ ...filters, plataforma: e.target.value })}
             >
@@ -106,13 +143,13 @@ export const DashboardOperaciones = () => {
               {CATEGORIA_RED.map((name) => <MenuItem value={name} key={name}>{name}</MenuItem>)}
             </TextField>
           </Grid>
-          
+
           <Grid size={{ xs: 12, md: 12, lg: 2 }}>
-            <TextField 
-              fullWidth 
-              label="Tipo cliente" 
-              select 
-              size="medium" 
+            <TextField
+              fullWidth
+              label="Tipo cliente"
+              select
+              size="medium"
               value={filters.cliente}
               onChange={(e) => setFilters({ ...filters, cliente: e.target.value })}
             >
@@ -122,8 +159,7 @@ export const DashboardOperaciones = () => {
               ))}
             </TextField>
           </Grid>
-          
-          {/* ✅ DatePicker de MUI X - Selector de Mes */}
+
           <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
             <LocalizationProvider dateAdapter={AdapterDayjs}>
               <DatePicker
@@ -132,28 +168,28 @@ export const DashboardOperaciones = () => {
                 onChange={handleMesChange}
                 views={['year', 'month']}
                 format="MMMM YYYY"
-                slotProps={{ 
-                  textField: { 
-                    size: 'small', 
+                slotProps={{
+                  textField: {
+                    size: 'small',
                     fullWidth: true,
                     sx: { bgcolor: 'white', borderRadius: 2 }
-                  } 
+                  }
                 }}
               />
             </LocalizationProvider>
           </Grid>
-          
+
           <Grid size={{ xs: 12, md: 12, lg: 2 }} sx={{ display: 'flex', justifyContent: 'center' }}>
-            <IconButton 
-              size="large" 
-              color="primary" 
+            <IconButton
+              size="large"
+              color="primary"
               onClick={handleSearchFilter}
-              sx={{ 
-                bgcolor: '#080769', 
-                color: 'white', 
-                '&:hover': { bgcolor: '#060550' }, 
-                width: 56, 
-                height: 56 
+              sx={{
+                bgcolor: '#080769',
+                color: 'white',
+                '&:hover': { bgcolor: '#060550' },
+                width: 56,
+                height: 56
               }}
             >
               <Search />
@@ -163,7 +199,9 @@ export const DashboardOperaciones = () => {
       </Paper>
 
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        {reportPreview.cards?.map((card, key) => <KpiCard {...card} key={key} />)}
+        {reportPreview.cards
+          ?.filter((card) => !CARDS_SOLO_GRAFICA.includes(card.title))
+          .map((card, key) => <KpiCard {...card} key={key} />)}
       </Grid>
 
       {Grupos[filters.grupo as keyof typeof Grupos]}
@@ -175,7 +213,7 @@ export const DashboardOperaciones = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenModal(false)}>Cancelar</Button>
-          <Button variant="contained" onClick={() => alert('Generando...')}>Confirmar</Button>
+          <Button variant="contained" onClick={handleExportar}>Confirmar</Button>
         </DialogActions>
       </Dialog>
     </Box>
