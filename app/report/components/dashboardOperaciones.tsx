@@ -166,7 +166,7 @@ export const DashboardOperaciones = () => {
         {reportPreview.cards?.map((card, key) => <KpiCard {...card} key={key} />)}
       </Grid>
 
-      {reportPreview.mttrPlataforma && Grupos[filters.grupo as keyof typeof Grupos]}
+      {Grupos[filters.grupo as keyof typeof Grupos]}
 
       <Dialog open={openModal} onClose={() => setOpenModal(false)} fullWidth maxWidth="sm">
         <DialogTitle>Exportar Reporte Filtrado</DialogTitle>

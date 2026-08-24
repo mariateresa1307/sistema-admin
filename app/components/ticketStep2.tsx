@@ -28,7 +28,7 @@ interface TiemposCalculados {
   tAtencion: number;
   tEscalado: number;
   cCierreSoporte: number;
-  mttrTotal: number;
+  mttrTotal: number; // MTTR (Mean Time To Repair) del ticket: el tiempo total de resolución, expresado en minutos. = horaInicioFalla  - horaCierreFalla  
   turnoAsignado: 'DIURNO' | 'NOCTURNO';
 }
 

@@ -330,7 +330,7 @@ export const mapFormToUpdatePayload = (form: TicketFormData & Record<string, unk
   tAtencion: form.tAtencion as number | undefined,
   tEscalado: form.tEscalado as number | undefined,
   cCierreSoporte: form.cCierreSoporte as number | undefined,
-  mttrTotal: form.mttrTotal as number | undefined,
+  mttrTotal: form.mttrTotal as number | undefined, // MTTR (Mean Time To Repair) del ticket: el tiempo total de resolución, expresado en minutos. = horaInicioFalla  - horaCierreFalla
   status: form.estatus, 
 });
 
@@ -343,7 +343,7 @@ export const calcularTiempos = (form: TicketFormData) => {
     tAtencion: diffMin(form.horaDeteccionNoc, form.horaInicioAtencion),
     tEscalado: form.requiereEscalamiento === 'SI' ? diffMin(form.horaInicioFalla, form.horaEscalamiento) : 0,
     cCierreSoporte: diffMin(form.horaInicioAtencion, cierreFalla),
-    mttrTotal: diffMin(form.horaInicioFalla, cierreFalla),
+    mttrTotal: diffMin(form.horaInicioFalla, cierreFalla), // MTTR (Mean Time To Repair) del ticket: el tiempo total de resolución, expresado en minutos. = horaInicioFalla  - horaCierreFalla
     turnoAsignado: calcularTurno(form.horaDeteccionNoc),
   };
 };
