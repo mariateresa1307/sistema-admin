@@ -9,6 +9,7 @@ export const GrupoB = ({ reportPreview }: Props) => {
 
   return (
     <Box>
+      sssaaa
       <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: '#080769' }}>
         Tiempo Promedio de Afectación por Servicio
       </Typography>

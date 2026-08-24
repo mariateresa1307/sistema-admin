@@ -12,3 +12,10 @@ export const getNivelSeveridadConfig = (nivel: string): NivelSeveridadItem => {
     }
   );
 };
+
+export const parseMttrToMinutes = (value: string): number => {
+  if (!value) return 0;
+  const match = value.match(/(\d+)h\s*(\d+)m/);
+  if (!match) return 0;
+  return parseInt(match[1]) * 60 + parseInt(match[2]);
+};
