@@ -51,6 +51,26 @@ const extractData = (res: any) => {
   return Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
 };
 
+const filterByTipoIncidencia = <T extends { tipoIncidencia?: string[] }>(
+  items: T[],
+  tipoIncidencia: string,
+): T[] => {
+  if (!tipoIncidencia) return [];
+  const upper = tipoIncidencia.toUpperCase().trim();
+  return items.filter(item => {
+    if (!Array.isArray(item.tipoIncidencia) || item.tipoIncidencia.length === 0) return false;
+    return item.tipoIncidencia.some(t => (t || '').toUpperCase().trim() === upper);
+  });
+};
+
+const filterByPadreId = <T extends { padreId?: string; _id?: string }>(
+  items: T[],
+  padreId: string,
+): T[] => {
+  if (!padreId) return [];
+  return items.filter(item => String(item.padreId) === String(padreId));
+};
+
 export const useTicketData = (open: boolean): UseTicketDataReturn => {
   const [operadores, setOperadores] = useState<Operador[]>([]);
   const [categoriaRed, setCategoriaRed] = useState<ConfiguracionInterface[]>([]);
@@ -112,25 +132,34 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
     }
   }, [open]);
 
-  const loadCategoriasRed = useCallback(async (tipoIncidencia: string) => {
-    if (!tipoIncidencia) {
-      setCategoriaRed([]);
-      return [];
-    }
-    setLoading(true);
-    try {
-      const res = await getMiscellaneous({ categoria: 'CATEGORIA_RED', tipoIncidencia, limit: 999 });
-      const data = extractData(res);
-      setCategoriaRed(data);
-      return data;
-    } catch (err) {
-      console.error('❌ [useTicketData] Error cargando categorías:', err);
-      setCategoriaRed([]);
-      return [];
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+const loadCategoriasRed = useCallback(async (tipoIncidencia: string) => {
+  if (!tipoIncidencia) {
+    setCategoriaRed([]);
+    return [];
+  }
+
+  setLoading(true);
+  try {
+    
+    const res = await getMiscellaneous({ categoria: 'CATEGORIA_RED', limit: 999 });
+    const all = extractData(res) as ConfiguracionInterface[];
+    const filtradas = filterByTipoIncidencia(all, tipoIncidencia);
+
+    console.log(
+      `🏷️ [useTicketData] Categorias RED filtradas por ${tipoIncidencia}:`,
+      filtradas.length, 'de', all.length,
+    );
+
+    setCategoriaRed(filtradas);
+    return filtradas;
+  } catch (err) {
+    console.error('❌ [useTicketData] Error cargando categorías:', err);
+    setCategoriaRed([]);
+    return [];
+  } finally {
+    setLoading(false);
+  }
+}, []);
 
   const loadLocalidades = useCallback((ciudadIdOrName: string) => {
     if (!ciudadIdOrName) {
@@ -161,25 +190,33 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
     setLocalidadesOptions(filtradas);
   }, [todasLasLocalidades, ciudadesOptions]);
 
-  const loadSubcategorias = useCallback(async (categoriaId: string) => {
-    try {
-      const res = await getMiscellaneous({ categoria: 'SUBCATEGORIA', padreId: categoriaId, limit: 999 });
-      setSubcategorias(extractData(res));
-    } catch (error) {
-      console.error('Error cargando subcategorías:', error);
-      setSubcategorias([]);
-    }
-  }, []);
+ const loadSubcategorias = useCallback(async (categoriaId: string) => {
+  if (!categoriaId) {
+    setSubcategorias([]);
+    return;
+  }
+  try {
+    const res = await getMiscellaneous({ categoria: 'SUBCATEGORIA', padreId: categoriaId, limit: 999 });
+    setSubcategorias(extractData(res));
+  } catch (error) {
+    console.error('Error cargando subcategorías:', error);
+    setSubcategorias([]);
+  }
+}, []);
 
-  const loadDetalle = useCallback(async (subcategoriaId: string) => {
-    try {
-      const res = await getMiscellaneous({ categoria: 'DETALLE', padreId: subcategoriaId, limit: 999 });
-      setDetalle(extractData(res));
-    } catch (error) {
-      console.error('Error cargando detalles:', error);
-      setDetalle([]);
-    }
-  }, []);
+const loadDetalle = useCallback(async (subcategoriaId: string) => {
+  if (!subcategoriaId) {
+    setDetalle([]);
+    return;
+  }
+  try {
+    const res = await getMiscellaneous({ categoria: 'DETALLE', padreId: subcategoriaId, limit: 999 });
+    setDetalle(extractData(res));
+  } catch (error) {
+    console.error('Error cargando detalles:', error);
+    setDetalle([]);
+  }
+}, []);
 
   const loadTipoCliente = useCallback(async () => {
     try {

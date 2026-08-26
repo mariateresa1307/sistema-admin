@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import {
   Box, Typography, TextField, MenuItem, Button, Dialog, DialogTitle,
-  DialogContent, DialogActions, Paper, IconButton,
+  DialogContent, DialogActions, Paper, IconButton, CircularProgress,
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import { Download, Search } from '@mui/icons-material';
@@ -30,6 +30,7 @@ const CARDS_SOLO_GRAFICA = [
 
 export const DashboardOperaciones = () => {
   const [openModal, setOpenModal] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState({
     grupo: 'A',
     plataforma: 'TODAS',
@@ -38,12 +39,48 @@ export const DashboardOperaciones = () => {
   });
   const [reportPreview, setReportPreview] = useState<ReportePreview>({});
 
-  const handleSearchFilter = () => {
+  const handleSearchFilter = async () => {
     const mesString = dayjs(filters.mes).format('YYYY-MM');
-    getReportPreview({ ...filters, mes: mesString }).then((resultReport) => {
+    setLoading(true);
+    try {
+      const resultReport = await getReportPreview({ ...filters, mes: mesString });
       setReportPreview(resultReport.data);
-    });
+    } finally {
+      setLoading(false);
+    }
   };
+
+const handleExportReport = () => {
+  const mesString = dayjs(filters.mes).format('YYYY-MM');
+  
+  console.log('📥 [Frontend] Iniciando exportación con filtros:', {
+    grupo: filters.grupo,
+    plataforma: filters.plataforma,
+    cliente: filters.cliente,
+    mes: mesString
+  });
+  
+  // Construir URL con query params
+  const params = new URLSearchParams({
+    grupo: filters.grupo,
+    plataforma: filters.plataforma,
+    cliente: filters.cliente,
+    mes: mesString,
+  });
+
+  const exportUrl = `/api/reports/export?${params.toString()}`;
+  console.log('📥 [Frontend] URL de exportación:', exportUrl);
+  
+  // Crear link temporal para forzar la descarga
+  const link = document.createElement('a');
+  link.href = exportUrl;
+  link.target = '_blank';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  setOpenModal(false);
+};
 
   const handleMesChange = (newValue: Dayjs | null) => {
     if (newValue) {
@@ -160,7 +197,7 @@ export const DashboardOperaciones = () => {
             </TextField>
           </Grid>
 
-          <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
+          <Grid size={{ xs: 12, md: 12, lg: 2 }}>
             <LocalizationProvider dateAdapter={AdapterDayjs}>
               <DatePicker
                 label="Mes de Incidencias"
@@ -179,21 +216,33 @@ export const DashboardOperaciones = () => {
             </LocalizationProvider>
           </Grid>
 
-          <Grid size={{ xs: 12, md: 12, lg: 2 }} sx={{ display: 'flex', justifyContent: 'center' }}>
-            <IconButton
-              size="large"
-              color="primary"
+           <Grid size={{ xs: 12, sm: 6, md: 4, lg: 2 }} sx={{ display: 'flex' }}>
+            <Button
+              fullWidth
+              variant="contained"
               onClick={handleSearchFilter}
+              disabled={loading}
+              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <Search />}
               sx={{
+                height: 56,
                 bgcolor: '#080769',
-                color: 'white',
-                '&:hover': { bgcolor: '#060550' },
-                width: 56,
-                height: 56
+                borderRadius: '12px',
+                textTransform: 'none',
+                fontWeight: 700,
+                fontSize: '1rem',
+                letterSpacing: '0.3px',
+                boxShadow: '0 4px 14px rgba(8, 7, 105, 0.35)',
+                transition: 'all 0.25s ease',
+                '&:hover': {
+                  bgcolor: '#0a0980',
+                  boxShadow: '0 6px 20px rgba(8, 7, 105, 0.5)',
+                  transform: 'translateY(-2px)',
+                },
+                '&:active': { transform: 'translateY(0)' },
               }}
             >
-              <Search />
-            </IconButton>
+              {loading ? 'Consultando…' : 'Buscar'}
+            </Button>
           </Grid>
         </Grid>
       </Paper>
