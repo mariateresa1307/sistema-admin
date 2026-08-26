@@ -262,7 +262,7 @@ export const useTicketForm = ({ sessionOperatorId, causasRaiz = [], solucionesCa
       horaCierreFalla: fechaHoraCierreFinal,
       descripcion: descripcionFinal,
       cCierreSoporte: diffMin(form.horaInicioAtencion, fechaHoraCierreFinal),
-      mttrTotal: diffMin(form.horaInicioFalla, fechaHoraCierreFinal),
+      mttrTotal: diffMin(form.horaInicioFalla, fechaHoraCierreFinal), // MTTR (Mean Time To Repair) del ticket: el tiempo total de resolución, expresado en minutos. = horaInicioFalla  - horaCierreFalla
       estatus: isClosed ? TICKET_STATUS.CERRADO : TICKET_STATUS.ACTIVO,
     };
   }, [form, causasRaiz, solucionesCaso, getNombreFromId]);

@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import {
   Box, Typography, TextField, MenuItem, Button, Dialog, DialogTitle,
-  DialogContent, DialogActions, Paper, IconButton, CircularProgress,
+  DialogContent, DialogActions, Paper, IconButton,
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import { Download, Search } from '@mui/icons-material';
@@ -30,61 +30,37 @@ const CARDS_SOLO_GRAFICA = [
 
 export const DashboardOperaciones = () => {
   const [openModal, setOpenModal] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState({
     grupo: 'A',
     plataforma: 'TODAS',
     cliente: 'TODOS',
     mes: dayjs(),
   });
+  const [searchedGrupo, setSearchedGrupo] = useState<string | null>(null);
   const [reportPreview, setReportPreview] = useState<ReportePreview>({});
 
-  const handleSearchFilter = async () => {
-    const mesString = dayjs(filters.mes).format('YYYY-MM');
-    setLoading(true);
-    try {
-      const resultReport = await getReportPreview({ ...filters, mes: mesString });
-      setReportPreview(resultReport.data);
-    } finally {
-      setLoading(false);
-    }
+  const clearResults = () => {
+    setReportPreview({});
+    setSearchedGrupo(null);
   };
 
-const handleExportReport = () => {
-  const mesString = dayjs(filters.mes).format('YYYY-MM');
-  
-  console.log('📥 [Frontend] Iniciando exportación con filtros:', {
-    grupo: filters.grupo,
-    plataforma: filters.plataforma,
-    cliente: filters.cliente,
-    mes: mesString
-  });
-  
-  // Construir URL con query params
-  const params = new URLSearchParams({
-    grupo: filters.grupo,
-    plataforma: filters.plataforma,
-    cliente: filters.cliente,
-    mes: mesString,
-  });
+  const updateFilter = (partial: Partial<typeof filters>) => {
+    setFilters((prev) => ({ ...prev, ...partial }));
+    clearResults();
+  };
 
-  const exportUrl = `/api/reports/export?${params.toString()}`;
-  console.log('📥 [Frontend] URL de exportación:', exportUrl);
-  
-  // Crear link temporal para forzar la descarga
-  const link = document.createElement('a');
-  link.href = exportUrl;
-  link.target = '_blank';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  
-  setOpenModal(false);
-};
+  const handleSearchFilter = () => {
+    const mesString = dayjs(filters.mes).format('YYYY-MM');
+    setReportPreview({});
+    setSearchedGrupo(filters.grupo);
+    getReportPreview({ ...filters, mes: mesString }).then((resultReport) => {
+      setReportPreview(resultReport.data);
+    });
+  };
 
   const handleMesChange = (newValue: Dayjs | null) => {
     if (newValue) {
-      setFilters({ ...filters, mes: newValue });
+      updateFilter({ mes: newValue });
     }
   };
 
@@ -158,7 +134,7 @@ const handleExportReport = () => {
               select
               size="medium"
               value={filters.grupo}
-              onChange={(e) => setFilters({ ...filters, grupo: e.target.value })}
+              onChange={(e) => updateFilter({ grupo: e.target.value })}
             >
               <MenuItem value="A">A - Gestión de fallas</MenuItem>
               <MenuItem value="B">B - Por servicio</MenuItem>
@@ -174,7 +150,7 @@ const handleExportReport = () => {
               select
               size="medium"
               value={filters.plataforma}
-              onChange={(e) => setFilters({ ...filters, plataforma: e.target.value })}
+              onChange={(e) => updateFilter({ plataforma: e.target.value })}
             >
               <MenuItem value="TODAS">Todas</MenuItem>
               {CATEGORIA_RED.map((name) => <MenuItem value={name} key={name}>{name}</MenuItem>)}
@@ -188,7 +164,7 @@ const handleExportReport = () => {
               select
               size="medium"
               value={filters.cliente}
-              onChange={(e) => setFilters({ ...filters, cliente: e.target.value })}
+              onChange={(e) => updateFilter({ cliente: e.target.value })}
             >
               <MenuItem value="TODOS">Todos</MenuItem>
               {(Object.keys(TIPO_CLIENTE) as Array<keyof typeof TIPO_CLIENTE>).map((key) => (
@@ -197,7 +173,7 @@ const handleExportReport = () => {
             </TextField>
           </Grid>
 
-          <Grid size={{ xs: 12, md: 12, lg: 2 }}>
+          <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
             <LocalizationProvider dateAdapter={AdapterDayjs}>
               <DatePicker
                 label="Mes de Incidencias"
@@ -216,44 +192,35 @@ const handleExportReport = () => {
             </LocalizationProvider>
           </Grid>
 
-           <Grid size={{ xs: 12, sm: 6, md: 4, lg: 2 }} sx={{ display: 'flex' }}>
-            <Button
-              fullWidth
-              variant="contained"
+          <Grid size={{ xs: 12, md: 12, lg: 2 }} sx={{ display: 'flex', justifyContent: 'center' }}>
+            <IconButton
+              size="large"
+              color="primary"
               onClick={handleSearchFilter}
-              disabled={loading}
-              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <Search />}
               sx={{
-                height: 56,
                 bgcolor: '#080769',
-                borderRadius: '12px',
-                textTransform: 'none',
-                fontWeight: 700,
-                fontSize: '1rem',
-                letterSpacing: '0.3px',
-                boxShadow: '0 4px 14px rgba(8, 7, 105, 0.35)',
-                transition: 'all 0.25s ease',
-                '&:hover': {
-                  bgcolor: '#0a0980',
-                  boxShadow: '0 6px 20px rgba(8, 7, 105, 0.5)',
-                  transform: 'translateY(-2px)',
-                },
-                '&:active': { transform: 'translateY(0)' },
+                color: 'white',
+                '&:hover': { bgcolor: '#060550' },
+                width: 56,
+                height: 56
               }}
             >
-              {loading ? 'Consultando…' : 'Buscar'}
-            </Button>
+              <Search />
+            </IconButton>
           </Grid>
         </Grid>
       </Paper>
 
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        {reportPreview.cards
-          ?.filter((card) => !CARDS_SOLO_GRAFICA.includes(card.title))
-          .map((card, key) => <KpiCard {...card} key={key} />)}
-      </Grid>
-
-      {reportPreview.mttrPlataforma && Grupos[filters.grupo as keyof typeof Grupos]}
+      {searchedGrupo && (
+        <>
+          <Grid container spacing={3} sx={{ mb: 4 }}>
+            {reportPreview.cards
+              ?.filter((card) => !CARDS_SOLO_GRAFICA.includes(card.title))
+              .map((card, key) => <KpiCard {...card} key={key} />)}
+          </Grid>
+          {Grupos[searchedGrupo as keyof typeof Grupos]}
+        </>
+      )}
 
       <Dialog open={openModal} onClose={() => setOpenModal(false)} fullWidth maxWidth="sm">
         <DialogTitle>Exportar Reporte Filtrado</DialogTitle>

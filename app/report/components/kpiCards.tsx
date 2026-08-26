@@ -114,7 +114,7 @@ const KpiItem = ({ title, value, subtitle }: KpiCardProps) => {
 };
 
 export const KpiCard = (props: KpiCardProps) => (
-  <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+  <Grid size={{ xs: 12, sm: 12, md: 12, lg: 4 }}>
     <KpiItem {...props} />
   </Grid>
 );
