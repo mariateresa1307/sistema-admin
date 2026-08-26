@@ -2,10 +2,26 @@ import React from 'react';
 import { Paper, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Box } from '@mui/material';
 import { ReportePreview } from 'app/utils/types';
 
+interface TiempoPorServicioRow {
+  title: string;
+  value: number;
+}
+
+interface FallaRecurrenteRow {
+  servicio: string;
+  causaRaiz: string;
+  cantidad: number;
+}
+
+interface GrupoBReportPreview extends ReportePreview {
+  fallasRecurrentes?: FallaRecurrenteRow[];
+  tiempoPorServicio?: TiempoPorServicioRow[];
+}
+
 interface Props { reportPreview: ReportePreview; }
 
 export const GrupoB = ({ reportPreview }: Props) => {
-  const { fallasRecurrentes = [], tiempoPorServicio = [] } = reportPreview as any;
+  const { fallasRecurrentes = [], tiempoPorServicio = [] } = reportPreview as GrupoBReportPreview;
 
   return (
     <Box>
@@ -21,7 +37,7 @@ export const GrupoB = ({ reportPreview }: Props) => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {tiempoPorServicio.map((row: any, i) => (
+            {tiempoPorServicio.map((row: TiempoPorServicioRow, i: number) => (
               <TableRow key={i}>
                 <TableCell>{row.title}</TableCell>
                 <TableCell align="right">{row.value} h</TableCell>
@@ -45,7 +61,7 @@ export const GrupoB = ({ reportPreview }: Props) => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {fallasRecurrentes.map((row: any, i) => (
+            {fallasRecurrentes.map((row: FallaRecurrenteRow, i: number) => (
               <TableRow key={i}>
                 <TableCell>{row.servicio}</TableCell>
                 <TableCell>{row.causaRaiz}</TableCell>
@@ -70,7 +86,7 @@ export const GrupoB = ({ reportPreview }: Props) => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {fallasRecurrentes.map((row: any, i) => (
+            {fallasRecurrentes.map((row: FallaRecurrenteRow, i: number) => (
               <TableRow key={i}>
                 <TableCell>{row.servicio}</TableCell>
                 <TableCell>{row.causaRaiz}</TableCell>
