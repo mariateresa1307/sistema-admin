@@ -32,7 +32,7 @@ export const GrupoD = ({ reportPreview }: Props) => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {incidentesMayoresPorMes.map((row: any, i) => (
+                {incidentesMayoresPorMes.map((row: any, i: any) => (
                   <TableRow key={i}>
                     <TableCell>{row.mes}</TableCell>
                     <TableCell align="right">{row.cantidad}</TableCell>
@@ -57,7 +57,7 @@ export const GrupoD = ({ reportPreview }: Props) => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {rankingServicios.map((row: any, i) => (
+                {rankingServicios.map((row: any, i: any) => (
                   <TableRow key={i}>
                     <TableCell>{row.name}</TableCell>
                     <TableCell align="right">{row.cantidad}</TableCell>

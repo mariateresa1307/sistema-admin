@@ -36,7 +36,7 @@ export const GrupoC = ({ reportPreview }: Props) => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {ticketsPorOperador.map((row: any, i) => (
+            {ticketsPorOperador.map((row: any, i: any) => (
               <TableRow key={i}>
                 <TableCell>{row.name}</TableCell>
                 <TableCell align="right">{row.cantidad}</TableCell>
