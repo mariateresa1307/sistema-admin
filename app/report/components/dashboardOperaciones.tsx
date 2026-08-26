@@ -36,10 +36,23 @@ export const DashboardOperaciones = () => {
     cliente: 'TODOS',
     mes: dayjs(),
   });
+  const [searchedGrupo, setSearchedGrupo] = useState<string | null>(null);
   const [reportPreview, setReportPreview] = useState<ReportePreview>({});
+
+  const clearResults = () => {
+    setReportPreview({});
+    setSearchedGrupo(null);
+  };
+
+  const updateFilter = (partial: Partial<typeof filters>) => {
+    setFilters((prev) => ({ ...prev, ...partial }));
+    clearResults();
+  };
 
   const handleSearchFilter = () => {
     const mesString = dayjs(filters.mes).format('YYYY-MM');
+    setReportPreview({});
+    setSearchedGrupo(filters.grupo);
     getReportPreview({ ...filters, mes: mesString }).then((resultReport) => {
       setReportPreview(resultReport.data);
     });
@@ -47,7 +60,7 @@ export const DashboardOperaciones = () => {
 
   const handleMesChange = (newValue: Dayjs | null) => {
     if (newValue) {
-      setFilters({ ...filters, mes: newValue });
+      updateFilter({ mes: newValue });
     }
   };
 
@@ -121,7 +134,7 @@ export const DashboardOperaciones = () => {
               select
               size="medium"
               value={filters.grupo}
-              onChange={(e) => setFilters({ ...filters, grupo: e.target.value })}
+              onChange={(e) => updateFilter({ grupo: e.target.value })}
             >
               <MenuItem value="A">A - Gestión de fallas</MenuItem>
               <MenuItem value="B">B - Por servicio</MenuItem>
@@ -137,7 +150,7 @@ export const DashboardOperaciones = () => {
               select
               size="medium"
               value={filters.plataforma}
-              onChange={(e) => setFilters({ ...filters, plataforma: e.target.value })}
+              onChange={(e) => updateFilter({ plataforma: e.target.value })}
             >
               <MenuItem value="TODAS">Todas</MenuItem>
               {CATEGORIA_RED.map((name) => <MenuItem value={name} key={name}>{name}</MenuItem>)}
@@ -151,7 +164,7 @@ export const DashboardOperaciones = () => {
               select
               size="medium"
               value={filters.cliente}
-              onChange={(e) => setFilters({ ...filters, cliente: e.target.value })}
+              onChange={(e) => updateFilter({ cliente: e.target.value })}
             >
               <MenuItem value="TODOS">Todos</MenuItem>
               {(Object.keys(TIPO_CLIENTE) as Array<keyof typeof TIPO_CLIENTE>).map((key) => (
@@ -198,13 +211,16 @@ export const DashboardOperaciones = () => {
         </Grid>
       </Paper>
 
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        {reportPreview.cards
-          ?.filter((card) => !CARDS_SOLO_GRAFICA.includes(card.title))
-          .map((card, key) => <KpiCard {...card} key={key} />)}
-      </Grid>
-
-      {Grupos[filters.grupo as keyof typeof Grupos]}
+      {searchedGrupo && (
+        <>
+          <Grid container spacing={3} sx={{ mb: 4 }}>
+            {reportPreview.cards
+              ?.filter((card) => !CARDS_SOLO_GRAFICA.includes(card.title))
+              .map((card, key) => <KpiCard {...card} key={key} />)}
+          </Grid>
+          {Grupos[searchedGrupo as keyof typeof Grupos]}
+        </>
+      )}
 
       <Dialog open={openModal} onClose={() => setOpenModal(false)} fullWidth maxWidth="sm">
         <DialogTitle>Exportar Reporte Filtrado</DialogTitle>
