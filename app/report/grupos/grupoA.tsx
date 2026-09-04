@@ -58,7 +58,7 @@ export function GrupoA({ reportPreview }: Props) {
     }));
 
   const mttrServicioHours = mttrServicioData
-    .filter(item => item.value > 0)
+   .filter(item => item.value > 0)
     .map(({ title, value }) => ({
       title,
       value: minutesToHours(value),

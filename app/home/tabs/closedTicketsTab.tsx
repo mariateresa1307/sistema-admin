@@ -2,12 +2,24 @@
 import React, { useState, useEffect, useCallback } from "react";
 import CustomDataGrid, { SearchParams } from "../../components/customDataGrid";
 import { GridColDef, GridCellParams } from "@mui/x-data-grid";
-import { Chip, Box } from "@mui/material";
-import { getTickets } from "@/lib/api";
+import { Chip, Box, Typography } from "@mui/material";
+import PersonIcon from "@mui/icons-material/Person";
+import { getTickets, getUsers } from "@/lib/api";
 import { Pagination, Tickets } from "app/utils/types";
 import { TICKET_STATUS } from "app/utils/constants";
 
 const corporateFont = 'Calibri, Arial, sans-serif';
+
+// ✅ Helper: formatear fecha dd/mm/aaaa hh:mm
+const formatDateTime = (value?: string): string => {
+  if (!value) return '—';
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return '—';
+  return d.toLocaleString('es-VE', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  });
+};
 
 const getColorByTipoIncidencia = (tipoIncidencia: string): { bgcolor: string; color: string } => {
   const tipoUpper = (tipoIncidencia || '').toUpperCase();
@@ -67,6 +79,16 @@ const getTicketPriority = (ticket: any): number => {
   return 5;
 };
 
+// ✅ Helper: resolver responsable (objeto, ID o fallback)
+const resolveResponsable = (ticket: any, usersMap: Record<string, string>): string => {
+  const raw = ticket?.operatorResponsable || ticket?.operatorAsignado || ticket?.operador;
+  if (!raw) return 'Sin asignar';
+  if (typeof raw === 'object') {
+    return `${raw.primerNombre || ''} ${raw.primerApellido || ''}`.trim() || raw.username || 'Sin asignar';
+  }
+  return usersMap[String(raw)] || 'Sin asignar';
+};
+
 
 export default function ClosedTicketsTab({ 
   onCellClick, onCountChange 
@@ -78,6 +100,27 @@ export default function ClosedTicketsTab({
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState({ page: 0, pageSize: 10 });
   const [searchParams, setSearchParams] = useState<SearchParams>({ field: "caseNumber", value: "" });
+  
+  // ✅ Mapa de usuarios para resolver ID → nombre
+  const [usersMap, setUsersMap] = useState<Record<string, string>>({});
+
+  // ✅ Cargar usuarios una sola vez
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        const res = await getUsers({ isActive: true });
+        const list = Array.isArray(res.data?.data) ? res.data.data : Array.isArray(res.data) ? res.data : [];
+        const map: Record<string, string> = {};
+        list.forEach((u: any) => {
+          map[u._id] = `${u.primerNombre || ''} ${u.primerApellido || ''}`.trim() || u.username || u._id;
+        });
+        setUsersMap(map);
+      } catch (error) {
+        console.error('❌ Error cargando operadores:', error);
+      }
+    };
+    loadUsers();
+  }, []);
 
   const fetchTickets = useCallback(async () => {
     setLoading(true);
@@ -86,6 +129,8 @@ export default function ClosedTicketsTab({
         page: page.page + 1,
         limit: page.pageSize,
         status: TICKET_STATUS.CERRADO,
+        sortBy: 'createdAt',
+        sortOrder: 'DESC',
       };
       if (searchParams.value) params[searchParams.field] = searchParams.value;
 
@@ -93,13 +138,15 @@ export default function ClosedTicketsTab({
       let filteredData = response.data?.data || [];
       const currentTotal = response.data?.total || 0;
 
-       filteredData.sort((a: any, b: any) => {
+      // ✅ Ordenar: primero por fecha de creación descendente (más reciente primero), luego por prioridad
+      filteredData.sort((a: any, b: any) => {
+        const dateA = new Date(a.createdAt || a.horaInicioFalla || 0).getTime();
+        const dateB = new Date(b.createdAt || b.horaInicioFalla || 0).getTime();
+        if (dateB !== dateA) return dateB - dateA; // más reciente primero
         const priorityA = getTicketPriority(a);
         const priorityB = getTicketPriority(b);
-        if (priorityA === priorityB) return 0;
         return priorityA - priorityB;
       });
-      
       
       setTickets(response.data);
       onCountChange(currentTotal);
@@ -123,6 +170,23 @@ export default function ClosedTicketsTab({
   const handlePagination = (model: { page: number; pageSize: number }) => setPage(model);
 
   const columns: GridColDef[] = [
+    { field: "caseNumber", headerName: "Tickets", flex: 1, minWidth: 120 },
+    { field: "subject", headerName: "Asunto de Caso", flex: 2, minWidth: 250 },
+
+    // ✅ NUEVA COLUMNA: Fecha de Inicio de Incidencia (t0 con fallback a createdAt)
+    {
+      field: "horaInicioFalla",
+      headerName: "Fecha Inicio Incidencia",
+      flex: 1.2,
+      minWidth: 170,
+      valueGetter: (_value, row: any) => row?.horaInicioFalla || row?.createdAt || '',
+      renderCell: (params) => (
+        <Typography variant="body2" sx={{ fontFamily: corporateFont, fontWeight: 500, color: params.value ? '#0f172a' : '#94a3b8' }}>
+          {formatDateTime(params.value)}
+        </Typography>
+      ),
+    },
+
     {
       field: 'tipoCliente',
       headerName: 'Tipo de Cliente',
@@ -189,9 +253,24 @@ export default function ClosedTicketsTab({
         );
       },
     },
-    { field: "caseNumber", headerName: "Tickets", flex: 1, minWidth: 120 },
-    { field: "subject", headerName: "Asunto de Caso", flex: 2, minWidth: 250 },
-    { field: "primerNombre", headerName: "Responsable", flex: 1.5, minWidth: 200, valueGetter: (value, row) => `${row?.primerNombre || ""} ${row?.primerApellido || ""}`.trim() },
+
+    // ✅ CORREGIDA: Responsable (resuelve objeto, ID o fallback)
+    {
+      field: "operatorResponsable",
+      headerName: "Responsable",
+      flex: 1.5,
+      minWidth: 200,
+      valueGetter: (_value, row: any) => resolveResponsable(row, usersMap),
+      renderCell: (params) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+          <PersonIcon sx={{ fontSize: '1rem', color: '#64748b' }} />
+          <Typography variant="body2" sx={{ fontFamily: corporateFont, fontWeight: 600, color: '#0f172a' }}>
+            {params.value}
+          </Typography>
+        </Box>
+      ),
+    },
+
     {
       field: "status", 
       headerName: "Estado", 

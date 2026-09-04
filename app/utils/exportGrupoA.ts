@@ -29,7 +29,8 @@ interface TicketResumen {
   duracion: string;
   causaRaiz: string;
   solucionCaso: string;
-  operador: string;
+  operadorResponsable: string;
+  operadorAsignado: string;
 }
 
 interface ExportGrupoAParams {
@@ -38,7 +39,6 @@ interface ExportGrupoAParams {
   tickets: TicketResumen[];
 }
 
-// ✅ Helper para formatear minutos a "Xh Ym"
 const formatMttr = (minutos: number): string => {
   if (!minutos || minutos <= 0) return '0h 0m';
   const h = Math.floor(minutos / 60);
@@ -56,22 +56,23 @@ export const exportReporteGrupoAExcel = async ({
     views: [{ showGridLines: false }],
   });
 
-  // 10 columnas base
+  // ✅ 11 COLUMNAS (no 10) con anchos adecuados
   ws.columns = [
-    { key: 'ticket', width: 16 },
-    { key: 'c2', width: 20 },
+    { key: 'ticket', width: 18 },
+    { key: 'c2', width: 22 },
     { key: 'c3', width: 20 },
-    { key: 'c4', width: 24 },
-    { key: 'c5', width: 20 },
-    { key: 'c6', width: 20 },
+    { key: 'c4', width: 22 },
+    { key: 'c5', width: 22 },
+    { key: 'c6', width: 22 },
     { key: 'c7', width: 18 },
     { key: 'c8', width: 28 },
-    { key: 'c9', width: 28 },
-    { key: 'c10', width: 25 }, // ✅ Aumentado un poco para el nombre del operador
+    { key: 'c9', width: 30 },
+    { key: 'c10', width: 35 }, // ✅ OPERADOR RESPONSABLE (más ancho)
+    { key: 'c11', width: 30 }, // ✅ OPERADOR ASIGNADO
   ];
 
   // ============== TÍTULO ==============
-  ws.mergeCells('A1:J1');
+  ws.mergeCells('A1:K1'); // ✅ 11 columnas (A-K)
   const titulo = ws.getCell('A1');
   titulo.value = 'REPORTE OPERACIONAL - GRUPO A: GESTIÓN DE FALLAS';
   titulo.font = { bold: true, size: 16, color: { argb: 'FFFFFFFF' } };
@@ -79,14 +80,14 @@ export const exportReporteGrupoAExcel = async ({
   titulo.alignment = { horizontal: 'center', vertical: 'middle' };
   ws.getRow(1).height = 34;
 
-  ws.mergeCells('A2:J2');
+  ws.mergeCells('A2:K2'); // ✅ 11 columnas
   const sub = ws.getCell('A2');
   sub.value = `Mes: ${mes.format('MMMM YYYY').toUpperCase()}   •   Generado: ${dayjs().format('DD/MM/YYYY HH:mm')}`;
   sub.font = { italic: true, size: 10, color: { argb: GRIS } };
   sub.alignment = { horizontal: 'center', vertical: 'middle' };
   ws.getRow(2).height = 20;
 
-  // ============== KPIs (6 cards en 2 filas) ==============
+  // ============== KPIs ==============
   const cards = reportPreview.cards || [];
   const getCard = (title: string) => cards.find((c) => c.title === title);
 
@@ -121,9 +122,9 @@ export const exportReporteGrupoAExcel = async ({
 
   let currentRow = 9;
 
-  // ============== SECCIÓN DISTRIBUCIÓN POR TIPO DE INCIDENCIA ==============
+  // ============== SECCIÓN DISTRIBUCIÓN ==============
   const tituloSeccion = (titulo: string, fila: number) => {
-    ws.mergeCells(fila, 1, fila, 10);
+    ws.mergeCells(fila, 1, fila, 11); // ✅ 11 columnas
     const cell = ws.getCell(fila, 1);
     cell.value = titulo;
     cell.font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
@@ -135,7 +136,7 @@ export const exportReporteGrupoAExcel = async ({
   const HEADERS_DETALLE = [
     'N° TICKET', 'TIPO INCIDENCIA', 'PLATAFORMA', 'SERVICIO',
     'INICIO FALLA', 'CIERRE', 'DURACIÓN',
-    'CAUSA RAÍZ', 'SOLUCIÓN', 'OPERADOR'
+    'CAUSA RAÍZ', 'SOLUCIÓN', 'OPERADOR RESPONSABLE', 'OPERADOR ASIGNADO'
   ];
 
   const renderTablaTipo = (
@@ -175,10 +176,11 @@ export const exportReporteGrupoAExcel = async ({
         row.tipoCliente,
         row.horaInicioFalla ? dayjs(row.horaInicioFalla).format('DD/MM/YYYY HH:mm') : 'N/A',
         row.horaCierre ? dayjs(row.horaCierre).format('DD/MM/YYYY HH:mm') : 'N/A',
-        row.duracion || 'N/A', // ✅ Ya viene formateado desde el backend
+        row.duracion || 'N/A',
         row.causaRaiz || 'Sin causa',
         row.solucionCaso || 'Sin solución',
-        row.operador || 'Sin asignar', // ✅ Ya viene con el nombre desde el backend
+        row.operadorResponsable || 'N/A',
+        row.operadorAsignado || '-'
       ];
       r.eachCell((c, colNumber) => {
         c.border = borde();
@@ -187,11 +189,12 @@ export const exportReporteGrupoAExcel = async ({
           : { vertical: 'middle', wrapText: true };
         if (idx % 2 === 1) c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ZEBRA } };
       });
+      r.height = 40; // ✅ Altura fija para que se vean los nombres completos
     });
 
     const totalRow = ws.getRow(filaInicio + 2 + filtrados.length);
-    ws.mergeCells(totalRow.number, 1, totalRow.number, 9);
-    for (let i = 1; i <= 10; i++) {
+    ws.mergeCells(totalRow.number, 1, totalRow.number, 10); // ✅ Merge de 1 a 10
+    for (let i = 1; i <= 11; i++) { // ✅ 11 columnas
       const cell = totalRow.getCell(i);
       cell.border = borde();
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colorTipo } };
@@ -200,7 +203,7 @@ export const exportReporteGrupoAExcel = async ({
     totalLabel.value = `TOTAL ${tipo}`;
     totalLabel.font = { bold: true, size: 11, color: { argb: 'FFFFFFFF' } };
     totalLabel.alignment = { horizontal: 'right', vertical: 'middle' };
-    const totalValue = totalRow.getCell(10);
+    const totalValue = totalRow.getCell(11); // ✅ Columna 11
     totalValue.value = filtrados.length;
     totalValue.font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
     totalValue.alignment = { horizontal: 'center', vertical: 'middle' };
@@ -215,7 +218,7 @@ export const exportReporteGrupoAExcel = async ({
   currentRow = renderTablaTipo('MASIVA', ROJO, currentRow);
   currentRow = renderTablaTipo('MANTENIMIENTO', AMARILLO, currentRow);
 
-  // ============== SECCIÓN GRÁFICAS (con celdas nativas) ==============
+  // ============== SECCIÓN GRÁFICAS ==============
   currentRow += 1;
   tituloSeccion('RESUMEN GRÁFICO', currentRow);
   currentRow += 1;
@@ -235,7 +238,7 @@ export const exportReporteGrupoAExcel = async ({
     cell.alignment = { horizontal: 'left', vertical: 'middle' };
   };
 
-  // ---- GRÁFICA 1: TORTA simulada ----
+  // ---- GRÁFICA 1: TORTA ----
   const total = tickets.length || 1;
   const puntualCount = tickets.filter(t => {
     const tipoUp = (t.tipoIncidencia || '').toUpperCase();
@@ -253,7 +256,7 @@ export const exportReporteGrupoAExcel = async ({
     { label: 'Mantenimiento', valor: mantCount, color: AMARILLO_TORTA },
   ];
 
-  ws.mergeCells(currentRow, 1, currentRow, 5);
+  ws.mergeCells(currentRow, 1, currentRow, 11);
   const tituloTorta = ws.getCell(currentRow, 1);
   tituloTorta.value = 'Distribución por Tipo de Incidencia';
   tituloTorta.font = { bold: true, size: 11, color: { argb: AZUL } };
@@ -300,15 +303,15 @@ export const exportReporteGrupoAExcel = async ({
   currentRow += distribucion.length + 2;
 
   // ---- GRÁFICA 2: MTTR PLATAFORMA ----
-  ws.mergeCells(currentRow, 1, currentRow, 10);
+  ws.mergeCells(currentRow, 1, currentRow, 11);
   const tituloMttrPlat = ws.getCell(currentRow, 1);
-  tituloMttrPlat.value = 'MTTR por Plataforma'; // ✅ Cambiado de "(horas)" a genérico
+  tituloMttrPlat.value = 'MTTR por Plataforma';
   tituloMttrPlat.font = { bold: true, size: 11, color: { argb: AZUL } };
   tituloMttrPlat.alignment = { horizontal: 'center' };
   currentRow += 1;
 
   const mttrPlatHeaders = ws.getRow(currentRow);
-  ['Plataforma', 'MTTR', 'Comparativa'].forEach((h, i) => { // ✅ Cambiado "MTTR (h)" a "MTTR"
+  ['Plataforma', 'MTTR', 'Comparativa'].forEach((h, i) => {
     const c = mttrPlatHeaders.getCell(i + 1);
     c.value = h;
     c.font = { bold: true, size: 10, color: { argb: 'FFFFFFFF' } };
@@ -316,7 +319,7 @@ export const exportReporteGrupoAExcel = async ({
     c.alignment = { horizontal: 'center', vertical: 'middle' };
     c.border = borde();
   });
-  if (ws.getColumn(3)) ws.getColumn(3).width = 40;
+  ws.getColumn(3).width = 50; // ✅ Más ancho para la barra
   currentRow += 1;
 
   const mttrPlataforma = reportPreview.mttrPlataforma || [];
@@ -328,7 +331,6 @@ export const exportReporteGrupoAExcel = async ({
     r.getCell(1).border = borde();
     r.getCell(1).alignment = { vertical: 'middle' };
 
-    // ✅ Formateado a "Xh Ym" en lugar de decimal
     r.getCell(2).value = formatMttr(Number(item.value || 0));
     r.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
     r.getCell(2).border = borde();
@@ -336,7 +338,7 @@ export const exportReporteGrupoAExcel = async ({
 
     r.getCell(3).border = borde();
     const pct = maxMttrPlat > 0 ? Math.round(((item.value || 0) / maxMttrPlat) * 100) : 0;
-    dibujarBarra(currentRow + idx, 3, pct, 'FF1976D2', 35);
+    dibujarBarra(currentRow + idx, 3, pct, 'FF1976D2', 40); // ✅ 40 bloques
 
     if (idx % 2 === 1) {
       for (let i = 1; i <= 3; i++) {
@@ -347,15 +349,15 @@ export const exportReporteGrupoAExcel = async ({
   currentRow += Math.min(mttrPlataforma.length, 8) + 2;
 
   // ---- GRÁFICA 3: MTTR SERVICIO ----
-  ws.mergeCells(currentRow, 1, currentRow, 10);
+  ws.mergeCells(currentRow, 1, currentRow, 11);
   const tituloMttrServ = ws.getCell(currentRow, 1);
-  tituloMttrServ.value = 'MTTR por Tipo de Cliente'; // ✅ Cambiado de "(horas)" a genérico
+  tituloMttrServ.value = 'MTTR por Tipo de Cliente';
   tituloMttrServ.font = { bold: true, size: 11, color: { argb: AZUL } };
   tituloMttrServ.alignment = { horizontal: 'center' };
   currentRow += 1;
 
   const mttrServHeaders = ws.getRow(currentRow);
-  ['Tipo de Cliente', 'MTTR', 'Comparativa'].forEach((h, i) => { // ✅ Cambiado "MTTR (h)" a "MTTR"
+  ['Tipo de Cliente', 'MTTR', 'Comparativa'].forEach((h, i) => {
     const c = mttrServHeaders.getCell(i + 1);
     c.value = h;
     c.font = { bold: true, size: 10, color: { argb: 'FFFFFFFF' } };
@@ -374,7 +376,6 @@ export const exportReporteGrupoAExcel = async ({
     r.getCell(1).border = borde();
     r.getCell(1).alignment = { vertical: 'middle' };
 
-    // ✅ Formateado a "Xh Ym" en lugar de decimal
     r.getCell(2).value = formatMttr(Number(item.value || 0));
     r.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
     r.getCell(2).border = borde();
@@ -382,7 +383,7 @@ export const exportReporteGrupoAExcel = async ({
 
     r.getCell(3).border = borde();
     const pct = maxMttrServ > 0 ? Math.round(((item.value || 0) / maxMttrServ) * 100) : 0;
-    dibujarBarra(currentRow + idx, 3, pct, 'FF7B1FA2', 35);
+    dibujarBarra(currentRow + idx, 3, pct, 'FF7B1FA2', 40);
 
     if (idx % 2 === 1) {
       for (let i = 1; i <= 3; i++) {

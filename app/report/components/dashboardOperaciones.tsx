@@ -20,6 +20,9 @@ import { GrupoD } from '../grupos/grupoD';
 import { CATEGORIA_RED, TIPO_CLIENTE } from 'app/utils/constants';
 import { ReportePreview } from 'app/utils/types';
 import { exportReporteGrupoAExcel } from '../../utils/exportGrupoA';
+import { exportReporteGrupoBExcel } from '../../utils/exportGrupoB';
+import { exportReporteGrupoCExcel } from '../../utils/exportGrupoC';
+import { exportReporteGrupoDExcel } from '../../utils/exportGrupoD'; // ✅ IMPORTACIÓN AGREGADA
 
 // Cards que solo se muestran en la gráfica de torta (no como KPIs)
 const CARDS_SOLO_GRAFICA = [
@@ -54,7 +57,7 @@ export const DashboardOperaciones = () => {
     setReportPreview({});
     setSearchedGrupo(filters.grupo);
     getReportPreview({ ...filters, mes: mesString }).then((resultReport) => {
-      setReportPreview(resultReport.data);
+      setReportPreview(resultReport.data || {});
     });
   };
 
@@ -64,23 +67,89 @@ export const DashboardOperaciones = () => {
     }
   };
 
-  // ✅ Export usa los tickets que ya vienen en reportPreview.ticketsDetalle
+  // ✅ Exportación dinámica según el grupo seleccionado
   const handleExportar = async () => {
     try {
-      const ticketsDetalle = (reportPreview as any).ticketsDetalle || [];
+      if (filters.grupo === 'A') {
+        const ticketsDetalle = (reportPreview as any).ticketsDetalle || [];
 
-      if (ticketsDetalle.length === 0) {
+        if (ticketsDetalle.length === 0) {
+          window.dispatchEvent(new CustomEvent('app-notification', {
+            detail: { message: 'No hay tickets para exportar en este período', severity: 'warning' },
+          }));
+          return;
+        }
+
+        await exportReporteGrupoAExcel({
+          reportPreview,
+          mes: filters.mes,
+          tickets: ticketsDetalle,
+        });
+
+      } else if (filters.grupo === 'B') {
+        const tiempoPorServicio = (reportPreview as any).tiempoPorServicio || [];
+        const fallasRecurrentes = (reportPreview as any).fallasRecurrentes || [];
+        const ticketsDetalle = (reportPreview as any).ticketsDetalle || [];
+
+        if (tiempoPorServicio.length === 0 && fallasRecurrentes.length === 0) {
+          window.dispatchEvent(new CustomEvent('app-notification', {
+            detail: { message: 'No hay datos de servicio para exportar en este período', severity: 'warning' },
+          }));
+          return;
+        }
+
+        await exportReporteGrupoBExcel({
+          reportPreview,
+          mes: filters.mes,
+          tiempoPorServicio,
+          fallasRecurrentes,
+          ticketsDetalle, 
+        });
+
+      } else if (filters.grupo === 'C') {
+        const ticketsPorOperador = (reportPreview as any).ticketsPorOperador || [];
+        const promedioPorOperador = (reportPreview as any).promedioPorOperador || 0;
+        const cantidadOperadores = (reportPreview as any).cantidadOperadores || 0;
+        const ticketsDetalle = (reportPreview as any).ticketsDetalle || [];
+
+        if (ticketsPorOperador.length === 0 && ticketsDetalle.length === 0) {
+          window.dispatchEvent(new CustomEvent('app-notification', {
+            detail: { message: 'No hay datos de operadores para exportar en este período', severity: 'warning' },
+          }));
+          return;
+        }
+
+        await exportReporteGrupoCExcel({
+          reportPreview,
+          mes: filters.mes,
+          ticketsPorOperador,
+          promedioPorOperador,
+          cantidadOperadores,
+        });
+
+      } else if (filters.grupo === 'D') {
+        // ✅ LÓGICA DE EXPORTACIÓN PARA GRUPO D AGREGADA
+        const incidentesMayoresPorMes = (reportPreview as any).incidentesMayoresPorMes || [];
+        const rankingServicios = (reportPreview as any).rankingServicios || [];
+
+        if (incidentesMayoresPorMes.length === 0 && rankingServicios.length === 0) {
+          window.dispatchEvent(new CustomEvent('app-notification', {
+            detail: { message: 'No hay datos de calidad y mejora para exportar en este período', severity: 'warning' },
+          }));
+          return;
+        }
+
+        await exportReporteGrupoDExcel({
+          reportPreview,
+          mes: filters.mes,
+        });
+
+      } else {
         window.dispatchEvent(new CustomEvent('app-notification', {
-          detail: { message: 'No hay tickets para exportar en este período', severity: 'warning' },
+          detail: { message: `La exportación para el Grupo ${filters.grupo} aún no está disponible`, severity: 'info' },
         }));
         return;
       }
-
-      await exportReporteGrupoAExcel({
-        reportPreview,
-        mes: filters.mes,
-        tickets: ticketsDetalle,
-      });
 
       setOpenModal(false);
       window.dispatchEvent(new CustomEvent('app-notification', {
@@ -211,13 +280,21 @@ export const DashboardOperaciones = () => {
         </Grid>
       </Paper>
 
+      {/* ✅ SECCIÓN CORREGIDA */}
       {searchedGrupo && (
         <>
-          <Grid container spacing={3} sx={{ mb: 4 }}>
-            {reportPreview.cards
-              ?.filter((card) => !CARDS_SOLO_GRAFICA.includes(card.title))
-              .map((card, key) => <KpiCard {...card} key={key} />)}
-          </Grid>
+          {/* ✅ CAMBIO CLAVE: Se eliminó 'D' de la exclusión. 
+              Ahora los Grupos A y D usan las cards globales (estilo KpiCard).
+              Solo B y C tienen sus propias cards integradas. */}
+          {!['B', 'C'].includes(searchedGrupo) && (
+            <Grid container spacing={3} sx={{ mb: 4 }}>
+              {reportPreview.cards
+                ?.filter((card) => !CARDS_SOLO_GRAFICA.includes(card.title))
+                .map((card, key) => <KpiCard {...card} key={`${card.title}-${key}`} />)}
+            </Grid>
+          )}
+
+          {/* Renderizar el componente del grupo seleccionado (Tablas y gráficas) */}
           {Grupos[searchedGrupo as keyof typeof Grupos]}
         </>
       )}
@@ -225,7 +302,10 @@ export const DashboardOperaciones = () => {
       <Dialog open={openModal} onClose={() => setOpenModal(false)} fullWidth maxWidth="sm">
         <DialogTitle>Exportar Reporte Filtrado</DialogTitle>
         <DialogContent dividers>
-          <Typography>Se exportarán los datos del mes seleccionado aplicando los filtros.</Typography>
+          <Typography>
+            Se exportarán los datos del mes <b>{dayjs(filters.mes).format('MMMM YYYY')}</b> 
+            aplicando los filtros seleccionados para el <b>Grupo {filters.grupo}</b>.
+          </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenModal(false)}>Cancelar</Button>

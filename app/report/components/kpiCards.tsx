@@ -10,6 +10,8 @@ import {
   Warning,
   Build,
   Category,
+  AccessTime,
+  Star
 } from '@mui/icons-material';
 
 interface KpiCardProps {
@@ -21,13 +23,24 @@ interface KpiCardProps {
 // ✅ Mapeo de estilo según el tipo de KPI
 const getCardStyle = (title: string) => {
   const t = (title || '').toLowerCase();
+  
   if (t.includes('plataforma')) return { color: '#1976d2', icon: <ChartIcon /> };
   if (t.includes('servicio')) return { color: '#7b1fa2', icon: <TrendingUp /> };
   if (t.includes('resuelta') || t.includes('soporte')) return { color: '#388e3c', icon: <CheckCircle /> };
-  if (t.includes('puntual')) return { color: '#2e7d32', icon: <Warning /> };
-  if (t.includes('masiva')) return { color: '#c62828', icon: <Warning /> };
+  if (t.includes('puntual')) return { color: '#2e7d32', icon: <CheckCircle /> };
+  
+  // ✅ Agregado 'incidentes mayores' para que coincida con el Grupo D
+  if (t.includes('masiva') || t.includes('incidentes mayores')) return { color: '#c62828', icon: <Warning /> };
+  
   if (t.includes('mantenimiento')) return { color: '#ef6c00', icon: <Build /> };
   if (t.includes('total')) return { color: '#f57c00', icon: <Category /> };
+  
+  // ✅ NUEVOS CASOS ESPECÍFICOS PARA GRUPO D
+  if (t.includes('escalamiento')) return { color: '#f57c00', icon: <AccessTime /> };
+  if (t.includes('documentado')) return { color: '#388e3c', icon: <CheckCircle /> };
+  if (t.includes('demandante')) return { color: '#1976d2', icon: <Star /> };
+  
+  // Default
   return { color: '#080769', icon: <ChartIcon /> };
 };
 
