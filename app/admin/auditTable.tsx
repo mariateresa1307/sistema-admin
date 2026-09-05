@@ -17,6 +17,7 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/es';
 import { useIdResolver } from '../hooks/useIdResolver';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined'; 
 
 dayjs.extend(relativeTime);
 dayjs.locale('es');
@@ -39,6 +40,7 @@ const ACTION_CONFIG: Record<string, { label: string; color: 'success' | 'error' 
   UPDATE: { label: 'Actualizar', color: 'warning', icon: EditIcon },
   DELETE: { label: 'Eliminar', color: 'error', icon: DeleteIcon },
   EXPORT: { label: 'Exportar', color: 'info', icon: HistoryIcon },
+  CAMBIO_CONTRASEÑA: { label: 'Cambio Contraseña', color: 'warning', icon: LockOutlinedIcon }, 
 };
 
 

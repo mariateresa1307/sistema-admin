@@ -2,7 +2,7 @@
 import React from 'react';
 import { Box, Skeleton, Stack } from '@mui/material';
 
-// ✅ Skeleton de tabla: imita el diseño corporativo (header #080769 + filas)
+//  Skeleton de tabla: imita el diseño corporativo 
 export const TableSkeleton = ({ rows = 8, withSearch = true }: { rows?: number; withSearch?: boolean }) => (
   <Box>
     {withSearch && (
@@ -35,7 +35,7 @@ export const TableSkeleton = ({ rows = 8, withSearch = true }: { rows?: number; 
   </Box>
 );
 
-// ✅ Skeleton de tarjetas KPI (dashboards, métricas)
+// Skeleton de tarjetas KPI 
 export const KpiSkeleton = ({ count = 4 }: { count?: number }) => (
   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
     {Array.from({ length: count }).map((_, i) => (
@@ -49,7 +49,7 @@ export const KpiSkeleton = ({ count = 4 }: { count?: number }) => (
   </Stack>
 );
 
-// ✅ Skeleton de página completa (navegación entre módulos)
+//  Skeleton de página completa (
 export const PageSkeleton = () => (
   <Box sx={{ p: { xs: 2, md: 3 } }}>
     <Skeleton variant="text" width={280} height={44} sx={{ mb: 0.5 }} />

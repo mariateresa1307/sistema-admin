@@ -47,7 +47,7 @@ export const TicketStep1 = React.memo(
     const localidadesOptionsArray = Array.isArray(data?.localidadesOptions) ? data.localidadesOptions : [];
     const serviciosAfectadosArray = Array.isArray(data?.serviciosAfectados) ? (data.serviciosAfectados as ServicioAfectado[]) : [];
 
-    // ✅ NUEVO: lista completa de localidades como respaldo
+    // lista completa de localidades
     const todasLocalidadesArray = Array.isArray((data as any)?.todasLasLocalidades)
       ? (data as any).todasLasLocalidades
       : [];
@@ -74,7 +74,6 @@ export const TicketStep1 = React.memo(
       const ciudadId = String(ciudadObj._id);
       const ciudadNombre = ciudadObj.valor;
 
-      // ✅ Usar localidadesBase en lugar de localidadesOptionsArray
       return localidadesBase.filter((loc: any) => {
         const locPadreId = typeof loc.padreId === 'object'
           ? String(loc.padreId?._id ?? '')
@@ -91,7 +90,6 @@ export const TicketStep1 = React.memo(
       });
     }, [localidadesBase, ciudadesOptionsArray, form.ciudad]);
 
-    // ✅ NUEVO: valor normalizado para el select (manejo de mayúsculas/minúsculas)
     const localidadDisplayValue = useMemo(() => {
       if (!form.localidad) return '';
       const norm = (form.localidad || '').toString().trim().toUpperCase();
@@ -110,7 +108,6 @@ export const TicketStep1 = React.memo(
       return ciudadObj.padreNombre || '';
     }, [ciudadesOptionsArray, form.ciudad]);
 
-    // ✅ MODIFICADO: no validar mientras las localidades estén cargando
     useEffect(() => {
       if (!form.ciudad) {
         if (form.localidad) onFieldChange('localidad', '');
@@ -118,7 +115,6 @@ export const TicketStep1 = React.memo(
         return;
       }
 
-      // No validar ni limpiar la localidad hasta que las localidades estén cargadas
       if (!todasLocalidadesCargadas) return;
 
       if (form.localidad) {
@@ -388,7 +384,7 @@ export const TicketStep1 = React.memo(
           </>
         )}
 
-        {/* ✅ Servicios Afectados: Se muestra si NO es residencial Y afectacion es true */}
+        {/*Servicios Afectados: Se muestra si NO es residencial Y afectacion es true */}
         {!isResidencial && form.afectacion === true && (
           <Grid size={{ xs: 12, sm: 4 }}>
             <Autocomplete

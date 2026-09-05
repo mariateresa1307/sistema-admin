@@ -97,7 +97,6 @@ export const ConfirmDialog = ({
       </DialogContent>
       
       <DialogActions sx={{ p: 2.5, pt: 1, gap: 1.5 }}>
-        {/* ✅ CORRECCIÓN 1: Agregar type="button" */}
         <Button 
           type="button" 
           onClick={onCancel} 
@@ -119,7 +118,6 @@ export const ConfirmDialog = ({
           {cancelText}
         </Button>
         
-        {/* ✅ CORRECCIÓN 1: Agregar type="button" */}
         <Button 
           type="button"
           onClick={onConfirm} 

@@ -13,7 +13,7 @@ export default function ElementoModal({ open, onClose, onAdd }: ElementoModalPro
   const handleGuardar = () => {
     if (valor.trim()) {
       onAdd(valor);
-      setValor(''); // Limpiar input
+      setValor('');
       onClose();
     }
   };

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../context/authContext";
 import { useUserSession } from '../hooks/useUserSession';
-import { PageSkeleton } from './skeletons'; // ✅ Import único para loading
+import { PageSkeleton } from './skeletons';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -16,7 +16,7 @@ export default function ProtectedRoute({ children, module }: ProtectedRouteProps
   const router = useRouter();
   const [isChecking, setIsChecking] = useState(true);
 
-  // ✅ Reportar actividad del usuario logueado (heartbeat cada 60s)
+  // Reportar actividad del usuario logueado (heartbeat cada 60s)
   useUserSession();
 
   useEffect(() => {
@@ -33,11 +33,11 @@ export default function ProtectedRoute({ children, module }: ProtectedRouteProps
         return;
       }
       
-      console.log(`✅ [ProtectedRoute] Acceso permitido a ${module}`);
+      console.log(` [ProtectedRoute] Acceso permitido a ${module}`);
     }
   }, [isLoading, isAuthenticated, hasPermission, module, router]);
 
-  // ✅ NUEVO: Skeleton mientras verifica autenticación/permisos
+  // Skeleton 
   if (isLoading || isChecking) {
     return <PageSkeleton />;
   }

@@ -28,7 +28,7 @@ interface TiemposCalculados {
   tAtencion: number;
   tEscalado: number;
   cCierreSoporte: number;
-  mttrTotal: number; // MTTR (Mean Time To Repair) del ticket: el tiempo total de resolución, expresado en minutos. = horaInicioFalla  - horaCierreFalla  
+  mttrTotal: number;
   turnoAsignado: 'DIURNO' | 'NOCTURNO';
 }
 
@@ -338,7 +338,7 @@ useEffect(() => {
             value={form.ttZoho ?? ""}
             onChange={(e) => {
               let val = e.target.value;
-              // Si el usuario escribe algo, eliminamos cualquier '#' existente y agregamos exactamente uno al inicio
+              
               if (val) {
                 val = '#' + val.replace(/^#+/, '');
               }

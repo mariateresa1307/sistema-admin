@@ -9,10 +9,12 @@ import {
   Box,
   Typography,
   InputAdornment,
+  IconButton
 } from '@mui/material';
-import { Mail, Lock, Hub as HubIcon } from '@mui/icons-material';
+import { Mail, Lock, Hub as HubIcon, Visibility, VisibilityOff } from '@mui/icons-material';
 import { motion, Variants } from 'motion/react';
 import api from '@/../src/lib/api';
+import { useState, useMemo } from 'react';
 
 const glassColors = {
   fondoGradiente: 'linear-gradient(135deg, #1a0033 0%, #000000 100%)',
@@ -28,21 +30,32 @@ const containerVariants: Variants = {
   animate: { opacity: 1, scale: 1, transition: { duration: 0.6 } },
 };
 
-const bounceVariants: Variants = {
-  animate: () => ({
-    x: [Math.random() * 100 - 50, Math.random() * 200 - 100, Math.random() * -200 + 100, 0],
-    y: [Math.random() * 100 - 50, Math.random() * 300 - 150, Math.random() * -300 + 150, 0],
-    transition: {
-      duration: 4 + Math.random() * 2, 
-      repeat: Infinity,
-      repeatType: "reverse",
-      ease: "linear",
-    }
-  })
-};
-
 export default function LoginPage() {
   const router = useRouter();
+  const [showPassword, setShowPassword] = useState(false);
+
+  // ✅ useMemo DENTRO del componente (líneas 37-50)
+  const bounceVariants = useMemo<Variants>(() => ({
+    animate: () => ({
+      x: [Math.random() * 100 - 50, Math.random() * 200 - 100, Math.random() * -200 + 100, 0],
+      y: [Math.random() * 100 - 50, Math.random() * 300 - 150, Math.random() * -300 + 150, 0],
+      transition: {
+        duration: 4 + Math.random() * 2, 
+        repeat: Infinity,
+        repeatType: "reverse",
+        ease: "linear",
+      }
+    })
+  }), []);
+
+  // ✅ Burbujas memorizadas DENTRO del componente (líneas 52-59)
+  const burbujas = useMemo(() => [
+    { s: 350, t: '10%', l: '5%', c: glassColors.burbujaSecundaria },
+    { s: 250, t: '70%', l: '15%', c: glassColors.burbujaPrimaria },
+    { s: 280, t: '50%', l: '75%', c: glassColors.burbujaPrimaria },
+    { s: 400, t: '-5%', l: '45%', c: glassColors.burbujaPrimaria },
+    { s: 320, t: '20%', l: '85%', c: glassColors.burbujaTercera },
+  ], []);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -81,18 +94,9 @@ export default function LoginPage() {
         window.location.href = '/home';
       }
     } catch (error: any) {
-     
       console.error("Error de login:", error);
     }
   };
-
-  const burbujas = [
-    { s: 350, t: '10%', l: '5%', c: glassColors.burbujaSecundaria },
-    { s: 250, t: '70%', l: '15%', c: glassColors.burbujaPrimaria },
-    { s: 280, t: '50%', l: '75%', c: glassColors.burbujaPrimaria },
-    { s: 400, t: '-5%', l: '45%', c: glassColors.burbujaPrimaria },
-    { s: 320, t: '20%', l: '85%', c: glassColors.burbujaTercera },
-  ];
 
   return (
     <Box sx={{ 
@@ -147,12 +151,41 @@ export default function LoginPage() {
             />
 
             <TextField
-              fullWidth variant="standard" placeholder="Password" name="password" type="password" margin="normal"
+              fullWidth 
+              variant="standard" 
+              placeholder="Password" 
+              name="password" 
+              type={showPassword ? "text" : "password"} 
+              margin="normal"
               InputProps={{
-                startAdornment: <InputAdornment position="start"><Lock sx={{ color: 'white', opacity: 0.7 }} /></InputAdornment>,
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Lock sx={{ color: 'white', opacity: 0.7 }} />
+                  </InputAdornment>
+                ),
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={() => setShowPassword(!showPassword)}
+                      edge="end"
+                      sx={{ 
+                        color: 'white', 
+                        opacity: 0.7, 
+                        '&:hover': { opacity: 1 },
+                        mr: 0.5,
+                        '& .MuiSvgIcon-root': { fontSize: '1.3rem' }
+                      }}
+                    >
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
                 style: { color: 'white', fontSize: '1.1rem', paddingBottom: '10px' }
               }}
-              sx={{ '& .MuiInput-underlined:after': { borderBottomColor: glassColors.burbujaSecundaria }, mb: 5 }}
+              sx={{ 
+                '& .MuiInput-underline:after': { borderBottomColor: glassColors.burbujaSecundaria },
+                mb: 5 
+              }}
             />
 
             <Button 

@@ -157,7 +157,7 @@ export const TicketActions = ({
               </Button>
             )}
 
-            {/* ✅ Botón Salir: SOLO si está cerrado */}
+            {/* Botón Salir: SOLO si está cerrado */}
             {isClosed && (
               <Button
                 variant="outlined"
@@ -180,7 +180,7 @@ export const TicketActions = ({
             )}
           </>
         ) : (
-          /* ✅ CASO 2: Paso 1 (Mostrar solo "Siguiente") */
+          /* CASO 2: Paso 1 (Mostrar solo "Siguiente") */
           <Button
             variant="contained"
             onClick={onNext}

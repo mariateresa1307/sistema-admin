@@ -3,12 +3,9 @@ import { useMemo } from "react";
 import CustomDataGrid, { SearchParams } from "app/components/customDataGrid";
 import { GridCellParams, GridColDef } from "@mui/x-data-grid";
 import { Chip, Box, IconButton, Tooltip, Typography } from "@mui/material";
-import EditIcon from "@mui/icons-material/Edit";
-import DeleteIcon from "@mui/icons-material/Delete";
 import PlaceIcon from "@mui/icons-material/Place";
 import MapIcon from "@mui/icons-material/Map";
 import CategoryIcon from "@mui/icons-material/Category";
-import WarningIcon from "@mui/icons-material/Warning";
 import ReportProblemIcon from "@mui/icons-material/ReportProblem";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import { MiscellaneousItem } from "../miscellaneous/useMiscellaneous";
@@ -636,7 +633,7 @@ export const MiscellaneousTable = ({
       });
 
     } else {
-      // Default para otras categorías (ej. LOCALIDAD, ESTADO, etc.)
+     
       baseColumns.push({
         field: "descripcion",
         headerName: "Detalles",

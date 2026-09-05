@@ -32,14 +32,17 @@ api.interceptors.response.use(
   (error) => {
     let message = 'Ocurrió un error inesperado. Por favor, intenta de nuevo.';
     
-  if (error.response) {
+    if (error.response) {
       if (error.response.status === 401) {
-        message = 'Sesión expirada o credenciales incorrectas. Por favor, verifica tus datos.';
-        localStorage.removeItem('token');
-        localStorage.removeItem('userData');
+         message = 'Sesión expirada o credenciales incorrectas. Por favor, verifica tus datos.';
         
-        // Handle redirect if token expire
-        window.location.href = '/';
+        //NO redirigir si ya estamos en la página de login
+        const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
+        if (currentPath !== '/') {
+          localStorage.removeItem('token');
+          localStorage.removeItem('userData');
+          window.location.href = '/';
+        }
         
       } else if (error.response.status === 403) {
         message = 'No tienes permisos para realizar esta acción.';
@@ -48,7 +51,7 @@ api.interceptors.response.use(
       } else if (error.response.data?.message) {
         const rawMessage = error.response.data.message;
         
-        // ✅ TRADUCCIONES DE MENSAJES DE VALIDACIÓN DEL BACKEND
+     
         if (typeof rawMessage === 'string') {
           if (rawMessage.includes('clave must be longer than or equal to 6 characters')) {
             message = 'La contraseña debe tener al menos 6 caracteres.';
@@ -58,7 +61,7 @@ api.interceptors.response.use(
             message = rawMessage;
           }
         } else if (Array.isArray(rawMessage)) {
-          // Si el backend devuelve un array de errores (class-validator)
+       
           message = rawMessage.map((msg: string) => {
             if (msg.includes('clave must be longer than or equal to 6 characters')) {
               return 'La contraseña debe tener al menos 6 caracteres.';
@@ -100,7 +103,7 @@ export const createUser = (data: any) => api.post('/user', data);
 export const updateUser = (id: string, data: any) => api.put(`/user/${id}`, data);
 export const deleteUser = (id: string) => api.delete(`/user/${id}`);
 export const toggleStatus = (id: string, status: boolean) =>   api.patch(`/user/${id}/status`, { isActive: status });
-
+export const changePassword = (data: { currentPassword: string; newPassword: string }) => api.post('/user/change-password', data); 
 
 
 // ENDPOINTS DE AUTENTICACIÓN

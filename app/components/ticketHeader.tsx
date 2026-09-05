@@ -2,7 +2,7 @@
 import React from 'react';
 import { Box, Typography, IconButton, Chip } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber'; // ✅ Icono agregado
+import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import { getNivelSeveridadConfig } from 'app/utils/auxiliares';
 
 export interface TicketHeaderProps {
@@ -58,7 +58,7 @@ export const TicketHeader = React.memo(({ severidad, isEditMode = false, numeroT
           >
             {isEditMode ? 'Editar Ticket - NOC' : 'Ficha Técnica del Caso - NOC'}
             
-            {/* ✅ Mostrar número de ticket SIEMPRE que exista, con diseño de etiqueta */}
+            {/* Mostrar número de ticket SIEMPRE que exista, con diseño de etiqueta */}
             {numeroTicket && (
               <Box 
                 sx={{ 
