@@ -37,6 +37,9 @@ export interface UseTicketDataReturn {
   loadAllServicios: () => Promise<void>;
   loadCausasRaiz: () => Promise<void>;
   loadGrupoDestino: () => Promise<void>;
+  
+  // ✅ NUEVO: Filtrar causas raíz por categoría seleccionada
+  getCausasRaizPorCategoria: (categoriaId: string) => ConfiguracionInterface[];
 
   clearSubcategorias: () => void;
   clearDetalle: () => void;
@@ -61,14 +64,6 @@ const filterByTipoIncidencia = <T extends { tipoIncidencia?: string[] }>(
     if (!Array.isArray(item.tipoIncidencia) || item.tipoIncidencia.length === 0) return false;
     return item.tipoIncidencia.some(t => (t || '').toUpperCase().trim() === upper);
   });
-};
-
-const filterByPadreId = <T extends { padreId?: string; _id?: string }>(
-  items: T[],
-  padreId: string,
-): T[] => {
-  if (!padreId) return [];
-  return items.filter(item => String(item.padreId) === String(padreId));
 };
 
 export const useTicketData = (open: boolean): UseTicketDataReturn => {
@@ -102,27 +97,14 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
         getMiscellaneous({ categoria: 'LOCALIDAD', limit: 999 }),    
       ]);
 
-      const operadoresData = Array.isArray(operadoresRes.data?.data)
-        ? operadoresRes.data.data
-        : Array.isArray(operadoresRes.data)
-          ? operadoresRes.data
-          : [];
-
-      setOperadores(operadoresData.map((u: any) => ({
-        _id: u._id,
-        primerNombre: u.primerNombre,
-        primerApellido: u.primerApellido,
-        username: u.username,
-      })));
+      const operadoresData = Array.isArray(operadoresRes.data?.data) ? operadoresRes.data.data : Array.isArray(operadoresRes.data) ? operadoresRes.data : [];
+      setOperadores(operadoresData.map((u: any) => ({ _id: u._id, primerNombre: u.primerNombre, primerApellido: u.primerApellido, username: u.username })));
 
       setCiudadesOptions(extractData(ciudadesRes));
       setCausasRaiz(extractData(causasRes));
       setGrupoDestino(extractData(grupoDestinoRes));
       setTipoCliente(extractData(tipoClienteRes));
-      
-      const todas = extractData(localidadesRes);
-      setTodasLasLocalidades(todas);
-      console.log('📦 [useTicketData] Total localidades en BD:', todas.length);
+      setTodasLasLocalidades(extractData(localidadesRes));
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Error desconocido');
       setError(error);
@@ -132,46 +114,28 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
     }
   }, [open]);
 
-const loadCategoriasRed = useCallback(async (tipoIncidencia: string) => {
-  if (!tipoIncidencia) {
-    setCategoriaRed([]);
-    return [];
-  }
-
-  setLoading(true);
-  try {
-    
-    const res = await getMiscellaneous({ categoria: 'CATEGORIA_RED', limit: 999 });
-    const all = extractData(res) as ConfiguracionInterface[];
-    const filtradas = filterByTipoIncidencia(all, tipoIncidencia);
-
-    console.log(
-      `🏷️ [useTicketData] Categorias RED filtradas por ${tipoIncidencia}:`,
-      filtradas.length, 'de', all.length,
-    );
-
-    setCategoriaRed(filtradas);
-    return filtradas;
-  } catch (err) {
-    console.error('❌ [useTicketData] Error cargando categorías:', err);
-    setCategoriaRed([]);
-    return [];
-  } finally {
-    setLoading(false);
-  }
-}, []);
+  const loadCategoriasRed = useCallback(async (tipoIncidencia: string) => {
+    if (!tipoIncidencia) { setCategoriaRed([]); return []; }
+    setLoading(true);
+    try {
+      const res = await getMiscellaneous({ categoria: 'CATEGORIA_RED', limit: 999 });
+      const all = extractData(res) as ConfiguracionInterface[];
+      const filtradas = filterByTipoIncidencia(all, tipoIncidencia);
+      setCategoriaRed(filtradas);
+      return filtradas;
+    } catch (err) {
+      console.error('❌ [useTicketData] Error cargando categorías:', err);
+      setCategoriaRed([]);
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   const loadLocalidades = useCallback((ciudadIdOrName: string) => {
-    if (!ciudadIdOrName) {
-      setLocalidadesOptions([]);
-      return;
-    }
-
+    if (!ciudadIdOrName) { setLocalidadesOptions([]); return; }
     const searchVal = String(ciudadIdOrName).toLowerCase().trim();
-
-    const ciudadObj = ciudadesOptions.find((c: any) =>
-      String(c._id) === searchVal || (c.valor || '').toLowerCase() === searchVal
-    );
+    const ciudadObj = ciudadesOptions.find((c: any) => String(c._id) === searchVal || (c.valor || '').toLowerCase() === searchVal);
     const ciudadId = ciudadObj ? String(ciudadObj._id) : '';
     const ciudadNombre = ciudadObj ? (ciudadObj.valor || '').toLowerCase() : searchVal;
 
@@ -179,148 +143,92 @@ const loadCategoriasRed = useCallback(async (tipoIncidencia: string) => {
       const locPadreId = String(loc.padreId || '').toLowerCase();
       const locCiudadId = String(loc.ciudadId || '').toLowerCase();
       const locPadreNombre = String(loc.padreNombre || '').toLowerCase();
-
-      return (
-        (ciudadId && (locPadreId === ciudadId || locCiudadId === ciudadId)) ||
-        locPadreNombre === ciudadNombre
-      );
+      return (ciudadId && (locPadreId === ciudadId || locCiudadId === ciudadId)) || locPadreNombre === ciudadNombre;
     });
-
-    console.log('🏘️ [useTicketData] Localidades filtradas para', ciudadIdOrName, ':', filtradas.length);
     setLocalidadesOptions(filtradas);
   }, [todasLasLocalidades, ciudadesOptions]);
 
- const loadSubcategorias = useCallback(async (categoriaId: string) => {
-  if (!categoriaId) {
-    setSubcategorias([]);
-    return;
-  }
-  try {
-    const res = await getMiscellaneous({ categoria: 'SUBCATEGORIA', padreId: categoriaId, limit: 999 });
-    setSubcategorias(extractData(res));
-  } catch (error) {
-    console.error('Error cargando subcategorías:', error);
-    setSubcategorias([]);
-  }
-}, []);
+  const loadSubcategorias = useCallback(async (categoriaId: string) => {
+    if (!categoriaId) { setSubcategorias([]); return; }
+    try {
+      const res = await getMiscellaneous({ categoria: 'SUBCATEGORIA', padreId: categoriaId, limit: 999 });
+      setSubcategorias(extractData(res));
+    } catch (error) { console.error('Error cargando subcategorías:', error); setSubcategorias([]); }
+  }, []);
 
-const loadDetalle = useCallback(async (subcategoriaId: string) => {
-  if (!subcategoriaId) {
-    setDetalle([]);
-    return;
-  }
-  try {
-    const res = await getMiscellaneous({ categoria: 'DETALLE', padreId: subcategoriaId, limit: 999 });
-    setDetalle(extractData(res));
-  } catch (error) {
-    console.error('Error cargando detalles:', error);
-    setDetalle([]);
-  }
-}, []);
+  const loadDetalle = useCallback(async (subcategoriaId: string) => {
+    if (!subcategoriaId) { setDetalle([]); return; }
+    try {
+      const res = await getMiscellaneous({ categoria: 'DETALLE', padreId: subcategoriaId, limit: 999 });
+      setDetalle(extractData(res));
+    } catch (error) { console.error('Error cargando detalles:', error); setDetalle([]); }
+  }, []);
 
   const loadTipoCliente = useCallback(async () => {
     try {
       const res = await getMiscellaneous({ categoria: 'TIPO_CLIENTE', limit: 999 });
       setTipoCliente(extractData(res));
-    } catch (error) {
-      console.error('Error cargando tipos de cliente:', error);
-      setTipoCliente([]);
-    }
+    } catch (error) { console.error('Error cargando tipos de cliente:', error); setTipoCliente([]); }
   }, []);
 
   const loadSolucionesCaso = useCallback(async (causaRaizId: string) => {
-    if (!causaRaizId) {
-      setSolucionesCaso([]);
-      return;
-    }
+    if (!causaRaizId) { setSolucionesCaso([]); return; }
     try {
       const res = await getMiscellaneous({ categoria: CATEGORIA.SOLUCION_CASO, padreId: causaRaizId, limit: 999 });
       setSolucionesCaso(extractData(res));
-    } catch (error) {
-      console.error('Error cargando soluciones:', error);
-      setSolucionesCaso([]);
-    }
+    } catch (error) { console.error('Error cargando soluciones:', error); setSolucionesCaso([]); }
   }, []);
 
   const loadServiciosAfectados = useCallback(async (tipoClienteInput: string | ConfiguracionInterface) => {
-    if (!tipoClienteInput) {
-      setServiciosAfectados([]);
-      return;
-    }
-
+    if (!tipoClienteInput) { setServiciosAfectados([]); return; }
     setLoading(true);
     try {
-      let idAEnviar = '';
-      if (typeof tipoClienteInput === 'object' && tipoClienteInput !== null) {
-        idAEnviar = tipoClienteInput._id;
-      } else {
-        idAEnviar = String(tipoClienteInput);
-      }
-
-      if (!idAEnviar) {
-        setServiciosAfectados([]);
-        return;
-      }
-
+      let idAEnviar = typeof tipoClienteInput === 'object' && tipoClienteInput !== null ? tipoClienteInput._id : String(tipoClienteInput);
+      if (!idAEnviar) { setServiciosAfectados([]); return; }
       const res = await getService({ tipoCliente: idAEnviar, limit: 9999 });
-      const dataServicios: any[] = Array.isArray(res)
-        ? res
-        : Array.isArray(res?.data)
-          ? res.data
-          : Array.isArray(res?.data?.data)
-            ? res.data.data
-            : [];
-
+      const dataServicios: any[] = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : Array.isArray(res?.data?.data) ? res.data.data : [];
       setServiciosAfectados(dataServicios);
-    } catch (error) {
-      console.error('❌ [useTicketData] Error al obtener servicios:', error);
-      setServiciosAfectados([]);
-    } finally {
-      setLoading(false);
-    }
+    } catch (error) { console.error('❌ [useTicketData] Error al obtener servicios:', error); setServiciosAfectados([]); }
+    finally { setLoading(false); }
   }, []);
 
   const loadAllServicios = useCallback(async () => {
     setLoading(true);
     try {
-      console.log('📡 [useTicketData] Solicitando TODOS los servicios (Falla Masiva)...');
       const res = await getService({ limit: 9999 });
-
-      const dataServicios: any[] = Array.isArray(res)
-        ? res
-        : Array.isArray(res?.data)
-          ? res.data
-          : Array.isArray(res?.data?.data)
-            ? res.data.data
-            : [];
-
-      console.log('✅ [useTicketData] Todos los servicios recibidos:', dataServicios.length);
+      const dataServicios: any[] = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : Array.isArray(res?.data?.data) ? res.data.data : [];
       setServiciosAfectados(dataServicios);
-    } catch (error) {
-      console.error('❌ [useTicketData] Error al obtener todos los servicios:', error);
-      setServiciosAfectados([]);
-    } finally {
-      setLoading(false);
-    }
+    } catch (error) { console.error('❌ [useTicketData] Error al obtener todos los servicios:', error); setServiciosAfectados([]); }
+    finally { setLoading(false); }
   }, []);
 
   const loadCausasRaiz = useCallback(async () => {
     try {
       const response = await getMiscellaneous({ categoria: CATEGORIA.CAUSA_RAIZ, limit: 999 });
       setCausasRaiz(extractData(response));
-    } catch (error) {
-      console.error('Error cargando causas raíz:', error);
-    }
+    } catch (error) { console.error('Error cargando causas raíz:', error); }
   }, []);
 
   const loadGrupoDestino = useCallback(async () => {
     try {
       const response = await getMiscellaneous({ categoria: 'GRUPO_DESTINO', limit: 999 });
       setGrupoDestino(extractData(response));
-    } catch (error) {
-      console.error('Error cargando grupo destino:', error);
-    }
+    } catch (error) { console.error('Error cargando grupo destino:', error); }
   }, []);
+
+  // ✅ NUEVA FUNCIÓN: Filtra las causas raíz según la categoría seleccionada
+  const getCausasRaizPorCategoria = useCallback((categoriaId: string) => {
+    if (!categoriaId) return causasRaiz; // Fallback: si no hay categoría, muestra todas
+
+    return causasRaiz.filter((causa: any) => {
+      // Si la causa tiene categorías asociadas, verifica que la seleccionada esté en la lista
+      if (causa.categoriaRedIds && causa.categoriaRedIds.length > 0) {
+        return causa.categoriaRedIds.includes(categoriaId);
+      }
+      // Fallback para datos legacy: si no tiene restricciones, muéstrala
+      return true; 
+    });
+  }, [causasRaiz]);
 
   const clearSubcategorias = useCallback(() => setSubcategorias([]), []);
   const clearDetalle = useCallback(() => setDetalle([]), []);
@@ -330,36 +238,12 @@ const loadDetalle = useCallback(async (subcategoriaId: string) => {
   const clearCategoriaRed = useCallback(() => setCategoriaRed([]), []);
 
   return {
-    operadores,
-    categoriaRed,
-    subcategorias,
-    detalle,
-    tipoCliente,
-    causasRaiz,
-    solucionesCaso,
-    ciudadesOptions,
-    localidadesOptions,
-    todasLasLocalidades, 
-    serviciosAfectados,
-    grupoDestino,
-    loading,
-    error,
-    loadInitialData,
-    loadCategoriasRed,
-    loadSubcategorias,
-    loadDetalle,
-    loadTipoCliente,
-    loadLocalidades,
-    loadSolucionesCaso,
-    loadServiciosAfectados,
-    loadAllServicios,
-    loadCausasRaiz,
-    loadGrupoDestino,
-    clearSubcategorias,
-    clearDetalle,
-    clearTipoCliente,
-    clearLocalidades,
-    clearServiciosAfectados,
-    clearCategoriaRed,
+    operadores, categoriaRed, subcategorias, detalle, tipoCliente, causasRaiz, solucionesCaso,
+    ciudadesOptions, localidadesOptions, todasLasLocalidades, serviciosAfectados, grupoDestino,
+    loading, error,
+    loadInitialData, loadCategoriasRed, loadSubcategorias, loadDetalle, loadTipoCliente,
+    loadLocalidades, loadSolucionesCaso, loadServiciosAfectados, loadAllServicios, loadCausasRaiz, loadGrupoDestino,
+    getCausasRaizPorCategoria, // ✅ EXPORTADO
+    clearSubcategorias, clearDetalle, clearTipoCliente, clearLocalidades, clearServiciosAfectados, clearCategoriaRed,
   };
 };

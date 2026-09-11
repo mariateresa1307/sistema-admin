@@ -7,8 +7,12 @@ import { CategoriaRedFields } from "./modal/fields/CategoriaRedFields";
 import { DetalleFields } from "./modal/fields/detalleFields";
 import { SolucionCasoFields } from "./modal/fields/solucionCasoFields";
 import { TipoClienteFields } from "./modal/fields/tipoClienteFields";
-import { getMiscellaneous, createMiscellaneous, updateMiscellaneous } from "@/lib/api";
-import { Snackbar, Alert } from "@mui/material"; 
+import { CausaRaizFields } from "./modal/fields/CausaRaizFields";
+import {
+  getMiscellaneous,
+  createMiscellaneous,
+  updateMiscellaneous,
+} from "@/lib/api";
 
 interface MiscellaneousModalProps {
   isOpen: boolean;
@@ -18,23 +22,61 @@ interface MiscellaneousModalProps {
   categoria: string;
 }
 
-const CATEGORIA_DEPENDENCIAS: Record<string, { categoria: string; stateKey: string; label: string; campoId: string }> = {
-  CIUDAD: { categoria: "ESTADO", stateKey: "estados", label: "estado", campoId: "estadoId" },
-  SUBCATEGORIA: { categoria: "CATEGORIA_RED", stateKey: "categorias", label: "categoría", campoId: "categoriaId" },
-  DETALLE: { categoria: "SUBCATEGORIA", stateKey: "subcategorias", label: "subcategoría", campoId: "subcategoriaId" },
-  LOCALIDAD: { categoria: "CIUDAD", stateKey: "ciudades", label: "ciudad", campoId: "padreId" }, 
-  SOLUCION_CASO: { categoria: "CAUSA_RAIZ", stateKey: "causasRaiz", label: "causa raíz", campoId: "causaId" },
+const CATEGORIA_DEPENDENCIAS: Record<
+  string,
+  { categoria: string; stateKey: string; label: string; campoId: string }
+> = {
+  CIUDAD: {
+    categoria: "ESTADO",
+    stateKey: "estados",
+    label: "estado",
+    campoId: "estadoId",
+  },
+  SUBCATEGORIA: {
+    categoria: "CATEGORIA_RED",
+    stateKey: "categorias",
+    label: "categoría",
+    campoId: "categoriaId",
+  },
+  DETALLE: {
+    categoria: "SUBCATEGORIA",
+    stateKey: "subcategorias",
+    label: "subcategoría",
+    campoId: "subcategoriaId",
+  },
+  LOCALIDAD: {
+    categoria: "CIUDAD",
+    stateKey: "ciudades",
+    label: "ciudad",
+    campoId: "padreId",
+  },
+  SOLUCION_CASO: {
+    categoria: "CAUSA_RAIZ",
+    stateKey: "causasRaiz",
+    label: "causa raíz",
+    campoId: "causaId",
+  },
 };
 
 const TITULOS: Record<string, { nuevo: string; editar: string }> = {
   CIUDAD: { nuevo: "Nueva Ciudad", editar: "Editar Ciudad" },
   SUBCATEGORIA: { nuevo: "Nueva Subcategoría", editar: "Editar Subcategoría" },
-  CATEGORIA_RED: { nuevo: "Nueva Categoría de Red", editar: "Editar Categoría de Red" },
+  CATEGORIA_RED: {
+    nuevo: "Nueva Categoría de Red",
+    editar: "Editar Categoría de Red",
+  },
   ESTADO: { nuevo: "Nuevo Estado", editar: "Editar Estado" },
   LOCALIDAD: { nuevo: "Nueva Localidad", editar: "Editar Localidad" },
   DETALLE: { nuevo: "Nuevo Detalle", editar: "Editar Detalle" },
-  SOLUCION_CASO: { nuevo: "Nueva Solución del Caso", editar: "Editar Solución del Caso" },
-  TIPO_CLIENTE: { nuevo: "Nuevo Tipo de Cliente", editar: "Editar Tipo de Cliente" },
+  CAUSA_RAIZ: { nuevo: "Nueva Causa Raíz", editar: "Editar Causa Raíz" }, // ✅ AGREGADO
+  SOLUCION_CASO: {
+    nuevo: "Nueva Solución del Caso",
+    editar: "Editar Solución del Caso",
+  },
+  TIPO_CLIENTE: {
+    nuevo: "Nuevo Tipo de Cliente",
+    editar: "Editar Tipo de Cliente",
+  },
 };
 
 export const MiscellaneousModal = ({
@@ -47,24 +89,38 @@ export const MiscellaneousModal = ({
   const [estadoSeleccionado, setEstadoSeleccionado] = React.useState("");
   const [categoriaSeleccionada, setCategoriaSeleccionada] = React.useState("");
   const [tipoIncidencia, setTipoIncidencia] = React.useState<string[]>([]);
-  const [subcategoriaSeleccionada, setSubcategoriaSeleccionada] = React.useState("");
+  const [subcategoriaSeleccionada, setSubcategoriaSeleccionada] =
+    React.useState("");
   const [ciudadSeleccionada, setCiudadSeleccionada] = React.useState("");
   const [causaRaizSeleccionada, setCausaRaizSeleccionada] = React.useState("");
-  const [nivelSeveridadSeleccionado, setNivelSeveridadSeleccionado] = React.useState("");
+  const [nivelSeveridadSeleccionado, setNivelSeveridadSeleccionado] =
+    React.useState("");
+  const [categoriaRedIds, setCategoriaRedIds] = React.useState<string[]>([]); // ✅ ESTADO PARA CAUSA RAÍZ
   const [estados, setEstados] = React.useState<MiscellaneousItem[]>([]);
   const [categorias, setCategorias] = React.useState<MiscellaneousItem[]>([]);
-  const [subcategorias, setSubcategorias] = React.useState<MiscellaneousItem[]>([]);
+  const [subcategorias, setSubcategorias] = React.useState<MiscellaneousItem[]>(
+    [],
+  );
   const [ciudades, setCiudades] = React.useState<MiscellaneousItem[]>([]);
   const [causasRaiz, setCausasRaiz] = React.useState<MiscellaneousItem[]>([]);
-  const [validateFn, setValidateFn] = React.useState<() => boolean>(() => () => true);
+  const [validateFn, setValidateFn] = React.useState<() => boolean>(
+    () => () => true,
+  );
 
-  const cargarDependencia = async (categoriaDep: string): Promise<MiscellaneousItem[]> => {
+  const cargarDependencia = async (
+    categoriaDep: string,
+  ): Promise<MiscellaneousItem[]> => {
     try {
-      const response = await getMiscellaneous({ categoria: categoriaDep, limit: 9999 });
+      const response = await getMiscellaneous({
+        categoria: categoriaDep,
+        limit: 9999,
+      });
       const rawData = response?.data;
-      const items = Array.isArray(rawData?.data) 
-        ? rawData.data 
-        : (Array.isArray(rawData) ? rawData : []);
+      const items = Array.isArray(rawData?.data)
+        ? rawData.data
+        : Array.isArray(rawData)
+          ? rawData
+          : [];
       return items.filter((item: MiscellaneousItem) => item.activo !== false);
     } catch (error) {
       console.error(`Error al cargar ${categoriaDep}:`, error);
@@ -80,6 +136,7 @@ export const MiscellaneousModal = ({
     setCiudadSeleccionada("");
     setCausaRaizSeleccionada("");
     setNivelSeveridadSeleccionado("");
+    setCategoriaRedIds([]); // ✅ LIMPIAR ESTADO
     setEstados([]);
     setCategorias([]);
     setSubcategorias([]);
@@ -98,33 +155,44 @@ export const MiscellaneousModal = ({
     const cargarDatos = async () => {
       const datos = await cargarDependencia(dependencia.categoria);
       switch (categoria) {
-        case "CIUDAD": setEstados(datos); break;
-        case "SUBCATEGORIA": setCategorias(datos); break;
-        case "DETALLE": setSubcategorias(datos); break;
-        case "LOCALIDAD": setCiudades(datos); break;
-        case "SOLUCION_CASO": setCausasRaiz(datos); break;
+        case "CIUDAD":
+          setEstados(datos);
+          break;
+        case "SUBCATEGORIA":
+          setCategorias(datos);
+          break;
+        case "DETALLE":
+          setSubcategorias(datos);
+          break;
+        case "LOCALIDAD":
+          setCiudades(datos);
+          break;
+        case "SOLUCION_CASO":
+          setCausasRaiz(datos);
+          break;
       }
     };
     cargarDatos();
   }, [categoria, isOpen]);
 
-  const modalTitle = title || (initialData
-    ? TITULOS[categoria]?.editar || "Editar Elemento"
-    : TITULOS[categoria]?.nuevo || "Nuevo Elemento"
-  );
+  const modalTitle =
+    title ||
+    (initialData
+      ? TITULOS[categoria]?.editar || "Editar Elemento"
+      : TITULOS[categoria]?.nuevo || "Nuevo Elemento");
 
   const construirPayloadConRelacion = (
     basePayload: any,
     padreSeleccionado: string,
     listaPadres: MiscellaneousItem[],
-    campoId: string
+    campoId: string,
   ): any => {
     const payload = { ...basePayload };
-    
+
     if (padreSeleccionado) {
       payload[campoId] = padreSeleccionado;
     }
-    
+
     return payload;
   };
 
@@ -132,25 +200,54 @@ export const MiscellaneousModal = ({
     try {
       let payload = { ...basePayload };
 
-      if (!payload.categoria || payload.categoria === 'null' || payload.categoria === null) {
+      if (
+        !payload.categoria ||
+        payload.categoria === "null" ||
+        payload.categoria === null
+      ) {
         payload.categoria = categoria;
       }
 
       switch (categoria) {
         case "CIUDAD":
-          payload = construirPayloadConRelacion(payload, estadoSeleccionado, estados, "estadoId");
+          payload = construirPayloadConRelacion(
+            payload,
+            estadoSeleccionado,
+            estados,
+            "estadoId",
+          );
           break;
         case "SUBCATEGORIA":
-          payload = construirPayloadConRelacion(payload, categoriaSeleccionada, categorias, "categoriaId");
+          payload = construirPayloadConRelacion(
+            payload,
+            categoriaSeleccionada,
+            categorias,
+            "categoriaId",
+          );
           break;
         case "DETALLE":
-          payload = construirPayloadConRelacion(payload, subcategoriaSeleccionada, subcategorias, "subcategoriaId");
+          payload = construirPayloadConRelacion(
+            payload,
+            subcategoriaSeleccionada,
+            subcategorias,
+            "subcategoriaId",
+          );
           break;
         case "LOCALIDAD":
-          payload = construirPayloadConRelacion(payload, ciudadSeleccionada, ciudades, "padreId");
+          payload = construirPayloadConRelacion(
+            payload,
+            ciudadSeleccionada,
+            ciudades,
+            "padreId",
+          );
           break;
         case "SOLUCION_CASO":
-          payload = construirPayloadConRelacion(payload, causaRaizSeleccionada, causasRaiz, "causaId");
+          payload = construirPayloadConRelacion(
+            payload,
+            causaRaizSeleccionada,
+            causasRaiz,
+            "causaId",
+          );
           break;
         case "TIPO_CLIENTE":
           if (nivelSeveridadSeleccionado) {
@@ -159,33 +256,45 @@ export const MiscellaneousModal = ({
           break;
         case "CATEGORIA_RED":
           if (tipoIncidencia.length === 0) {
-            alert('Debes seleccionar al menos un tipo de incidencia');
+           window.dispatchEvent(
+              new CustomEvent("app-notification", {
+                detail: { message: "Debes seleccionar al menos un tipo de incidencia", severity: "warning" },
+              })
+            );
             return false;
           }
           payload.tipoIncidencia = tipoIncidencia;
           break;
+        case "CAUSA_RAIZ": // ✅ NUEVO CASO
+          payload.categoriaRedIds = categoriaRedIds;
+          break;
       }
 
-      delete payload.padre; 
+      delete payload.padre;
       delete payload._id;
       delete payload.id;
-      delete payload.createdAt; 
-      delete payload.updatedAt; 
-      delete payload.padreId;       
-      delete payload.padreNombre; 
+      delete payload.createdAt;
+      delete payload.updatedAt;
+      delete payload.padreId;
+      delete payload.padreNombre;
 
       const isEditMode = Boolean(initialData?._id || initialData?.id);
       const id = initialData?._id || initialData?.id;
 
-      const response = isEditMode && id
-        ? await updateMiscellaneous(id, payload)
-        : await createMiscellaneous(payload);
+      const response =
+        isEditMode && id
+          ? await updateMiscellaneous(id, payload)
+          : await createMiscellaneous(payload);
 
       return Boolean(response?.data);
     } catch (error: any) {
       console.error("❌ Error al guardar:", error);
-      const errorMsg = error?.response?.data?.message || error?.message || "Error desconocido";
-      console.error("🔴 Detalle del error:", errorMsg);
+      const errorMsg =        error?.response?.data?.message || error?.message || "Error desconocido";
+     window.dispatchEvent(
+        new CustomEvent("app-notification", {
+          detail: { message: `Error al guardar: ${errorMsg}`, severity: "error" },
+        })
+      );
       return false;
     }
   };
@@ -193,28 +302,76 @@ export const MiscellaneousModal = ({
   const renderExtraFields = () => {
     const commonProps = { isOpen, initialData, onValidate: setValidateFn };
     switch (categoria) {
-      case "CIUDAD": 
-        return <CiudadFields {...commonProps} onEstadoChange={setEstadoSeleccionado} />;
-      case "SUBCATEGORIA": 
-        return <SubcategoriaFields {...commonProps} onCategoriaChange={setCategoriaSeleccionada} />;
-      case "CATEGORIA_RED": 
-        return <CategoriaRedFields isOpen={isOpen} initialData={initialData} onTipoIncidenciaChange={setTipoIncidencia} />;
-      case "DETALLE": 
-        return <DetalleFields {...commonProps} subcategorias={subcategorias} onSubcategoriaChange={setSubcategoriaSeleccionada} />;
-      case "SOLUCION_CASO": 
-        return <SolucionCasoFields {...commonProps} causasRaiz={causasRaiz} onCausaRaizChange={setCausaRaizSeleccionada} />;
-      case "TIPO_CLIENTE": 
-        return <TipoClienteFields {...commonProps} onNivelSeveridadChange={setNivelSeveridadSeleccionado} />;
-      default: 
+      case "CIUDAD":
+        return (
+          <CiudadFields
+            {...commonProps}
+            onEstadoChange={setEstadoSeleccionado}
+          />
+        );
+      case "SUBCATEGORIA":
+        return (
+          <SubcategoriaFields
+            {...commonProps}
+            onCategoriaChange={setCategoriaSeleccionada}
+          />
+        );
+      case "CATEGORIA_RED":
+        return (
+          <CategoriaRedFields
+            isOpen={isOpen}
+            initialData={initialData}
+            onTipoIncidenciaChange={setTipoIncidencia}
+          />
+        );
+      case "DETALLE":
+        return (
+          <DetalleFields
+            {...commonProps}
+            subcategorias={subcategorias}
+            onSubcategoriaChange={setSubcategoriaSeleccionada}
+          />
+        );
+      case "SOLUCION_CASO":
+        return (
+          <SolucionCasoFields
+            {...commonProps}
+            causasRaiz={causasRaiz}
+            onCausaRaizChange={setCausaRaizSeleccionada}
+          />
+        );
+      case "TIPO_CLIENTE":
+        return (
+          <TipoClienteFields
+            {...commonProps}
+            onNivelSeveridadChange={setNivelSeveridadSeleccionado}
+          />
+        );
+      case "CAUSA_RAIZ": // ✅ NUEVO CASO
+        return (
+          <CausaRaizFields
+            isOpen={isOpen}
+            initialData={initialData}
+            onCategoriasRedChange={setCategoriaRedIds}
+          />
+        );
+      default:
         return null;
     }
   };
 
   const validate = () => {
-    if (typeof validateFn === 'function' && !validateFn()) {
+    if (typeof validateFn === "function" && !validateFn()) {
       const dependencia = CATEGORIA_DEPENDENCIAS[categoria];
       if (dependencia) {
-        alert(`Debe seleccionar un${dependencia.label.startsWith('e') ? 'a' : ''} ${dependencia.label}`);
+          window.dispatchEvent(
+          new CustomEvent("app-notification", {
+            detail: {
+              message: `Debe seleccionar un${dependencia.label.startsWith("e") ? "a" : ""} ${dependencia.label}`,
+              severity: "warning",
+            },
+          })
+        );
       }
       return false;
     }

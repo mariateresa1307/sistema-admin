@@ -3,7 +3,7 @@ import * as React from "react";
 import { Dialog, DialogTitle, DialogContent, IconButton, Typography,
   Button, TextField, Box, Snackbar, Alert, FormControlLabel, Switch} from "@mui/material";
 import Grid from "@mui/material/Grid";
-import { Close as CloseIcon } from "@mui/icons-material";
+import { Close , Lightbulb  } from "@mui/icons-material";
 
 export type MiscellaneousItem = {
   _id?: string;
@@ -48,7 +48,7 @@ export const BaseModal = ({
     severity: "success" as "success" | "error",
   });
 
-  React.useEffect(() => {
+    React.useEffect(() => {
     if (isOpen) {
       if (initialData) {
         setValor(initialData.valor || "");
@@ -62,14 +62,28 @@ export const BaseModal = ({
     }
   }, [initialData, isOpen]);
 
-  const triggerNotification = (message: string, severity: "success" | "error") => {
+  const triggerNotification = React.useCallback((message: string, severity: "success" | "error") => {
     setNotification({ open: true, message, severity });
-  };
+  }, []);
 
-  const handleSave = async () => {
-    if (!valor.trim()) {
+ const handleSave = React.useCallback(async () => {
+    const valorTrimmed = valor.trim();
+    
+    if (!valorTrimmed) {
       triggerNotification("El valor es obligatorio", "error");
       return;
+    }
+
+     if (categoria === "CATEGORIA_RED") {
+      // Regex: 2 a 11 letras, opcionalmente seguido de " - P", " - M" o " - VM"
+      const regex = /^[A-Za-zÀ-ÿ]{2,11}(?: - (?:P|M|VM))?$/i;
+      if (!regex.test(valorTrimmed)) {
+        triggerNotification(
+          "Formato inválido. Use entre 2 y 11 letras, opcionalmente seguido de ' - P', ' - M' o ' - VM' (Ej: ACCESO, ACCESO - P, ACCESO - M o ACCESO - VM).",
+          "error"
+        );
+        return;
+      }
     }
 
     if (validate && !validate()) {
@@ -80,7 +94,7 @@ export const BaseModal = ({
     try {
       const payload: any = {
         categoria,
-        valor: valor.toUpperCase(),
+        valor: valorTrimmed.toUpperCase(),
         descripcion,
         activo,
       };
@@ -90,16 +104,27 @@ export const BaseModal = ({
       if (success) {
         triggerNotification("Elemento guardado correctamente", "success");
         setTimeout(onClose, 1000);
-      } else {
-        triggerNotification("Error al guardar el elemento", "error");
       }
-    } catch (error) {
+     } catch (error) {
       console.error("Error:", error);
-      triggerNotification("Error de conexión con el servidor", "error");
+      triggerNotification("Error al guardar el elemento", "error");
     } finally {
       setSaving(false);
     }
-  };
+  }, [valor, categoria, descripcion, activo, validate, onSave, onClose, triggerNotification]);
+
+
+  const valorPlaceholder = React.useMemo(() => {
+    if (categoria === "CATEGORIA_RED") return "Ej: ACCESO o ACCESO - P";
+    if (categoria === "CIUDAD") return "Ej: CARACAS";
+    return "Ej: NUEVO VALOR";
+  }, [categoria]);
+
+  const valorHelperText = React.useMemo(() => {
+    return categoria === "CATEGORIA_RED" 
+      ? "Mín. 2, Máx. 11 letras. Opcional: ' - P', ' - M' o ' - VM'."
+      : undefined;
+  }, [categoria]);
 
   return (
     <>
@@ -146,7 +171,7 @@ export const BaseModal = ({
             </Typography>
           </Box>
           <IconButton onClick={onClose} size="small">
-            <CloseIcon />
+            <Close />
           </IconButton>
         </DialogTitle>
 
@@ -178,6 +203,26 @@ export const BaseModal = ({
                   }
                   size="small"
                   autoFocus
+                        helperText={
+                    valorHelperText ? (
+                      <Box  component="span" sx={{ 
+                        
+                        display: "flex", 
+                        alignItems: "center", 
+                        gap: 0.5,
+                        color: "#d32f2f",
+                        bgcolor: "rgba(211, 47, 47, 0.05)",
+                        p: 0.75,
+                        borderRadius: 1,
+                        mt: 0.5
+                      }}>
+                        <Lightbulb sx={{ fontSize: 16, color: "#f59e0b" }} /> {/* 💡 Icono amarillo */}
+                        <Typography variant="caption"  component="span" sx={{ fontWeight: 500, fontSize: "0.75rem" }}>
+                          {valorHelperText}
+                        </Typography>
+                      </Box>
+                    ) : undefined
+                  }
                 />
               </Grid>
 

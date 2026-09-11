@@ -54,16 +54,17 @@ export const TicketStep2 = React.memo(
     onFieldChange,
     onCausaRaizChange,
   }: TicketStep2Props) => {
-useEffect(() => {
-  console.log('🔍 [TicketStep2] Diagnóstico operadores:', {
-    operadoresRecibidos: operadores?.length || 0,
-    primerOperador: operadores?.[0],
-    formOperatorResponsable: form.operatorResponsable,
-    formOperatorAsignado: form.operatorAsignado,
-    matchResponsable: operadores?.find(op => op._id === form.operatorResponsable),
-    matchAsignado: operadores?.find(op => op._id === form.operatorAsignado),
-  });
-}, [operadores, form.operatorResponsable, form.operatorAsignado]);
+    useEffect(() => {
+      console.log('🔍 [TicketStep2] Diagnóstico operadores:', {
+        operadoresRecibidos: operadores?.length || 0,
+        primerOperador: operadores?.[0],
+        formOperatorResponsable: form.operatorResponsable,
+        formOperatorAsignado: form.operatorAsignado,
+        matchResponsable: operadores?.find(op => op._id === form.operatorResponsable),
+        matchAsignado: operadores?.find(op => op._id === form.operatorAsignado),
+      });
+    }, [operadores, form.operatorResponsable, form.operatorAsignado]);
+
     // Verificar si el ticket está cerrado
     const isClosed = form.estatus === TICKET_STATUS.CERRADO || form.estatus === 'CERRADO';
 
@@ -94,9 +95,9 @@ useEffect(() => {
 
     const formatCierreFalla = () => {
       const status = form.estatus || form.estatus;
-      const isClosed = status === TICKET_STATUS.CERRADO || status === 'CERRADO' || status === 'cerrado';
+      const isClosedStatus = status === TICKET_STATUS.CERRADO || status === 'CERRADO' || status === 'cerrado';
 
-      if (!isClosed || !form.horaCierreFalla) return '';
+      if (!isClosedStatus || !form.horaCierreFalla) return '';
 
       try {
         const date = new Date(form.horaCierreFalla);
@@ -110,6 +111,12 @@ useEffect(() => {
     };
 
     const cierreFallaValue = formatCierreFalla();
+
+    // ✅ VALIDACIÓN BLINDADA Y SINCRONIZADA:
+    // Usamos String() para garantizar que nunca falle si el valor viene como null/undefined/objeto.
+    // Si el ticket YA está cerrado (isClosed === true), NO mostramos validación visual.
+    const escaladoPorRequired = !isClosed && (!form.escaladoPor || String(form.escaladoPor).trim() === '');
+    const imputableRequired = !isClosed && (!form.imputable || String(form.imputable).trim() === '');
 
     return (
       <Grid container spacing={2.5} sx={{ fontFamily: corporateFont }}>
@@ -227,7 +234,7 @@ useEffect(() => {
 
         {/* Resumen de Tiempos */}
         <Grid size={12}>
-          <Box sx={{ bgcolor: '#2e3e7d ', color: '#ffffff', p: 2, borderRadius: 2, display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2, px: 3, fontFamily: corporateFont }}>
+          <Box sx={{ bgcolor: '#2e3e7d', color: '#ffffff', p: 2, borderRadius: 2, display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2, px: 3, fontFamily: corporateFont }}>
             <Typography variant="body2" sx={{ fontWeight: 700 }}><strong>T. Detección:</strong> {tiempos.tDeteccion} min</Typography>
             <Typography variant="body2" sx={{ fontWeight: 700 }}><strong>T. Atención:</strong> {tiempos.tAtencion} min</Typography>
             <Typography variant="body2" sx={{ fontWeight: 700 }}><strong>T. Escalado:</strong> {tiempos.tEscalado} min</Typography>
@@ -338,7 +345,6 @@ useEffect(() => {
             value={form.ttZoho ?? ""}
             onChange={(e) => {
               let val = e.target.value;
-              
               if (val) {
                 val = '#' + val.replace(/^#+/, '');
               }
@@ -400,9 +406,6 @@ useEffect(() => {
           </TextField>
         </Grid>
 
-
-
-
         {/* Severidad */}
         <Grid size={{ xs: 12, sm: 4 }}>
           <TextField
@@ -431,17 +434,20 @@ useEffect(() => {
           </TextField>
         </Grid>
 
-            <Grid size={{ xs: 12, sm: 4 }}>
+        {/* Escalado por - ✅ BLINDADO */}
+        <Grid size={{ xs: 12, sm: 4 }}>
           <TextField
             select
             fullWidth
-            required
+            required={escaladoPorRequired} 
             label="Escalado por"
             name="escaladoPor"
             value={form.escaladoPor ?? ""}
             onChange={handleChange}
             size="small"
             disabled={isClosed}
+            error={escaladoPorRequired} 
+            helperText={escaladoPorRequired ? "Campo obligatorio para poder cerrar" : ""}
             sx={{ fontFamily: corporateFont }}
           >
             <MenuItem value="" sx={{ fontFamily: corporateFont }}><em>Seleccionar</em></MenuItem>
@@ -451,18 +457,20 @@ useEffect(() => {
           </TextField>
         </Grid>
 
-        {/* Imputable a */}
+        {/* Imputable a - ✅ BLINDADO */}
         <Grid size={{ xs: 12, sm: 4 }}>
           <TextField
             select
             fullWidth
-            required
+            required={imputableRequired} 
             label="Imputable a"
             name="imputable"
             value={form.imputable ?? ""}
             onChange={handleChange}
             size="small"
             disabled={isClosed}
+            error={imputableRequired} 
+            helperText={imputableRequired ? "Campo obligatorio para poder cerrar" : ""}
             sx={{ fontFamily: corporateFont }}
           >
             <MenuItem value="" sx={{ fontFamily: corporateFont }}><em>Seleccionar</em></MenuItem>

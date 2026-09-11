@@ -9,11 +9,7 @@ import {
 } from "@mui/material";
 import { 
   Dashboard, People, ExpandLess, ExpandMore, Logout, Settings, 
-  VerifiedUser, Assessment, Close as CloseIcon,
-  NotificationsActive as NotificationsActiveIcon,
-  NotificationsNone as NotificationsNoneIcon,
-  Person,
-  Lock
+  VerifiedUser, Assessment, Lock
 } from "@mui/icons-material";
 import { ThemeProvider, useTheme, type ThemeMode } from "../context/ThemeContext";
 import { HomeRefreshProvider, useHomeRefresh } from "../context/homeRefreshContext";
@@ -25,8 +21,9 @@ import { motion } from "motion/react";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
 import TuneIcon from '@mui/icons-material/Tune';
 import { logout } from '@/lib/api'; 
-
+import { NotificationBell } from '../components/NotificationBell';
 import { ChangePasswordModal } from "../components/ChangePasswordModal"; 
+import api from '@/lib/api'; 
 
 const DRAWER_WIDTH = 260;
 const APP_BAR_HEIGHT = 64;
@@ -91,15 +88,6 @@ const UserMenu = React.memo<{ onThemeToggle: (mode: ThemeMode) => void; isDark: 
   const { refreshHomeData } = useHomeRefresh();
   const [userData, setUserData] = useState<UserData | null>(null);
 
-  // Estados para Notificaciones
-  const [notifAnchorEl, setNotifAnchorEl] = React.useState<null | HTMLElement>(null);
-  const notifOpen = Boolean(notifAnchorEl);
-  const [notifications, setNotifications] = useState([
-    { id: '1', message: 'Nuevo ticket asignado: TT-1024', time: 'Hace 5 min', read: false, type: 'info' },
-    { id: '2', message: 'Ticket TT-1020 cerrado exitosamente', time: 'Hace 15 min', read: false, type: 'success' },
-    { id: '3', message: 'Alerta: 3 tickets sin atender', time: 'Hace 1 hora', read: true, type: 'warning' },
-  ]);
-
   useEffect(() => {
     const stored = localStorage.getItem('userData');
     if (stored) {
@@ -119,15 +107,6 @@ const UserMenu = React.memo<{ onThemeToggle: (mode: ThemeMode) => void; isDark: 
   }, []);
 
   const initial = userData ? userData.primerNombre[0]?.toUpperCase() : "U";
-  const unreadCount = notifications.filter(n => !n.read).length;
-
-  const handleDeleteNotification = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-  };
-
-  const handleClearAllNotifications = () => {
-    setNotifications([]);
-  };
 
   const handleLogout = async () => {
     setAnchorEl(null);
@@ -154,117 +133,7 @@ const UserMenu = React.memo<{ onThemeToggle: (mode: ThemeMode) => void; isDark: 
 
       <TicketModal open={modalOpen} onClose={() => { setModalOpen(false); refreshHomeData(); }} onSave={() => setModalOpen(false)} />
       
-      {/* 🔔 Icono de Notificaciones */}
-      <Tooltip title="Notificaciones">
-        <IconButton
-          onClick={(e) => setNotifAnchorEl(e.currentTarget)}
-          sx={{ color: "inherit", mx: 1, position: 'relative' }}
-        >
-          {unreadCount > 0 ? <NotificationsActiveIcon fontSize="large" /> : <NotificationsNoneIcon fontSize="large" />}
-          {unreadCount > 0 && (
-            <Box
-              sx={{
-                position: 'absolute',
-                top: 4,
-                right: 4,
-                bgcolor: '#ff4444',
-                color: 'white',
-                borderRadius: '50%',
-                width: 18,
-                height: 18,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '0.65rem',
-                fontWeight: 700,
-                border: '2px solid',
-                borderColor: 'background.paper',
-              }}
-            >
-              {unreadCount > 9 ? '9+' : unreadCount}
-            </Box>
-          )}
-        </IconButton>
-      </Tooltip>
-
-      {/* Menú de Notificaciones */}
-      <Menu
-        anchorEl={notifAnchorEl}
-        open={notifOpen}
-        onClose={() => setNotifAnchorEl(null)}
-        PaperProps={{
-          sx: {
-            mt: 1.5,
-            p: 0,
-            width: 360,
-            maxHeight: 450,
-            borderRadius: 3,
-            boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
-            overflow: 'hidden',
-          },
-        }}
-        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-      >
-        <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1rem' }}>Notificaciones</Typography>
-          {notifications.length > 0 && (
-            <Button size="small" onClick={handleClearAllNotifications} sx={{ color: 'primary.main', fontWeight: 600, textTransform: 'none' }}>
-              Limpiar todo
-            </Button>
-          )}
-        </Box>
-        
-        <Box sx={{ overflow: 'auto', maxHeight: 350 }}>
-          {notifications.length === 0 ? (
-            <Box sx={{ p: 4, textAlign: 'center' }}>
-              <NotificationsNoneIcon sx={{ fontSize: 48, color: 'text.secondary', opacity: 0.3, mb: 1 }} />
-              <Typography variant="body2" color="text.secondary">No hay notificaciones nuevas</Typography>
-            </Box>
-          ) : (
-            notifications.map((notif, index) => (
-              <Box
-                key={notif.id}
-                sx={{
-                  p: 2,
-                  borderBottom: index < notifications.length - 1 ? '1px solid' : 'none',
-                  borderColor: 'divider',
-                  bgcolor: notif.read ? 'background.default' : 'rgba(102, 126, 234, 0.05)',
-                  '&:hover': { bgcolor: 'action.hover' },
-                }}
-              >
-                <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
-                  <Box
-                    sx={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: '50%',
-                      bgcolor: notif.read ? 'transparent' : notif.type === 'error' ? '#ff4444' : notif.type === 'success' ? '#48bb78' : '#667eea',
-                      mt: 1,
-                      flexShrink: 0,
-                    }}
-                  />
-                  <Box sx={{ flex: 1 }}>
-                    <Typography variant="body2" sx={{ fontWeight: notif.read ? 400 : 600, mb: 0.5 }}>
-                      {notif.message}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {notif.time}
-                    </Typography>
-                  </Box>
-                  <IconButton
-                    size="small"
-                    onClick={() => handleDeleteNotification(notif.id)}
-                    sx={{ color: 'text.secondary', '&:hover': { color: 'error.main' }, mt: -0.5 }}
-                  >
-                    <CloseIcon fontSize="small" />
-                  </IconButton>
-                </Box>
-              </Box>
-            ))
-          )}
-        </Box>
-      </Menu>
+    
 
       {/* 👤 Avatar con Menú de Usuario Integrado */}
       <Tooltip title="Cuenta y Configuración">
@@ -316,9 +185,6 @@ const UserMenu = React.memo<{ onThemeToggle: (mode: ThemeMode) => void; isDark: 
           </Typography>
         </Box>
 
-        {/* Opciones de menú */}
-    
-
         <MenuItem 
           onClick={() => { 
             setAnchorEl(null); 
@@ -333,8 +199,6 @@ const UserMenu = React.memo<{ onThemeToggle: (mode: ThemeMode) => void; isDark: 
         </MenuItem>
 
         <Divider sx={{ my: 1 }} />
-
-       
 
         {/* Cerrar Sesión menu*/}
         <MenuItem 
@@ -353,6 +217,9 @@ const UserMenu = React.memo<{ onThemeToggle: (mode: ThemeMode) => void; isDark: 
           <Typography sx={{ fontWeight: 600 }}>Cerrar Sesión</Typography>
         </MenuItem>
       </Menu>
+
+        {/* ✅ COMPONENTE DE NOTIFICACIONES INTEGRADO (Reemplaza todo el menú hardcodeado anterior) */}
+      <NotificationBell />
 
       <ChangePasswordModal open={pwdModalOpen} onClose={() => setPwdModalOpen(false)} />
     </Box>
@@ -403,7 +270,6 @@ const Sidebar = React.memo<{ pathname: string; onNavigate: (path: string) => voi
       <List sx={{ pt: 2, flexGrow: 1 }}>
         {filteredMenuItems.map((item) => <SidebarItem key={item.path} item={item} pathname={pathname} isOpen={open} onNavigate={onNavigate} />)}
       </List>
-      
     </Drawer>
   );
 });
@@ -418,6 +284,23 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const handleLogout = React.useCallback(async () => {
     try { /* await logout(); */ } catch (error) { console.error('Error durante el logout:', error); } 
     finally { localStorage.clear(); window.location.href = '/'; }
+  }, []);
+
+  // ✅ HEARTBEAT: Mantiene la sesión del usuario como "activa" para recibir notificaciones
+  React.useEffect(() => {
+    const sendHeartbeat = async () => {
+      try {
+        await api.post('/user-sessions/heartbeat');
+      } catch (error) {
+        console.error('Error sending heartbeat:', error);
+      }
+    };
+
+    // Enviar heartbeat cada 2 minutos
+    sendHeartbeat();
+    const interval = setInterval(sendHeartbeat, 2 * 60 * 1000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   return (

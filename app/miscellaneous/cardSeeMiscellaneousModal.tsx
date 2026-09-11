@@ -25,7 +25,9 @@ type MiscellaneousItem = {
   createdAt?: string;
   updatedAt?: string;
   tipoIncidencia?: string[];
+  causasRaizIds?: string[]; 
   nivelSeveridad?: string;
+  categoriaRedIds?: string[];
 };
 
 interface CardSeeMiscellaneousModalProps {
@@ -36,6 +38,7 @@ interface CardSeeMiscellaneousModalProps {
   subcategorias: MiscellaneousItem[];
   soluciones?: MiscellaneousItem[];
   causasRaiz?: MiscellaneousItem[];
+  categoriasRed?: MiscellaneousItem[];
   onEditClick: () => void;
   onDelete: (item: MiscellaneousItem) => void;
 }
@@ -90,6 +93,7 @@ export const CardSeeMiscellaneousModal = ({
   subcategorias = [],
   soluciones = [],
   causasRaiz = [],
+  categoriasRed = [],
   onEditClick,
   onDelete
 }: CardSeeMiscellaneousModalProps) => {
@@ -98,6 +102,7 @@ export const CardSeeMiscellaneousModal = ({
   const subcategoriasList = subcategorias || [];
   const solucionesList = soluciones || [];
   const causasRaizList = causasRaiz || [];
+   const categoriasRedList = categoriasRed || []; 
 
   const [confirmDeleteOpen, setConfirmDeleteOpen] = React.useState(false);
 
@@ -114,6 +119,22 @@ export const CardSeeMiscellaneousModal = ({
   const handleCancelDelete = () => {
     setConfirmDeleteOpen(false);
   };
+
+  const categoriasAsociadasACausaRaiz = React.useMemo(() => {
+    if (item.categoria !== 'CAUSA_RAIZ' || !item.categoriaRedIds) return [];
+    return categoriasRedList.filter((cat) => {
+      const catIdStr = getIdAsString(cat._id || cat.id);
+      return item.categoriaRedIds?.includes(catIdStr) && cat.activo !== false;
+    });
+  }, [item, categoriasRedList]);
+
+   const causasRaizAsociadasACategoria = React.useMemo(() => {
+    if (item.categoria !== 'CATEGORIA_RED' || !item.causasRaizIds) return [];
+    return causasRaizList.filter((causa) => {
+      const causaIdStr = getIdAsString(causa._id || causa.id);
+      return item.causasRaizIds?.includes(causaIdStr) && causa.activo !== false;
+    });
+  }, [item, causasRaizList]);
 
   const subcategoriasAsociadas = React.useMemo(() => {
     if (item.categoria !== 'CATEGORIA_RED') return [];
@@ -299,24 +320,26 @@ export const CardSeeMiscellaneousModal = ({
                   </Grid>
 
                   {/* Tipo de Incidencia - CATEGORIA_RED */}
-                  {item.categoria === 'CATEGORIA_RED' && item.tipoIncidencia && item.tipoIncidencia.length > 0 && (
+             {item.categoria === 'CAUSA_RAIZ' && categoriasAsociadasACausaRaiz.length > 0 && (
                     <Grid size={12}>
                       <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700, letterSpacing: '0.5px' }}>
-                        Tipos de Incidencia
+                        Categorías Asociadas ({categoriasAsociadasACausaRaiz.length})
                       </Typography>
                       <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                        {item.tipoIncidencia.map((tipo) => (
+                        {categoriasAsociadasACausaRaiz.map((cat) => (
                           <Chip
-                            key={tipo}
-                            label={tipo}
+                            key={getIdAsString(cat._id || cat.id)}
+                            label={cat.valor}
                             size="small"
+                            icon={<CategoryIcon sx={{ fontSize: 14 }} />}
                             sx={{
-                              bgcolor: getColorByTipoIncidencia(tipo),
-                              color: 'white',
+                              bgcolor: '#e1bee7',
+                              color: '#7b1fa2',
                               fontWeight: 600,
                               borderRadius: '6px',
                               fontSize: '0.72rem',
-                              px: 1
+                              px: 1,
+                              '& .MuiChip-icon': { color: '#7b1fa2', mr: 0.5 }
                             }}
                           />
                         ))}

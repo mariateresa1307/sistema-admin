@@ -144,3 +144,9 @@ export const getReportPreview = (params: any) => api.get('/reports/preview', { p
 // USER SESSIONS
 export const sendHeartbeat = () => api.post('/user-sessions/heartbeat');
 export const getOnlineUsers = () => api.get('/user-sessions/online');
+
+// NOTIFICACIONES
+export const getNotifications = async () => { const res = await api.get('/notifications'); return res.data;};
+export const getUnreadNotificationsCount = async () => { const res = await api.get('/notifications/unread-count'); return res.data;};
+export const markNotificationAsRead = async (id: string) => { const res = await api.post(`/notifications/${id}/read`); return res.data;};
+export const markAllNotificationsAsRead = async () => {const res = await api.post('/notifications/read-all'); return res.data;};

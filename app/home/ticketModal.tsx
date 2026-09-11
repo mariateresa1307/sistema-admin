@@ -253,6 +253,8 @@ export default function TicketModal({ open, onClose, onSave, ticketToEdit }: Tic
     ticketForm.handleCategoriaChange(categoria, ticketForm.form.numeroTicket);
     ticketData.clearSubcategorias();
     ticketData.clearDetalle();
+    ticketForm.updateField('causaRaiz', '');
+    ticketForm.updateField('SolucionCaso', '');
     if (categoriaId) {
       await ticketData.loadSubcategorias(categoriaId);
     }
@@ -335,7 +337,8 @@ export default function TicketModal({ open, onClose, onSave, ticketToEdit }: Tic
     if (!ticketForm.form.horaFinAfectacion || String(ticketForm.form.horaFinAfectacion).trim() === '') camposFaltantes.push('Hora de Fin de Afectación');
     if (!ticketForm.form.causaRaiz || String(ticketForm.form.causaRaiz).trim() === '') camposFaltantes.push('Causa Raíz');
     if (!ticketForm.form.SolucionCaso || String(ticketForm.form.SolucionCaso).trim() === '') camposFaltantes.push('Solución al Caso');
-
+    if (!ticketForm.form.escaladoPor || String(ticketForm.form.escaladoPor).trim() === '') camposFaltantes.push('Escalado por');
+    if (!ticketForm.form.imputable || String(ticketForm.form.imputable).trim() === '') camposFaltantes.push('Imputable a');
     if (camposFaltantes.length > 0) {
       window.dispatchEvent(new CustomEvent('app-notification', { detail: { message: `No se puede cerrar el ticket. Debe completar: ${camposFaltantes.join(', ')}`, severity: 'warning' } }));
       return;
@@ -376,24 +379,37 @@ export default function TicketModal({ open, onClose, onSave, ticketToEdit }: Tic
     });
   }, [ticketForm.preSaved, ticketForm.form, ticketForm.prepareFinalData, ticketForm.updateField, onSave, onClose]);
 
-  const requestReopenTicket = useCallback(() => {
-    if (!ticketForm.preSaved) return;
-    setConfirmDialog({
-      open: true, title: 'Reabrir Ticket', message: '¿Estás seguro de que deseas reabrir este ticket? Su estado volverá a ACTIVO.', type: 'info',
-      onConfirm: async () => {
-        setConfirmDialog(prev => ({ ...prev, open: false }));
-        try {
-          const result = await reopenTicket(ticketForm.preSaved!);
-          window.dispatchEvent(new CustomEvent('app-notification', { detail: { message: 'Ticket reabierto exitosamente', severity: 'success' } }));
-          onSave(result.data);
-          ticketForm.resetForm();
-          onClose();
-        } catch (err: any) {
-          window.dispatchEvent(new CustomEvent('app-notification', { detail: { message: err.response?.data?.message || 'Error al reabrir', severity: 'error' } }));
-        }
+const requestReopenTicket = useCallback(async () => {
+  if (!ticketForm.preSaved) return;
+  
+  setConfirmDialog({
+    open: true, 
+    title: 'Reabrir Ticket', 
+    message: '¿Estás seguro de que deseas reabrir este ticket? Su estado volverá a ACTIVO.', 
+    type: 'info',
+    onConfirm: async () => {
+      setConfirmDialog(prev => ({ ...prev, open: false }));
+      try {
+        const result = await reopenTicket(ticketForm.preSaved!);
+        
+        // ✅ CRUCIAL: Actualizar el estado local del formulario inmediatamente
+        // Esto asegura que isClosed sea false y las validaciones se activen
+        ticketForm.updateField('estatus', 'ACTIVO'); 
+        
+        window.dispatchEvent(new CustomEvent('app-notification', { 
+          detail: { message: 'Ticket reabierto exitosamente', severity: 'success' } 
+        }));
+        
+        onSave(result.data);
+        // No cerramos el modal ni reseteamos el form, solo actualizamos el estado
+      } catch (err: any) {
+        window.dispatchEvent(new CustomEvent('app-notification', { 
+          detail: { message: err.response?.data?.message || 'Error al reabrir', severity: 'error' } 
+        }));
       }
-    });
-  }, [ticketForm.preSaved, onSave, onClose]);
+    }
+  });
+}, [ticketForm.preSaved, ticketForm, onSave]);
 
   const isAdmin = useMemo(() => {
     if (typeof window === 'undefined') return false;
@@ -431,11 +447,12 @@ export default function TicketModal({ open, onClose, onSave, ticketToEdit }: Tic
               form={ticketForm.form}
               tiempos={ticketForm.tiemposCalculados}
               operadores={ticketData.operadores}
-              causasRaiz={ticketData.causasRaiz}
+               causasRaiz={ticketData.getCausasRaizPorCategoria(ticketForm.form.categoria)} 
               solucionesCaso={ticketData.solucionesCaso}
               grupoDestino={ticketData.grupoDestino || []}
               onFieldChange={ticketForm.updateField}
               onCausaRaizChange={handleCausaRaizChange}
+              
             />
           )}
 

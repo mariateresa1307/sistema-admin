@@ -159,41 +159,152 @@ export const exportIncidenciasPorProveedorCsv = async (
   };
   ws.views = [{ state: 'frozen', ySplit: HEADER_ROW }];
 
-  // GRÁFICAS
-  if (graficas.barras || graficas.torta) {
-    let fila = HEADER_ROW + data.length + 3;
+  // ✅ SECCIÓN GRÁFICAS (Ajustada - Sin perturbar la data principal)
+  let currentRow = HEADER_ROW + data.length + 2;
 
-    ws.mergeCells(fila, 1, fila, 10);
-    const t2 = ws.getCell(fila, 1);
-    t2.value = 'RESUMEN GRÁFICO';
-    t2.font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
-    t2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: AZUL } };
-    t2.alignment = { horizontal: 'center' };
-    ws.getRow(fila).height = 22;
+  // --- 1. DISTRIBUCIÓN POR ESTADO (Compacta) ---
+  const totalTickets = data.length || 1;
+  const pctAbiertas = Math.round((abiertas / totalTickets) * 100);
+  const pctCerradas = Math.round((cerradas / totalTickets) * 100);
 
-    fila += 1;
-    ws.getRow(fila).height = 280;
-    ws.getRow(fila + 1).height = 280;
+  ws.mergeCells(currentRow, 1, currentRow, 10);
+  const tituloGrafico = ws.getCell(currentRow, 1);
+  tituloGrafico.value = 'RESUMEN GRÁFICO';
+  tituloGrafico.font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
+  tituloGrafico.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: AZUL } };
+  tituloGrafico.alignment = { horizontal: 'center' };
+  ws.getRow(currentRow).height = 24;
+  currentRow += 1;
 
-    try {
-      if (graficas.barras) {
-        const id = workbook.addImage({ base64: graficas.barras, extension: 'png' });
-        ws.addImage(id, {
-          tl: { col: 0.2, row: fila - 0.1 },
-          ext: { width: 720, height: 400 },
-        });
+  // Tabla de distribución compacta
+  const headerDist = ws.getRow(currentRow);
+  ['Estado', 'Cantidad', '%', 'Distribución'].forEach((h, i) => {
+    const c = headerDist.getCell(i + 1);
+    c.value = h;
+    c.font = { bold: true, size: 9, color: { argb: 'FFFFFFFF' } };
+    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: AZUL } };
+    c.alignment = { horizontal: 'center', vertical: 'middle' };
+    c.border = borde();
+  });
+  
+  ws.getColumn(1).width = 15;
+  ws.getColumn(2).width = 12;
+  ws.getColumn(3).width = 8;
+  ws.getColumn(4).width = 35;
+  currentRow += 1;
+
+  // Fila Abiertas
+  ws.getRow(currentRow).getCell(1).value = 'Abiertas';
+  ws.getRow(currentRow).getCell(1).font = { bold: true, color: { argb: NARANJA } };
+  ws.getRow(currentRow).getCell(1).border = borde();
+  
+  ws.getRow(currentRow).getCell(2).value = abiertas;
+  ws.getRow(currentRow).getCell(2).alignment = { horizontal: 'center' };
+  ws.getRow(currentRow).getCell(2).border = borde();
+  
+  ws.getRow(currentRow).getCell(3).value = `${pctAbiertas}%`;
+  ws.getRow(currentRow).getCell(3).font = { bold: true, color: { argb: NARANJA } };
+  ws.getRow(currentRow).getCell(3).alignment = { horizontal: 'center' };
+  ws.getRow(currentRow).getCell(3).border = borde();
+  
+  const barraAbiertas = '█'.repeat(Math.round(pctAbiertas / 2.5)) + '░'.repeat(40 - Math.round(pctAbiertas / 2.5));
+  ws.getRow(currentRow).getCell(4).value = barraAbiertas;
+  ws.getRow(currentRow).getCell(4).font = { color: { argb: NARANJA }, size: 9, name: 'Consolas' };
+  ws.getRow(currentRow).getCell(4).border = borde();
+  currentRow += 1;
+
+  // Fila Cerradas
+  ws.getRow(currentRow).getCell(1).value = 'Cerradas';
+  ws.getRow(currentRow).getCell(1).font = { bold: true, color: { argb: VERDE } };
+  ws.getRow(currentRow).getCell(1).border = borde();
+  
+  ws.getRow(currentRow).getCell(2).value = cerradas;
+  ws.getRow(currentRow).getCell(2).alignment = { horizontal: 'center' };
+  ws.getRow(currentRow).getCell(2).border = borde();
+  
+  ws.getRow(currentRow).getCell(3).value = `${pctCerradas}%`;
+  ws.getRow(currentRow).getCell(3).font = { bold: true, color: { argb: VERDE } };
+  ws.getRow(currentRow).getCell(3).alignment = { horizontal: 'center' };
+  ws.getRow(currentRow).getCell(3).border = borde();
+  
+  const barraCerradas = '█'.repeat(Math.round(pctCerradas / 2.5)) + '░'.repeat(40 - Math.round(pctCerradas / 2.5));
+  ws.getRow(currentRow).getCell(4).value = barraCerradas;
+  ws.getRow(currentRow).getCell(4).font = { color: { argb: VERDE }, size: 9, name: 'Consolas' };
+  ws.getRow(currentRow).getCell(4).border = borde();
+  currentRow += 2;
+
+  // --- 2. TOP SERVICIOS (Orden ajustado: INCIDENCIAS | SERVICIO | DISTRIBUCIÓN) ---
+  const serviciosCount = data.reduce((acc, ticket) => {
+    acc[ticket.servicioNombre] = (acc[ticket.servicioNombre] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const topServicios = Object.entries(serviciosCount)
+    .map(([nombre, cantidad]) => ({ nombre, cantidad }))
+    .sort((a, b) => b.cantidad - a.cantidad)
+    .slice(0, 8);
+
+  ws.mergeCells(currentRow, 1, currentRow, 10);
+  const tituloServicios = ws.getCell(currentRow, 1);
+  tituloServicios.value = 'TOP SERVICIOS CON MÁS INCIDENCIAS';
+  tituloServicios.font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
+  tituloServicios.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: AZUL } };
+  tituloServicios.alignment = { horizontal: 'center' };
+  ws.getRow(currentRow).height = 24;
+  currentRow += 1;
+
+  // ✅ Encabezados reordenados: INCIDENCIAS | SERVICIO | DISTRIBUCIÓN
+  const headerServ = ws.getRow(currentRow);
+  const headersTop = ['INCIDENCIAS', 'SERVICIO', 'DISTRIBUCIÓN'];
+  
+  headersTop.forEach((h, i) => {
+    const c = headerServ.getCell(i + 1);
+    c.value = h;
+    c.font = { bold: true, size: 10, color: { argb: 'FFFFFFFF' } };
+    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF5C6BC0' } };
+    c.alignment = { horizontal: 'center', vertical: 'middle' };
+    c.border = borde();
+  });
+  
+  // ✅ Anchos de columna ajustados
+  ws.getColumn(1).width = 14;  // Incidencias (estrecho)
+  ws.getColumn(2).width = 50;  // Servicio (ancho para ver nombres completos)
+  ws.getColumn(3).width = 40;  // Distribución (medio)
+  currentRow += 1;
+
+  topServicios.forEach((item, idx) => {
+    const r = ws.getRow(currentRow + idx);
+    const maxCantidad = topServicios[0].cantidad;
+    const pctRelativo = Math.round((item.cantidad / maxCantidad) * 100);
+
+    // ✅ Columna 1: INCIDENCIAS (número centrado)
+    r.getCell(1).value = item.cantidad;
+    r.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+    r.getCell(1).border = borde();
+    r.getCell(1).font = { bold: true, size: 11, color: { argb: AZUL } };
+
+    // ✅ Columna 2: SERVICIO (nombre completo)
+    r.getCell(2).value = item.nombre;
+    r.getCell(2).font = { size: 9 };
+    r.getCell(2).alignment = { vertical: 'middle', wrapText: false };
+    r.getCell(2).border = borde();
+
+    // ✅ Columna 3: DISTRIBUCIÓN (barra visual relativa al que más tiene)
+    const barra = '█'.repeat(Math.round(pctRelativo / 2.5)) + '░'.repeat(40 - Math.round(pctRelativo / 2.5));
+    r.getCell(3).value = barra;
+    r.getCell(3).font = { color: { argb: 'FF5C6BC0' }, size: 9, name: 'Consolas' };
+    r.getCell(3).alignment = { horizontal: 'left', vertical: 'middle' };
+    r.getCell(3).border = borde();
+
+    // Zebra striping (3 columnas)
+    if (idx % 2 === 1) {
+      for (let i = 1; i <= 3; i++) {
+        r.getCell(i).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ZEBRA } };
       }
-      if (graficas.torta) {
-        const id2 = workbook.addImage({ base64: graficas.torta, extension: 'png' });
-        ws.addImage(id2, {
-          tl: { col: 5.3, row: fila - 0.1 },
-          ext: { width: 480, height: 400 },
-        });
-      }
-    } catch (err) {
-      console.warn('⚠️ No se pudieron insertar las gráficas:', err);
     }
-  }
+  });
+
+  currentRow += topServicios.length;
 
   // DESCARGA
   const buffer = await workbook.xlsx.writeBuffer();

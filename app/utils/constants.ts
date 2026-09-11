@@ -24,14 +24,7 @@ export const ESCALADO_POR = {
   ZOHO: "ZOHO",
   GESTORES: "GESTORES"
 }
-export const CATEGORIA_RED = [/*esto se debe trar de miscelaneos no de aca de aca se debe eliminar */
-  "ACCESO",
-  "AMBIENTE",
-  "COMPONENTES",
-  "CORE",
-  "IT",
-  "TRANSPORTE"
-]
+
 
 export const PRODUCTO = [
   "FiberPonBusinessPlus100Mb",

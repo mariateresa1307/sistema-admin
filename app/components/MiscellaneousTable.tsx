@@ -29,6 +29,7 @@ interface MiscellaneousTableProps {
   pageSizeOptions?: number[];
   selectFieldOptions?: Record<string, Array<{ value: string; label: string }>>;
   excludeSearchFields?: string[];
+  categoriasRed?: MiscellaneousItem[];
 }
 
 export const MiscellaneousTable = ({
@@ -48,7 +49,7 @@ export const MiscellaneousTable = ({
   onPaginationModelChange,
   pageSizeOptions = [10, 25, 50],
   excludeSearchFields = [],
-  
+  categoriasRed = [],
 }: MiscellaneousTableProps) => {
   const getLocalidadesByCiudad = (ciudadId: string) => {
     if (!ciudadId) return [];
@@ -386,9 +387,75 @@ export const MiscellaneousTable = ({
         ),
       });
     } else if (currentCategoria === "CAUSA_RAIZ") {
+      // ✅ NUEVA COLUMNA: Categorías Asociadas
+      baseColumns.push({
+        field: "categoriasAsociadas",
+        headerName: "Categorías Asociadas",
+        flex: 1.5,
+        minWidth: 250,
+        sortable: false,
+        renderCell: (params) => {
+          const categorias = params.row.categoriasAsociadas || [];
+          const categoriasArray = Array.isArray(categorias) ? categorias : [];
+
+          if (categoriasArray.length === 0) {
+            return (
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ fontStyle: "italic" }}
+              >
+                Sin categorías asociadas
+              </Typography>
+            );
+          }
+
+          return (
+            <Box
+              sx={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 0.5,
+                alignItems: "center",
+              }}
+            >
+              {categoriasArray.slice(0, 2).map((cat: any) => (
+                <Chip
+                  key={cat._id || cat.id}
+                  icon={<CategoryIcon sx={{ fontSize: 14 }} />}
+                  label={cat.valor}
+                  size="small"
+                  sx={{
+                    bgcolor: "#f3e5f5",
+                    color: "#7b1fa2",
+                    fontWeight: 600,
+                    borderRadius: "6px",
+                    fontSize: "0.75rem",
+                    "& .MuiChip-icon": { color: "#7b1fa2" },
+                  }}
+                />
+              ))}
+              {categoriasArray.length > 2 && (
+                <Chip
+                  label={`+${categoriasArray.length - 2}`}
+                  size="small"
+                  sx={{
+                    bgcolor: "#f5f5f5",
+                    color: "#616161",
+                    fontWeight: 600,
+                    borderRadius: "6px",
+                    fontSize: "0.75rem",
+                  }}
+                />
+              )}
+            </Box>
+          );
+        },
+      });
+
       baseColumns.push({
         field: "solucionesAsociadas",
-        headerName: "Detalles",
+        headerName: "Soluciones Asociadas",
         flex: 1.5,
         minWidth: 250,
         sortable: false,
@@ -449,25 +516,7 @@ export const MiscellaneousTable = ({
           );
         },
       });
-
-      baseColumns.push({
-        field: "activo",
-        headerName: "Estado",
-        width: 120,
-        align: "center",
-        headerAlign: "center",
-        renderCell: (params) => (
-          <Chip
-            label={params.value !== false ? "Activo" : "Inactivo"}
-            size="small"
-            sx={{
-              bgcolor: params.value !== false ? "#e8f5e9" : "#ffebee",
-              color: params.value !== false ? "#2e7d32" : "#c62828",
-              fontWeight: "bold",
-            }}
-          />
-        ),
-      });
+      // ✅ ELIMINADA la columna de "Estado" (activo) específicamente para CAUSA_RAIZ
     } else if (currentCategoria === "SOLUCION_CASO") {
       baseColumns.push({
         field: "causaRaizAsociada",
@@ -585,8 +634,6 @@ export const MiscellaneousTable = ({
           />
         ),
       });
-    
-    // ✅ NUEVO: Sección exclusiva para DETALLE
     } else if (currentCategoria === "DETALLE") {
       baseColumns.push({
         field: "padreNombre",
@@ -631,9 +678,7 @@ export const MiscellaneousTable = ({
           />
         ),
       });
-
     } else {
-     
       baseColumns.push({
         field: "descripcion",
         headerName: "Detalles",
@@ -683,6 +728,7 @@ export const MiscellaneousTable = ({
     onDelete,
     onOpenLocalidades,
     onOpenSubcategorias,
+    categoriasRed,
   ]);
 
   return (

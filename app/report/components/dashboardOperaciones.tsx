@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, TextField, MenuItem, Button, Dialog, DialogTitle,
   DialogContent, DialogActions, Paper, IconButton,
@@ -12,19 +12,17 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs, { Dayjs } from 'dayjs';
 import { KpiCard } from './kpiCards';
-import { getReportPreview } from '@/lib/api';
+import { getReportPreview, getMiscellaneous } from '@/lib/api';
 import { GrupoA } from '../grupos/grupoA';
 import { GrupoB } from '../grupos/grupoB';
 import { GrupoC } from '../grupos/grupoC';
 import { GrupoD } from '../grupos/grupoD';
-import { CATEGORIA_RED, TIPO_CLIENTE } from 'app/utils/constants';
 import { ReportePreview } from 'app/utils/types';
 import { exportReporteGrupoAExcel } from '../../utils/exportGrupoA';
 import { exportReporteGrupoBExcel } from '../../utils/exportGrupoB';
 import { exportReporteGrupoCExcel } from '../../utils/exportGrupoC';
-import { exportReporteGrupoDExcel } from '../../utils/exportGrupoD'; // ✅ IMPORTACIÓN AGREGADA
+import { exportReporteGrupoDExcel } from '../../utils/exportGrupoD';
 
-// Cards que solo se muestran en la gráfica de torta (no como KPIs)
 const CARDS_SOLO_GRAFICA = [
   'Incidencias Puntuales',
   'Incidencias Masivas',
@@ -41,6 +39,39 @@ export const DashboardOperaciones = () => {
   });
   const [searchedGrupo, setSearchedGrupo] = useState<string | null>(null);
   const [reportPreview, setReportPreview] = useState<ReportePreview>({});
+  
+  // ✅ ESTADOS PARA DATOS DINÁMICOS
+  const [categoriasRed, setCategoriasRed] = useState<{ _id: string; valor: string }[]>([]);
+  const [tiposCliente, setTiposCliente] = useState<{ _id: string; valor: string }[]>([]);
+
+  // ✅ CARGAR CATEGORÍAS Y TIPOS DE CLIENTE DESDE MISCELLANEOUS
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [categoriasRes, tiposRes] = await Promise.all([
+          getMiscellaneous({ categoria: 'CATEGORIA_RED', limit: 9999 }),
+          getMiscellaneous({ categoria: 'TIPO_CLIENTE', limit: 9999 }),
+        ]);
+
+        // Procesar categorías de red
+        const catRaw = categoriasRes?.data;
+        const catData = Array.isArray(catRaw?.data) 
+          ? catRaw.data 
+          : (Array.isArray(catRaw) ? catRaw : []);
+        setCategoriasRed(catData.filter((c: any) => c.activo !== false));
+
+        // Procesar tipos de cliente
+        const tipoRaw = tiposRes?.data;
+        const tipoData = Array.isArray(tipoRaw?.data) 
+          ? tipoRaw.data 
+          : (Array.isArray(tipoRaw) ? tipoRaw : []);
+        setTiposCliente(tipoData.filter((t: any) => t.activo !== false));
+      } catch (error) {
+        console.error("Error cargando datos dinámicos:", error);
+      }
+    };
+    fetchData();
+  }, []);
 
   const clearResults = () => {
     setReportPreview({});
@@ -67,83 +98,50 @@ export const DashboardOperaciones = () => {
     }
   };
 
-  // ✅ Exportación dinámica según el grupo seleccionado
   const handleExportar = async () => {
     try {
       if (filters.grupo === 'A') {
         const ticketsDetalle = (reportPreview as any).ticketsDetalle || [];
-
         if (ticketsDetalle.length === 0) {
           window.dispatchEvent(new CustomEvent('app-notification', {
             detail: { message: 'No hay tickets para exportar en este período', severity: 'warning' },
           }));
           return;
         }
-
-        await exportReporteGrupoAExcel({
-          reportPreview,
-          mes: filters.mes,
-          tickets: ticketsDetalle,
-        });
-
+        await exportReporteGrupoAExcel({ reportPreview, mes: filters.mes, tickets: ticketsDetalle });
       } else if (filters.grupo === 'B') {
         const tiempoPorServicio = (reportPreview as any).tiempoPorServicio || [];
         const fallasRecurrentes = (reportPreview as any).fallasRecurrentes || [];
         const ticketsDetalle = (reportPreview as any).ticketsDetalle || [];
-
         if (tiempoPorServicio.length === 0 && fallasRecurrentes.length === 0) {
           window.dispatchEvent(new CustomEvent('app-notification', {
             detail: { message: 'No hay datos de servicio para exportar en este período', severity: 'warning' },
           }));
           return;
         }
-
-        await exportReporteGrupoBExcel({
-          reportPreview,
-          mes: filters.mes,
-          tiempoPorServicio,
-          fallasRecurrentes,
-          ticketsDetalle, 
-        });
-
+        await exportReporteGrupoBExcel({ reportPreview, mes: filters.mes, tiempoPorServicio, fallasRecurrentes, ticketsDetalle });
       } else if (filters.grupo === 'C') {
         const ticketsPorOperador = (reportPreview as any).ticketsPorOperador || [];
         const promedioPorOperador = (reportPreview as any).promedioPorOperador || 0;
         const cantidadOperadores = (reportPreview as any).cantidadOperadores || 0;
         const ticketsDetalle = (reportPreview as any).ticketsDetalle || [];
-
         if (ticketsPorOperador.length === 0 && ticketsDetalle.length === 0) {
           window.dispatchEvent(new CustomEvent('app-notification', {
             detail: { message: 'No hay datos de operadores para exportar en este período', severity: 'warning' },
           }));
           return;
         }
-
-        await exportReporteGrupoCExcel({
-          reportPreview,
-          mes: filters.mes,
-          ticketsPorOperador,
-          promedioPorOperador,
-          cantidadOperadores,
-        });
-
+        await exportReporteGrupoCExcel({ reportPreview, mes: filters.mes, ticketsPorOperador, promedioPorOperador, cantidadOperadores });
       } else if (filters.grupo === 'D') {
-        // ✅ LÓGICA DE EXPORTACIÓN PARA GRUPO D AGREGADA
         const incidentesMayoresPorMes = (reportPreview as any).incidentesMayoresPorMes || [];
         const rankingServicios = (reportPreview as any).rankingServicios || [];
-
         if (incidentesMayoresPorMes.length === 0 && rankingServicios.length === 0) {
           window.dispatchEvent(new CustomEvent('app-notification', {
             detail: { message: 'No hay datos de calidad y mejora para exportar en este período', severity: 'warning' },
           }));
           return;
         }
-
-        await exportReporteGrupoDExcel({
-          reportPreview,
-          mes: filters.mes,
-        });
-
+        await exportReporteGrupoDExcel({ reportPreview, mes: filters.mes });
       } else {
         window.dispatchEvent(new CustomEvent('app-notification', {
           detail: { message: `La exportación para el Grupo ${filters.grupo} aún no está disponible`, severity: 'info' },
@@ -212,6 +210,7 @@ export const DashboardOperaciones = () => {
             </TextField>
           </Grid>
 
+          {/* ✅ PLATAFORMA - Usa categorías dinámicas */}
           <Grid size={{ xs: 12, md: 12, lg: 2 }}>
             <TextField
               fullWidth
@@ -222,10 +221,15 @@ export const DashboardOperaciones = () => {
               onChange={(e) => updateFilter({ plataforma: e.target.value })}
             >
               <MenuItem value="TODAS">Todas</MenuItem>
-              {CATEGORIA_RED.map((name) => <MenuItem value={name} key={name}>{name}</MenuItem>)}
+              {categoriasRed.map((cat) => (
+                <MenuItem value={cat._id} key={cat._id }>
+                  {cat.valor}
+                </MenuItem>
+              ))}
             </TextField>
           </Grid>
 
+          {/* ✅ TIPO CLIENTE - Usa tipos dinámicos de Miscellaneous */}
           <Grid size={{ xs: 12, md: 12, lg: 2 }}>
             <TextField
               fullWidth
@@ -236,8 +240,10 @@ export const DashboardOperaciones = () => {
               onChange={(e) => updateFilter({ cliente: e.target.value })}
             >
               <MenuItem value="TODOS">Todos</MenuItem>
-              {(Object.keys(TIPO_CLIENTE) as Array<keyof typeof TIPO_CLIENTE>).map((key) => (
-                <MenuItem key={key} value={TIPO_CLIENTE[key]}>{TIPO_CLIENTE[key]}</MenuItem>
+              {tiposCliente.map((tipo) => (
+                <MenuItem value={tipo._id} key={tipo._id }>
+                  {tipo.valor}
+                </MenuItem>
               ))}
             </TextField>
           </Grid>
@@ -280,12 +286,8 @@ export const DashboardOperaciones = () => {
         </Grid>
       </Paper>
 
-      {/* ✅ SECCIÓN CORREGIDA */}
       {searchedGrupo && (
         <>
-          {/* ✅ CAMBIO CLAVE: Se eliminó 'D' de la exclusión. 
-              Ahora los Grupos A y D usan las cards globales (estilo KpiCard).
-              Solo B y C tienen sus propias cards integradas. */}
           {!['B', 'C'].includes(searchedGrupo) && (
             <Grid container spacing={3} sx={{ mb: 4 }}>
               {reportPreview.cards
@@ -294,7 +296,6 @@ export const DashboardOperaciones = () => {
             </Grid>
           )}
 
-          {/* Renderizar el componente del grupo seleccionado (Tablas y gráficas) */}
           {Grupos[searchedGrupo as keyof typeof Grupos]}
         </>
       )}

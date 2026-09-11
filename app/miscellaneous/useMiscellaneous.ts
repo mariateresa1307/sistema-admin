@@ -17,6 +17,7 @@ export type MiscellaneousItem = {
   subcategoriaId?: string;
   estadoId?: string;
   causaId?: string;
+  
 };
 
 export type NotificationType = {
