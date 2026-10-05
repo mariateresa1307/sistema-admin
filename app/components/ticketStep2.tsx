@@ -77,8 +77,15 @@ export const TicketStep2 = React.memo(
       });
     }, [form.requiereEscalamiento, form.escaladoA, grupoDestino, isClosed]);
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // ✅ CORRECCIÓN: Incluir HTMLTextAreaElement para campos multiline
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       const { name, value } = e.target;
+      
+      // Log de depuración para verificar que el cambio se detecta
+      if (name === 'descripcion') {
+        console.log('📝 [TicketStep2] Descripción cambiada a:', value);
+      }
+      
       onFieldChange(name as keyof TicketFormData, value);
     };
 
@@ -112,9 +119,7 @@ export const TicketStep2 = React.memo(
 
     const cierreFallaValue = formatCierreFalla();
 
-    // ✅ VALIDACIÓN BLINDADA Y SINCRONIZADA:
-    // Usamos String() para garantizar que nunca falle si el valor viene como null/undefined/objeto.
-    // Si el ticket YA está cerrado (isClosed === true), NO mostramos validación visual.
+    // ✅ VALIDACIÓN BLINDADA Y SINCRONIZADA
     const escaladoPorRequired = !isClosed && (!form.escaladoPor || String(form.escaladoPor).trim() === '');
     const imputableRequired = !isClosed && (!form.imputable || String(form.imputable).trim() === '');
 
@@ -385,7 +390,7 @@ export const TicketStep2 = React.memo(
           />
         </Grid>
 
-        {/* Operador Asignado */}
+            {/* Operador Asignado */}
         <Grid size={{ xs: 12, md: 4 }}>
           <TextField
             select
@@ -396,13 +401,21 @@ export const TicketStep2 = React.memo(
             value={form.operatorAsignado ?? ''}
             onChange={(e) => onFieldChange('operatorAsignado', e.target.value)}
             size="small"
+            // ✅ Muestra error si el asignado es igual al responsable
+            error={form.operatorAsignado === form.operatorResponsable && form.operatorAsignado !== ''}
+            helperText={form.operatorAsignado === form.operatorResponsable && form.operatorAsignado !== '' 
+              ? 'El operador asignado no puede ser el mismo que el responsable' 
+              : ''}
           >
             <MenuItem value="">Sin asignar</MenuItem>
-            {operadores.map((op) => (
-              <MenuItem key={op._id} value={op._id}>
-                {op.primerNombre} {op.primerApellido}
-              </MenuItem>
-            ))}
+            {/* ✅ FILTRO: Excluye al operador responsable de la lista de opciones */}
+            {operadores
+              .filter((op) => op._id !== form.operatorResponsable)
+              .map((op) => (
+                <MenuItem key={op._id} value={op._id}>
+                  {op.primerNombre} {op.primerApellido}
+                </MenuItem>
+              ))}
           </TextField>
         </Grid>
 

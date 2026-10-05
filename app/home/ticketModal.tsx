@@ -174,7 +174,7 @@ export default function TicketModal({ open, onClose, onSave, ticketToEdit }: Tic
     ticketData.loadLocalidades(ciudad);
   }, [open, ticketForm.isEditMode, ticketForm.form.ciudad, ticketData.ciudadesOptions.length, ticketData]);
 
-  useEffect(() => {
+    useEffect(() => {
     if (ticketForm.isEditMode) return;
     if (ticketForm.activeStep > 0 && !ticketForm.preSaved && !isSaving.current) {
       if (!ticketForm.form.tipoIncidencia || !ticketForm.form.asunto?.trim()) return;
@@ -182,8 +182,21 @@ export default function TicketModal({ open, onClose, onSave, ticketToEdit }: Tic
       const executePreSave = async () => {
         isSaving.current = true;
         try {
+          // ✅ PREVENCIÓN: Validar y corregir el número de caso antes de enviar
+          let caseNumberToSend = ticketForm.form.numeroTicket;
+          
+          if (!caseNumberToSend || !/^[A-Z]{4}-\d{6}$/.test(caseNumberToSend)) {
+            // Extraer el prefijo si existe (ej: "COMP" de "COMP-"), sino usar "TCKT"
+            const prefix = (caseNumberToSend && caseNumberToSend.includes('-')) 
+              ? caseNumberToSend.split('-')[0].toUpperCase().substring(0, 4) 
+              : 'TCKT';
+            
+            caseNumberToSend = `${prefix}-${Math.floor(100000 + Math.random() * 900000)}`;
+            ticketForm.updateField('numeroTicket', caseNumberToSend);
+          }
+
           const payload = {
-            caseNumber: ticketForm.form.numeroTicket,
+            caseNumber: caseNumberToSend, // ✅ Usar el número validado/corregido
             incidentType: ticketForm.form.tipoIncidencia,
             subject: ticketForm.form.asunto,
             networkCategory: ticketForm.form.categoria,
@@ -205,6 +218,7 @@ export default function TicketModal({ open, onClose, onSave, ticketToEdit }: Tic
           const result = await saveTicket(payload);
           ticketForm.setPreSaved(result.data._id);
 
+          // ✅ Si el backend tuvo que cambiar el número por colisión, actualizamos el frontend
           if (result.data.caseNumber && result.data.caseNumber !== ticketForm.form.numeroTicket) {
             ticketForm.updateField('numeroTicket', result.data.caseNumber);
           }
@@ -294,7 +308,19 @@ export default function TicketModal({ open, onClose, onSave, ticketToEdit }: Tic
     if (!ticketForm.preSaved) return;
     try {
       const finalData = ticketForm.prepareFinalData();
-      await updateTicket(ticketForm.preSaved, mapFormToUpdatePayload(finalData));
+      
+      // ✅ 1. Primero creamos el payload en una variable
+      const payload = mapFormToUpdatePayload(finalData);
+
+      // ✅ 2. Luego hacemos el console.log sobre la variable 'payload', no sobre la función 'updateTicket'
+      console.log('📤 [TicketModal] Payload exacto enviado al backend:', {
+        id: ticketForm.preSaved,
+        description: payload.description,
+       
+      });
+
+      // ✅ 3. Finalmente enviamos el payload
+      await updateTicket(ticketForm.preSaved, payload);
 
       window.dispatchEvent(new CustomEvent('app-notification', {
         detail: {

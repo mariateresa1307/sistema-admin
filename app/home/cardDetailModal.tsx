@@ -17,6 +17,7 @@ import ScheduleIcon from '@mui/icons-material/Schedule';
 import DescriptionIcon from '@mui/icons-material/Description';
 import CheckIcon from '@mui/icons-material/Check';
 import SettingsEthernet from '@mui/icons-material/SettingsEthernet';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import { TicketRecord, formatTTZoho } from "app/utils/ticketHelpers";
 import { getNivelSeveridadConfig } from "app/utils/auxiliares";
 import { getUsers, getMiscellaneous } from "@/lib/api";
@@ -129,14 +130,16 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
   const [operadores, setOperadores] = useState<Array<OperatorInfo & { _id: string }>>([]);
   const [causasRaizList, setCausasRaizList] = useState<any[]>([]);
   const [solucionesCasoList, setSolucionesCasoList] = useState<any[]>([]);
+  const [grupoDestinoList, setGrupoDestinoList] = useState<any[]>([]);
 
   useEffect(() => {
     if (!open) return;
     Promise.all([
       getUsers(),
       getMiscellaneous({ categoria: 'CAUSA_RAIZ', limit: 999 }),
-      getMiscellaneous({ categoria: 'SOLUCION_CASO', limit: 999 })
-    ]).then(([usersRes, causasRes, solucionesRes]) => {
+      getMiscellaneous({ categoria: 'SOLUCION_CASO', limit: 999 }),
+      getMiscellaneous({ categoria: 'GRUPO_DESTINO', limit: 999 })
+    ]).then(([usersRes, causasRes, solucionesRes, grupoDestinoRes]) => {
       const data = Array.isArray(usersRes.data) ? usersRes.data : [];
       setOperadores(data.filter((u: any) => u.isActive !== false).map((u: any) => ({
         _id: u._id, primerNombre: u.primerNombre, primerApellido: u.primerApellido, username: u.username, email: u.email,
@@ -144,6 +147,7 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
 
       setCausasRaizList(extractData(causasRes));
       setSolucionesCasoList(extractData(solucionesRes));
+      setGrupoDestinoList(extractData(grupoDestinoRes));
     }).catch((err) => console.error("❌ Error al obtener datos para el modal:", err));
   }, [open]);
 
@@ -208,13 +212,12 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
   const operatorAsignadoName = formatOperatorName(ticket.operatorAsignado);
   const operatorResponsableName = formatOperatorName(ticket.operatorResponsable);
 
-
   const getValorFromId = (idOrObj: any, lista: any[]) => {
     if (!idOrObj) return 'Sin especificar';
     if (typeof idOrObj === 'object' && idOrObj !== null) return idOrObj.valor || idOrObj.name || idOrObj.nombre || idOrObj._id || 'Sin especificar';
 
     if (!Array.isArray(lista)) {
-      console.warn('⚠️ [getValorFromId] lista no es un array:', lista);
+      console.warn('️ [getValorFromId] lista no es un array:', lista);
       return idOrObj;
     }
 
@@ -225,11 +228,13 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
   const causaRaizValor = getValorFromId(ticket.causaRaiz, causasRaizList);
   const solucionCasoRaw = (ticket as any).SolucionCaso || (ticket as any).solucionCaso || '';
   const solucionCasoValor = getValorFromId(solucionCasoRaw, solucionesCasoList);
+  const escaladoAValor = getValorFromId(ticket.escaladoA, grupoDestinoList);
 
   const tieneCausaRaiz = causaRaizValor && causaRaizValor !== 'Sin especificar';
   const tieneSolucion = solucionCasoValor && solucionCasoValor !== 'Sin especificar';
   const mostrarNodos = nodosUnicos.length > 0;
   const isClosed = (ticket.status || '').toUpperCase() === 'CERRADO';
+  const requiereEscalamiento = ticket.requiereEscalamiento === 'SI';
 
   return (
     <AnimatePresence>
@@ -343,14 +348,83 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
                       </SectionCard>
                     )}
 
-                    <SectionCard title="Análisis y Solución" icon={<BuildIcon sx={{ fontSize: '0.95rem' }} />} noBorder>
+                    {/* ✅ NUEVA SECCIÓN: ESCALAMIENTO */}
+                    <SectionCard title="Escalamiento" icon={<ArrowUpwardIcon sx={{ fontSize: '0.95rem' }} />} noBorder>
                       <Grid container spacing={1.5}>
                         <Grid size={12}>
-                          <InfoItem label="Causa Raíz" icon={<ReportProblemIcon sx={{ fontSize: 15, color: '#dc5353' }} />} value={<Typography sx={{ fontWeight: 'bold', color: tieneCausaRaiz ? '#0a0909' : '#94a3b8', fontSize: '12px' }}>{causaRaizValor}</Typography>} />
+                          <InfoItem 
+                            label="Caso escalado " 
+                            value={
+                              <Chip 
+                                label={requiereEscalamiento ? 'Sí' : 'No'} 
+                                size="small" 
+                                sx={{ 
+                                  fontWeight: 600, 
+                                  borderRadius: '6px', 
+                                  fontSize: '0.7rem', 
+                                  height: '22px', 
+                                  bgcolor: requiereEscalamiento ? '#fef3c7' : '#f0fdf4', 
+                                  color: requiereEscalamiento ? '#d97706' : '#059669' 
+                                }} 
+                              />
+                            } 
+                          />
                         </Grid>
-                        <Grid size={12}>
-                          <InfoItem label="Solución" icon={<CheckIcon sx={{ fontSize: 15, color: '#2e7d32' }} />} value={<Typography sx={{ fontWeight: 'bold', color: tieneSolucion ? '#0a0909' : '#94a3b8', fontSize: '12px' }}>{solucionCasoValor}</Typography>} />
-                        </Grid>
+                        
+                        {requiereEscalamiento && (
+                          <>
+                            <Grid size={12}>
+                              <InfoItem 
+                                label="Grupo Destino" 
+                                value={
+                                  <Typography sx={{ fontWeight: 600, color: escaladoAValor !== 'Sin especificar' ? '#0f172a' : '#94a3b8', fontSize: '12px' }}>
+                                    {escaladoAValor}
+                                  </Typography>
+                                } 
+                              />
+                            </Grid>
+                            
+                            {ticket.horaEscalamiento && (
+                              <Grid size={12}>
+                                <InfoItem 
+                                  label="Fecha de Escalamiento" 
+                                  icon={<AccessTimeIcon sx={{ fontSize: 12 }} />} 
+                                  value={<Typography sx={{ fontWeight: 600, color: '#334155', fontSize: '0.8rem' }}>{formatDateTime(ticket.horaEscalamiento)}</Typography>} 
+                                />
+                              </Grid>
+                            )}
+                            
+                            {ticket.escaladoPor && (
+                              <Grid size={12}>
+                                <InfoItem 
+                                  label="Escalado Por" 
+                                  value={
+                                    <Chip 
+                                      label={ticket.escaladoPor} 
+                                      size="small" 
+                                      sx={{ 
+                                        fontWeight: 600, 
+                                        borderRadius: '6px', 
+                                        fontSize: '0.7rem', 
+                                        height: '22px', 
+                                        bgcolor: '#e0e7ff', 
+                                        color: '#4f46e5' 
+                                      }} 
+                                    />
+                                  } 
+                                />
+                              </Grid>
+                            )}
+                          </>
+                        )}
+                        
+                        {!requiereEscalamiento && (
+                          <Grid size={12}>
+                            <Typography sx={{ color: '#94a3b8', fontSize: '0.8rem', fontStyle: 'italic' }}>
+                              Este ticket no ha sido escalado a ninguna unidad.
+                            </Typography>
+                          </Grid>
+                        )}
                       </Grid>
                     </SectionCard>
 
@@ -627,11 +701,6 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
                         </Box>
                       </SectionCard>
                     )}
-
-
-
-
-
 
                   </Grid>
                 </Grid>

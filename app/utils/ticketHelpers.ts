@@ -166,10 +166,19 @@ export const diffMin = (start: string, end: string): number => {
   return diff > 0 ? Math.round(diff / 1000 / 60) : 0;
 };
 
-export const generarNumeroTicket = (prefijo: string, actual?: string): string => {
-  if (actual && actual.startsWith(prefijo)) return actual;
-  const numeroAleatorio = Math.floor(100000 + Math.random() * 900000);
+export const generarNumeroTicket = (prefijo: string = 'TCKT', actual?: string): string => {
+  // ✅ VALIDAR FORMATO COMPLETO: 4 letras mayúsculas, guion y 6 dígitos
+  if (actual && /^[A-Z]{4}-\d{6}$/.test(actual)) {
+    return actual;
+  }
+  
+  // Si no es válido o está incompleto (ej: "COMP-"), generar uno nuevo con 6 dígitos aleatorios
+  const numeroAleatorio = Math.floor(100000 + Math.random() * 900000).toString();
   return `${prefijo}-${numeroAleatorio}`;
+};
+
+export const isValidCaseNumber = (caseNumber: string): boolean => {
+  return /^[A-Z]{4}-\d{6}$/.test(caseNumber);
 };
 
 export const calcularTurno = (horaDeteccionNoc: string): 'DIURNO' | 'NOCTURNO' => {

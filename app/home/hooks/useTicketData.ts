@@ -37,8 +37,6 @@ export interface UseTicketDataReturn {
   loadAllServicios: () => Promise<void>;
   loadCausasRaiz: () => Promise<void>;
   loadGrupoDestino: () => Promise<void>;
-  
-  // ✅ NUEVO: Filtrar causas raíz por categoría seleccionada
   getCausasRaizPorCategoria: (categoriaId: string) => ConfiguracionInterface[];
 
   clearSubcategorias: () => void;
@@ -216,16 +214,13 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
     } catch (error) { console.error('Error cargando grupo destino:', error); }
   }, []);
 
-  // ✅ NUEVA FUNCIÓN: Filtra las causas raíz según la categoría seleccionada
   const getCausasRaizPorCategoria = useCallback((categoriaId: string) => {
-    if (!categoriaId) return causasRaiz; // Fallback: si no hay categoría, muestra todas
+    if (!categoriaId) return causasRaiz; 
 
     return causasRaiz.filter((causa: any) => {
-      // Si la causa tiene categorías asociadas, verifica que la seleccionada esté en la lista
       if (causa.categoriaRedIds && causa.categoriaRedIds.length > 0) {
         return causa.categoriaRedIds.includes(categoriaId);
       }
-      // Fallback para datos legacy: si no tiene restricciones, muéstrala
       return true; 
     });
   }, [causasRaiz]);
@@ -243,7 +238,7 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
     loading, error,
     loadInitialData, loadCategoriasRed, loadSubcategorias, loadDetalle, loadTipoCliente,
     loadLocalidades, loadSolucionesCaso, loadServiciosAfectados, loadAllServicios, loadCausasRaiz, loadGrupoDestino,
-    getCausasRaizPorCategoria, // ✅ EXPORTADO
+    getCausasRaizPorCategoria,
     clearSubcategorias, clearDetalle, clearTipoCliente, clearLocalidades, clearServiciosAfectados, clearCategoriaRed,
   };
 };
