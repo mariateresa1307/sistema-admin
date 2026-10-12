@@ -18,7 +18,7 @@ import DescriptionIcon from '@mui/icons-material/Description';
 import CheckIcon from '@mui/icons-material/Check';
 import SettingsEthernet from '@mui/icons-material/SettingsEthernet';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
-import { TicketRecord, formatTTZoho } from "app/utils/ticketHelpers";
+import { TicketRecord, formatTTZoho, normalizeDescripcionFechas } from "app/utils/ticketHelpers";
 import { getNivelSeveridadConfig } from "app/utils/auxiliares";
 import { getUsers, getMiscellaneous } from "@/lib/api";
 
@@ -352,72 +352,72 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
                     <SectionCard title="Escalamiento" icon={<ArrowUpwardIcon sx={{ fontSize: '0.95rem' }} />} noBorder>
                       <Grid container spacing={1.5}>
                         <Grid size={12}>
-                          <InfoItem 
-                            label="Caso escalado " 
+                          <InfoItem
+                            label="Caso escalado "
                             value={
-                              <Chip 
-                                label={requiereEscalamiento ? 'Sí' : 'No'} 
-                                size="small" 
-                                sx={{ 
-                                  fontWeight: 600, 
-                                  borderRadius: '6px', 
-                                  fontSize: '0.7rem', 
-                                  height: '22px', 
-                                  bgcolor: requiereEscalamiento ? '#fef3c7' : '#f0fdf4', 
-                                  color: requiereEscalamiento ? '#d97706' : '#059669' 
-                                }} 
+                              <Chip
+                                label={requiereEscalamiento ? 'Sí' : 'No'}
+                                size="small"
+                                sx={{
+                                  fontWeight: 600,
+                                  borderRadius: '6px',
+                                  fontSize: '0.7rem',
+                                  height: '22px',
+                                  bgcolor: requiereEscalamiento ? '#fef3c7' : '#f0fdf4',
+                                  color: requiereEscalamiento ? '#d97706' : '#059669'
+                                }}
                               />
-                            } 
+                            }
                           />
                         </Grid>
-                        
+
                         {requiereEscalamiento && (
                           <>
                             <Grid size={12}>
-                              <InfoItem 
-                                label="Grupo Destino" 
+                              <InfoItem
+                                label="Grupo Destino"
                                 value={
                                   <Typography sx={{ fontWeight: 600, color: escaladoAValor !== 'Sin especificar' ? '#0f172a' : '#94a3b8', fontSize: '12px' }}>
                                     {escaladoAValor}
                                   </Typography>
-                                } 
+                                }
                               />
                             </Grid>
-                            
+
                             {ticket.horaEscalamiento && (
                               <Grid size={12}>
-                                <InfoItem 
-                                  label="Fecha de Escalamiento" 
-                                  icon={<AccessTimeIcon sx={{ fontSize: 12 }} />} 
-                                  value={<Typography sx={{ fontWeight: 600, color: '#334155', fontSize: '0.8rem' }}>{formatDateTime(ticket.horaEscalamiento)}</Typography>} 
+                                <InfoItem
+                                  label="Fecha de Escalamiento"
+                                  icon={<AccessTimeIcon sx={{ fontSize: 12 }} />}
+                                  value={<Typography sx={{ fontWeight: 600, color: '#334155', fontSize: '0.8rem' }}>{formatDateTime(ticket.horaEscalamiento)}</Typography>}
                                 />
                               </Grid>
                             )}
-                            
+
                             {ticket.escaladoPor && (
                               <Grid size={12}>
-                                <InfoItem 
-                                  label="Escalado Por" 
+                                <InfoItem
+                                  label="Escalado Por"
                                   value={
-                                    <Chip 
-                                      label={ticket.escaladoPor} 
-                                      size="small" 
-                                      sx={{ 
-                                        fontWeight: 600, 
-                                        borderRadius: '6px', 
-                                        fontSize: '0.7rem', 
-                                        height: '22px', 
-                                        bgcolor: '#e0e7ff', 
-                                        color: '#4f46e5' 
-                                      }} 
+                                    <Chip
+                                      label={ticket.escaladoPor}
+                                      size="small"
+                                      sx={{
+                                        fontWeight: 600,
+                                        borderRadius: '6px',
+                                        fontSize: '0.7rem',
+                                        height: '22px',
+                                        bgcolor: '#e0e7ff',
+                                        color: '#4f46e5'
+                                      }}
                                     />
-                                  } 
+                                  }
                                 />
                               </Grid>
                             )}
                           </>
                         )}
-                        
+
                         {!requiereEscalamiento && (
                           <Grid size={12}>
                             <Typography sx={{ color: '#94a3b8', fontSize: '0.8rem', fontStyle: 'italic' }}>
@@ -485,7 +485,7 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
                     <SectionCard title={isClosed ? 'Detalles' : 'Bitácora'} icon={<DescriptionIcon sx={{ fontSize: '0.95rem', color: isClosed ? '#c62828' : '#64748b' }} />} noBorder>
                       <Box sx={{ p: 1.25, bgcolor: isClosed ? '#f8fafc' : '#fafbfc', borderRadius: '6px', border: `1px solid ${isClosed ? '#e2e8f0' : '#f1f5f9'}`, maxHeight: '200px', overflowY: 'auto' }}>
                         <Typography sx={{ color: isClosed ? '#334155' : '#475569', lineHeight: 1.5, whiteSpace: 'pre-wrap', fontSize: '0.8rem' }}>
-                          {isClosed ? (ticket.description || 'Sin detalles') : (ticket.bitacora || '-')}
+                          {isClosed ? (normalizeDescripcionFechas(ticket.description || '') || 'Sin detalles') : (ticket.bitacora || '-')}
                         </Typography>
                       </Box>
                     </SectionCard>

@@ -9,7 +9,6 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell, Legend,
 } from 'recharts';
 import { ReportePreview } from "app/utils/types";
-import { parseMttrToMinutes } from 'app/utils/auxiliares';
 
 interface Props {
   reportPreview: ReportePreview;
@@ -20,63 +19,65 @@ const formatHours = (hours: number) =>
   `${hours.toLocaleString('es-VE', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} h`;
 
 export function GrupoA({ reportPreview }: Props) {
-  console.log('📊 [GrupoA] === DIAGNÓSTICO FRONTEND ===');
-  console.log('📊 [GrupoA] reportPreview completo:', reportPreview);
-  console.log('📊 [GrupoA] cards array:', reportPreview?.cards);
-  
-  const cards = reportPreview?.cards || [];
-  
-  const getCardValue = (title: string) => {
-    const card = cards.find(c => c.title === title);
-    console.log(`🔍 [GrupoA] Buscando card "${title}":`, card);
-    return card?.value || '0';
-  };
-
-  const incidenciasPuntuales = getCardValue('Incidencias Puntuales');
-  const incidenciasMasivas = getCardValue('Incidencias Masivas');
-  const ventanaMantenimiento = getCardValue('Ventana de Mantenimiento');
-
-  const totalPuntuales = parseInt(incidenciasPuntuales) || 0;
-  const totalMasivas = parseInt(incidenciasMasivas) || 0;
-  const totalMantenimiento = parseInt(ventanaMantenimiento) || 0;
-
-  console.log(' [GrupoA] Valores extraídos:', {
+  // ✅ OPTIMIZACIÓN: Memoizar todos los cálculos derivados para evitar rerenderings innecesarios
+  // y garantizar que los datos se extraigan correctamente solo cuando reportPreview cambie.
+  const {
     totalPuntuales,
     totalMasivas,
     totalMantenimiento,
-    total: totalPuntuales + totalMasivas + totalMantenimiento
-  });
+    mttrPlataformaHours,
+    mttrServicioHours,
+    tipoIncidenciaData,
+    hasData
+  } = useMemo(() => {
+    const cards = reportPreview?.cards || [];
+    
+    const getCardValue = (title: string) => {
+      const card = cards.find(c => c.title === title);
+      return card?.value || '0';
+    };
 
-  const mttrPlataformaData = reportPreview?.mttrPlataforma || [];
-  const mttrServicioData = reportPreview?.mttrServicio || [];
-  
-  const mttrPlataformaHours = mttrPlataformaData
-    .filter(item => item.value > 0)
-    .map(({ title, value }) => ({
-      title,
-      value: minutesToHours(value),
-    }));
+    const puntuales = parseInt(getCardValue('Incidencias Puntuales')) || 0;
+    const masivas = parseInt(getCardValue('Incidencias Masivas')) || 0;
+    const mantenimiento = parseInt(getCardValue('Ventana de Mantenimiento')) || 0;
 
-  const mttrServicioHours = mttrServicioData
-   .filter(item => item.value > 0)
-    .map(({ title, value }) => ({
-      title,
-      value: minutesToHours(value),
-    }));
+    const mttrPlataformaData = reportPreview?.mttrPlataforma || [];
+    const mttrServicioData = reportPreview?.mttrServicio || [];
+    
+    const mttrPlataformaHours = mttrPlataformaData
+      .filter(item => item.value > 0)
+      .map(({ title, value }) => ({
+        title,
+        value: minutesToHours(value),
+      }));
 
-  const tipoIncidenciaData = useMemo(() => {
-    const data = [
-      { name: 'Puntuales', value: totalPuntuales, color: '#42f5a8' },
-      { name: 'Masivas', value: totalMasivas, color: '#f54242' },
-      { name: 'Mantenimiento', value: totalMantenimiento, color: '#f5a842' },
+    const mttrServicioHours = mttrServicioData
+      .filter(item => item.value > 0)
+      .map(({ title, value }) => ({
+        title,
+        value: minutesToHours(value),
+      }));
+
+    const tipoIncidenciaData = [
+      { name: 'Puntuales', value: puntuales, color: '#42f5a8' },
+      { name: 'Masivas', value: masivas, color: '#f54242' },
+      { name: 'Mantenimiento', value: mantenimiento, color: '#f5a842' },
     ];
-    console.log('🥧 [GrupoA] Datos para gráfica de torta:', data);
-    return data;
-  }, [totalPuntuales, totalMasivas, totalMantenimiento]);
 
-  console.log(' [GrupoA] === FIN DIAGNÓSTICO ===');
+    const hasData = cards.length > 0 || mttrPlataformaData.length > 0;
 
-  if (cards.length === 0 && mttrPlataformaData.length === 0) {
+    return {
+      totalPuntuales: puntuales,
+      totalMasivas: masivas,
+      totalMantenimiento: mantenimiento,
+      mttrPlataformaHours,
+      mttrServicioHours,
+      tipoIncidenciaData,
+      hasData
+    };
+  }, [reportPreview]);
+
+  if (!hasData) {
     return (
       <Box sx={{ p: 4, textAlign: 'center' }}>
         <Typography variant="h6" color="text.secondary">

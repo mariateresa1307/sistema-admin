@@ -19,8 +19,10 @@ import Autocomplete from '@mui/material/Autocomplete';
 
 export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servicio", initialData, onSuccess }: any) => {
   const [tipoServicio, setTipoServicio] = React.useState("DOG");
-  const [proveedorOUMId, setProveedorOUMId] = React.useState("");
+  const [proveedorOUMId, setProveedorOUMId] = React.useState("");       // Última Milla / Proveedor (no METROLAN)
+  const [proveedorCompartidoId, setProveedorCompartidoId] = React.useState(""); // ✅ NUEVO: Proveedor compartido (solo METROLAN)
   const [proveedorNotFound, setProveedorNotFound] = React.useState(false);
+  const [proveedorCompartidoNotFound, setProveedorCompartidoNotFound] = React.useState(false); // ✅ NUEVO
   const [imagePreview, setImagePreview] = React.useState<string | null>(null);
   const [showImageSection, setShowImageSection] = React.useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = React.useState(false);
@@ -103,7 +105,6 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
     return () => { isMounted = false; };
   }, [isOpen, isMiscLoaded]);
 
-  // ✅ Bandera para evitar que handleEstadoChange limpie la ciudad durante carga inicial
   const isInitialLoad = React.useRef(true);
 
   React.useEffect(() => {
@@ -134,25 +135,17 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
       setImagePreview(null);
       setShowImageSection(false);
       setProveedorOUMId("");
+      setProveedorCompartidoId("");
       setProveedorNotFound(false);
+      setProveedorCompartidoNotFound(false);
       setFieldErrors({});
       isInitialLoad.current = true;
       return;
     }
 
-    console.log('🔍 [EDIT] initialData recibido:', {
-      estado: initialData.estado,
-      city: initialData.city,
-      tipo: typeof initialData.estado,
-      cityType: typeof initialData.city
-    });
-    console.log('🔍 [EDIT] ciudades cargadas:', ciudades.length);
-    console.log('🔍 [EDIT] estadosList cargados:', estadosList.length);
-
     const currentTipo = initialData.tipoServicio || "RBS";
     setTipoServicio(currentTipo);
 
-    // Extraer valor del estado
     let estadoVal = typeof initialData.estado === 'object' && initialData.estado?.valor
       ? initialData.estado.valor
       : (typeof initialData.estado === 'string' ? initialData.estado : "");
@@ -161,25 +154,19 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
       ? initialData.city.valor
       : (typeof initialData.city === 'string' ? initialData.city : "");
 
-if (cityVal && ciudades.length > 0) {
-  const ciudadObj = ciudades.find((c: any) =>
-    (c.valor || '').toString().trim().toUpperCase() === cityVal.trim().toUpperCase()
-  );
-  if (ciudadObj) {
-    cityVal = ciudadObj.valor;
-  }
-}
-if (!estadoVal && cityVal && ciudades.length > 0) {
-  const ciudadObj = ciudades.find((c: any) =>
-    (c.valor || '').toString().trim().toUpperCase() === cityVal.trim().toUpperCase()
-  );
-  if (ciudadObj?.padreNombre) {
-    estadoVal = ciudadObj.padreNombre;
-    console.log('🔍 [EDIT] Estado derivado de la ciudad:', estadoVal);
-  }
-}
+    if (cityVal && ciudades.length > 0) {
+      const ciudadObj = ciudades.find((c: any) =>
+        (c.valor || '').toString().trim().toUpperCase() === cityVal.trim().toUpperCase()
+      );
+      if (ciudadObj) cityVal = ciudadObj.valor;
+    }
+    if (!estadoVal && cityVal && ciudades.length > 0) {
+      const ciudadObj = ciudades.find((c: any) =>
+        (c.valor || '').toString().trim().toUpperCase() === cityVal.trim().toUpperCase()
+      );
+      if (ciudadObj?.padreNombre) estadoVal = ciudadObj.padreNombre;
+    }
 
-    console.log('🔍 [EDIT] Valores finales:', { estadoVal, cityVal });
     setEstadoSeleccionado(estadoVal);
     setCiudadSeleccionada(cityVal);
 
@@ -203,48 +190,57 @@ if (!estadoVal && cityVal && ciudades.length > 0) {
     setImagePreview(initialData.diagramaRed || null);
     setShowImageSection(Boolean(initialData.diagramaRed));
 
-    let rawValue = currentTipo === "METROLAN"
-      ? (initialData.ultimaMilla || initialData.proveedorUM)
-      : initialData.proveedorDelServicioCompartido;
+    // ✅ LÓGICA UNIFICADA DE CARGA DE PROVEEDORES
+    const extractId = (raw: any): string | null => {
+      if (!raw) return null;
+      return typeof raw === 'object' && raw !== null
+        ? String(raw._id || raw.valor || '')
+        : String(raw);
+    };
 
-    if (rawValue) {
-      let idValue = typeof rawValue === 'object' && rawValue !== null
-        ? String(rawValue._id || rawValue.valor)
-        : String(rawValue);
+    const findInList = (idValue: string, list: ConfiguracionInterface[]) =>
+      list.find((item: any) => String(item._id) === idValue);
 
-      if (idValue) {
-        const listToCheck = currentTipo === "METROLAN" ? ultimaMillaList : proveedoresList;
-        const foundItem = listToCheck.find((item: any) => String(item._id) === idValue);
+    if (currentTipo === "METROLAN") {
+      // METROLAN: tiene ÚLTIMA MILLA + PROVEEDOR COMPARTIDO
+      const umId = extractId(initialData.ultimaMilla || initialData.proveedorUM);
+      const pcId = extractId(initialData.proveedorDelServicioCompartido);
 
-        if (foundItem) {
-          setProveedorOUMId(idValue);
-          setProveedorNotFound(false);
-        } else {
-          const altList = currentTipo === "METROLAN" ? proveedoresList : ultimaMillaList;
-          const foundInAlt = altList.find((item: any) => String(item._id) === idValue);
+      if (umId) {
+        setProveedorOUMId(umId);
+        const found = findInList(umId, ultimaMillaList) || findInList(umId, proveedoresList);
+        setProveedorNotFound(!found);
+      } else {
+        setProveedorOUMId("");
+        setProveedorNotFound(false);
+      }
 
-          if (foundInAlt) {
-            setProveedorOUMId(idValue);
-            setProveedorNotFound(false);
-          } else {
-            setProveedorOUMId(idValue);
-            setProveedorNotFound(true);
-          }
-        }
+      if (pcId) {
+        setProveedorCompartidoId(pcId);
+        const found = findInList(pcId, proveedoresList) || findInList(pcId, ultimaMillaList);
+        setProveedorCompartidoNotFound(!found);
+      } else {
+        setProveedorCompartidoId("");
+        setProveedorCompartidoNotFound(false);
       }
     } else {
-      setProveedorOUMId("");
-      setProveedorNotFound(false);
+      // NO METROLAN: solo proveedorDelServicioCompartido en proveedorOUMId
+      const pcId = extractId(initialData.proveedorDelServicioCompartido);
+      if (pcId) {
+        setProveedorOUMId(pcId);
+        const found = findInList(pcId, proveedoresList) || findInList(pcId, ultimaMillaList);
+        setProveedorNotFound(!found);
+      } else {
+        setProveedorOUMId("");
+        setProveedorNotFound(false);
+      }
+      setProveedorCompartidoId("");
+      setProveedorCompartidoNotFound(false);
     }
 
     setFieldErrors({});
-
-    // Marcar como carga inicial y desmarcar después de un delay
     isInitialLoad.current = true;
-    const timer = setTimeout(() => {
-      isInitialLoad.current = false;
-    }, 200);
-
+    const timer = setTimeout(() => { isInitialLoad.current = false; }, 200);
     return () => clearTimeout(timer);
   }, [isOpen, initialData, ultimaMillaList, proveedoresList, ciudades, estadosList]);
 
@@ -271,13 +267,19 @@ if (!estadoVal && cityVal && ciudades.length > 0) {
     checkRequired(estadoSeleccionado, "estado", "Estado");
     checkRequired(ciudadSeleccionada, "city", "Ciudad");
     checkRequired(tipoClienteSeleccionado, "tipoCliente", "Tipo de Cliente");
-    checkRequired(proveedorOUMId, "proveedor", isMetrolan ? "Última Milla" : "Proveedor");
+
+    // ✅ VALIDACIÓN DE PROVEEDORES SEGÚN TIPO
+    if (isMetrolan) {
+      checkRequired(proveedorOUMId, "proveedor", "Última Milla");
+      checkRequired(proveedorCompartidoId, "proveedorCompartido", "Proveedor Compartido");
+    } else {
+      checkRequired(proveedorOUMId, "proveedor", "Proveedor");
+    }
 
     if (tipoServicio === "METROLAN") {
       checkRequired(idCircuitoValue, "id_circuito", "ID Circuito");
       checkRequired(nodoAValue, "nodoA", "Nodo A");
       checkRequired(nodoBValue, "nodoB", "Nodo B");
-      checkRequired(ipNetuno, "ipNetuno", "IP Netuno");
       checkRequired(vlanValue, "vlan", "VLAN");
     } else if (tipoServicio === "RBS") {
       checkRequired(idCircuitoValue, "id_circuito", "ID Circuito");
@@ -357,36 +359,26 @@ if (!estadoVal && cityVal && ciudades.length > 0) {
     setEstadoSeleccionado(nuevoEstado);
     setFieldErrors(prev => ({ ...prev, estado: false }));
 
-    // ✅ Si es carga inicial, no ejecutar lógica de auto-fill
-    if (isInitialLoad.current) {
-      console.log('🔍 [handleEstadoChange] Saltando auto-fill por carga inicial');
-      return;
-    }
+    if (isInitialLoad.current) return;
 
-    // Sin estado → limpiar ciudad
     if (!nuevoEstado) {
       setCiudadSeleccionada("");
       return;
     }
 
-    // Filtrar ciudades del nuevo estado
     const ciudadesDelEstado = ciudades.filter((c: any) => {
       const padreNombre = (c.padreNombre || '').toString().trim().toUpperCase();
       return padreNombre === nuevoEstado.trim().toUpperCase();
     });
-    console.log('🔍 [handleEstadoChange] Ciudades encontradas:', ciudadesDelEstado.length);
 
     if (ciudadesDelEstado.length === 1) {
-      // ✅ UNA sola ciudad: cargarla automáticamente
       setCiudadSeleccionada(ciudadesDelEstado[0].valor);
       setFieldErrors(prev => ({ ...prev, city: false }));
     } else {
-      // ✅ VARIAS ciudades (o ninguna): el usuario debe seleccionar
       setCiudadSeleccionada("");
     }
   }, [ciudades]);
 
-  // ✅ Handler para cambio de ciudad
   const handleCiudadChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setCiudadSeleccionada(e.target.value);
     setFieldErrors(prev => ({ ...prev, city: false }));
@@ -439,11 +431,9 @@ if (!estadoVal && cityVal && ciudades.length > 0) {
 
   const handleSave = React.useCallback(async () => {
     if (saving) return;
-
     if (!validateForm()) return;
 
     const serviceId = initialData?._id;
-
     if (isEditMode && !serviceId) {
       triggerNotification("Error: No se encontró el ID del servicio", "error");
       return;
@@ -454,8 +444,6 @@ if (!estadoVal && cityVal && ciudades.length > 0) {
       const parsed = Number(value);
       return isNaN(parsed) ? null : parsed;
     };
-
-    const idToSend = proveedorOUMId && proveedorOUMId.trim() !== "" ? proveedorOUMId : null;
 
     const payload: any = {
       tipoServicio,
@@ -480,12 +468,13 @@ if (!estadoVal && cityVal && ciudades.length > 0) {
       status: initialData?.status || "Activo"
     };
 
+    // ✅ ENVÍO DE PROVEEDORES SEGÚN TIPO
     if (isMetrolan) {
-      payload.ultimaMilla = idToSend;
+      payload.ultimaMilla = proveedorOUMId?.trim() ? proveedorOUMId : null;
       payload.proveedorUM = null;
-      payload.proveedorDelServicioCompartido = null;
+      payload.proveedorDelServicioCompartido = proveedorCompartidoId?.trim() ? proveedorCompartidoId : null;
     } else {
-      payload.proveedorDelServicioCompartido = idToSend;
+      payload.proveedorDelServicioCompartido = proveedorOUMId?.trim() ? proveedorOUMId : null;
       payload.ultimaMilla = null;
       payload.proveedorUM = null;
     }
@@ -514,11 +503,12 @@ if (!estadoVal && cityVal && ciudades.length > 0) {
   }, [
     saving, initialData, isEditMode, tipoServicio, ciudadSeleccionada,
     estadoSeleccionado, tipoClienteSeleccionado, productoSeleccionado, imagePreview, vlanValue,
-    ipNetuno, contratoValue, proveedorOUMId, isMetrolan, triggerNotification,
+    ipNetuno, contratoValue, proveedorOUMId, proveedorCompartidoId, isMetrolan, triggerNotification,
     onClose, onSuccess, nameValue, idCircuitoValue, idNetunoValue, idRBSValue,
     idDOGValue, nodoAValue, nodoBValue, nodoOLTValue, serialONTValue, proveedorValue
   ]);
 
+  // ✅ Lista base para el campo principal (no METROLAN) o Última Milla (METROLAN)
   const listaBase = isMetrolan ? ultimaMillaList : proveedoresList;
 
   const opcionesParaRenderizar = React.useMemo(() => {
@@ -526,19 +516,27 @@ if (!estadoVal && cityVal && ciudades.length > 0) {
     if (proveedorNotFound && proveedorOUMId) {
       const yaExiste = base.some((item: any) => String(item._id) === proveedorOUMId);
       if (!yaExiste) {
-        return [
-          ...base,
-          { _id: proveedorOUMId, valor: `ID: ${proveedorOUMId.substring(0, 8)}...`, esFallback: true }
-        ];
+        return [...base, { _id: proveedorOUMId, valor: `ID: ${proveedorOUMId.substring(0, 8)}...`, esFallback: true }];
       }
     }
     return base;
   }, [listaBase, proveedorNotFound, proveedorOUMId]);
 
+  // ✅ Opciones para el Proveedor Compartido (solo METROLAN)
+  const opcionesProveedorCompartido = React.useMemo(() => {
+    const base = Array.isArray(proveedoresList) ? proveedoresList : [];
+    if (proveedorCompartidoNotFound && proveedorCompartidoId) {
+      const yaExiste = base.some((item: any) => String(item._id) === proveedorCompartidoId);
+      if (!yaExiste) {
+        return [...base, { _id: proveedorCompartidoId, valor: `ID: ${proveedorCompartidoId.substring(0, 8)}...`, esFallback: true }];
+      }
+    }
+    return base;
+  }, [proveedoresList, proveedorCompartidoNotFound, proveedorCompartidoId]);
+
   const ciudadesFiltradas = React.useMemo(() => {
     const lista = Array.isArray(ciudades) ? ciudades : [];
     if (!estadoSeleccionado) return [];
-
     return lista.filter((c: any) => {
       const padreNombre = (c.padreNombre || '').toString().trim().toUpperCase();
       return padreNombre === estadoSeleccionado.trim().toUpperCase();
@@ -550,14 +548,12 @@ if (!estadoVal && cityVal && ciudades.length > 0) {
     return lista.some(e => e.valor === estadoSeleccionado) ? estadoSeleccionado : "";
   }, [estadosList, estadoSeleccionado]);
 
- const safeCiudadValue = React.useMemo(() => {
+  const safeCiudadValue = React.useMemo(() => {
     if (!ciudadSeleccionada) return "";
     const norm = ciudadSeleccionada.toString().trim().toUpperCase();
-
     const match =
       ciudadesFiltradas.find((c: any) => (c.valor || '').toString().trim().toUpperCase() === norm) ||
       ciudades.find((c: any) => (c.valor || '').toString().trim().toUpperCase() === norm);
-
     return match ? match.valor : "";
   }, [ciudadesFiltradas, ciudadSeleccionada, ciudades]);
 
@@ -630,7 +626,14 @@ if (!estadoVal && cityVal && ciudades.length > 0) {
 
               <Grid size={{ xs: 12, md: 6 }}>
                 {renderLabel("Tipo de Servicio")}
-                <TextField select fullWidth value={tipoServicio} onChange={(e) => { setTipoServicio(e.target.value); setProveedorOUMId(""); setProveedorNotFound(false); setFieldErrors({}); }} size="small">
+                <TextField select fullWidth value={tipoServicio} onChange={(e) => {
+                  setTipoServicio(e.target.value);
+                  setProveedorOUMId("");
+                  setProveedorCompartidoId("");
+                  setProveedorNotFound(false);
+                  setProveedorCompartidoNotFound(false);
+                  setFieldErrors({});
+                }} size="small">
                   {Object.values(TIPO_SERVICIO).map((opt) => <MenuItem key={opt} value={opt}>{opt}</MenuItem>)}
                 </TextField>
               </Grid>
@@ -708,18 +711,63 @@ if (!estadoVal && cityVal && ciudades.length > 0) {
                 </TextField>
               </Grid>
 
-              <Grid size={6}>
-                {renderLabel(isMetrolan ? "Última Milla" : "Proveedor del servicio compartido", true)}
-                <FormControl fullWidth size="small" error={proveedorNotFound || getErrorProp("proveedor")}>
+              {/* ✅ ÚLTIMA MILLA (solo para METROLAN) */}
+              {isMetrolan && (
+                <Grid size={6}>
+                  {renderLabel("Última Milla", true)}
+                  <FormControl fullWidth size="small" error={proveedorNotFound || getErrorProp("proveedor")}>
+                    <Select
+                      name="ultimaMilla"
+                      value={proveedorOUMId}
+                      onChange={(e) => { setProveedorOUMId(e.target.value); setProveedorNotFound(false); setFieldErrors(prev => ({ ...prev, proveedor: false })); }}
+                      displayEmpty
+                      sx={{ bgcolor: 'white' }}
+                    >
+                      <MenuItem value=""><em>Ninguno</em></MenuItem>
+                      {opcionesParaRenderizar.map((item: any) => (
+                        <MenuItem key={item._id} value={String(item._id)} sx={item.esFallback ? { bgcolor: '#fff3cd', color: '#856404', fontStyle: 'italic', borderLeft: '4px solid #ffc107', '&:hover': { bgcolor: '#ffe69c' } } : {}}>
+                          {item.esFallback && <WarningIcon sx={{ mr: 1, fontSize: '1rem' }} />}
+                          {item.valor}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  {getErrorProp("proveedor") && !proveedorNotFound && (
+                    <Typography variant="caption" sx={{ color: '#d32f2f', mt: 0.5, display: 'block', fontWeight: 600 }}>
+                      Campo obligatorio
+                    </Typography>
+                  )}
+                  {proveedorNotFound && (
+                    <Typography variant="caption" sx={{ color: 'warning.main', mt: 0.5, display: 'block', fontWeight: 600 }}>
+                      ⚠️ El registro original fue eliminado. Por favor, seleccione uno nuevo.
+                    </Typography>
+                  )}
+                </Grid>
+              )}
+
+              {/* ✅ PROVEEDOR DEL SERVICIO COMPARTIDO (METROLAN y otros) */}
+              <Grid size={isMetrolan ? 6 : 6}>
+                {renderLabel("Proveedor del servicio compartido", isMetrolan ? true : true)}
+                <FormControl fullWidth size="small" error={isMetrolan ? (proveedorCompartidoNotFound || getErrorProp("proveedorCompartido")) : (proveedorNotFound || getErrorProp("proveedor"))}>
                   <Select
-                    name={isMetrolan ? "ultimaMilla" : "proveedorDelServicioCompartido"}
-                    value={proveedorOUMId}
-                    onChange={(e) => { setProveedorOUMId(e.target.value); setProveedorNotFound(false); setFieldErrors(prev => ({ ...prev, proveedor: false })); }}
+                    name="proveedorDelServicioCompartido"
+                    value={isMetrolan ? proveedorCompartidoId : proveedorOUMId}
+                    onChange={(e) => {
+                      if (isMetrolan) {
+                        setProveedorCompartidoId(e.target.value);
+                        setProveedorCompartidoNotFound(false);
+                        setFieldErrors(prev => ({ ...prev, proveedorCompartido: false }));
+                      } else {
+                        setProveedorOUMId(e.target.value);
+                        setProveedorNotFound(false);
+                        setFieldErrors(prev => ({ ...prev, proveedor: false }));
+                      }
+                    }}
                     displayEmpty
                     sx={{ bgcolor: 'white' }}
                   >
                     <MenuItem value=""><em>Ninguno</em></MenuItem>
-                    {opcionesParaRenderizar.map((item: any) => (
+                    {(isMetrolan ? opcionesProveedorCompartido : opcionesParaRenderizar).map((item: any) => (
                       <MenuItem key={item._id} value={String(item._id)} sx={item.esFallback ? { bgcolor: '#fff3cd', color: '#856404', fontStyle: 'italic', borderLeft: '4px solid #ffc107', '&:hover': { bgcolor: '#ffe69c' } } : {}}>
                         {item.esFallback && <WarningIcon sx={{ mr: 1, fontSize: '1rem' }} />}
                         {item.valor}
@@ -727,15 +775,32 @@ if (!estadoVal && cityVal && ciudades.length > 0) {
                     ))}
                   </Select>
                 </FormControl>
-                {getErrorProp("proveedor") && !proveedorNotFound && (
-                  <Typography variant="caption" sx={{ color: '#d32f2f', mt: 0.5, display: 'block', fontWeight: 600 }}>
-                    Campo obligatorio
-                  </Typography>
-                )}
-                {proveedorNotFound && (
-                  <Typography variant="caption" sx={{ color: 'warning.main', mt: 0.5, display: 'block', fontWeight: 600 }}>
-                    ⚠️ El registro original fue eliminado. Por favor, seleccione uno nuevo.
-                  </Typography>
+                {isMetrolan ? (
+                  <>
+                    {getErrorProp("proveedorCompartido") && !proveedorCompartidoNotFound && (
+                      <Typography variant="caption" sx={{ color: '#d32f2f', mt: 0.5, display: 'block', fontWeight: 600 }}>
+                        Campo obligatorio
+                      </Typography>
+                    )}
+                    {proveedorCompartidoNotFound && (
+                      <Typography variant="caption" sx={{ color: 'warning.main', mt: 0.5, display: 'block', fontWeight: 600 }}>
+                        ⚠️ El registro original fue eliminado. Por favor, seleccione uno nuevo.
+                      </Typography>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {getErrorProp("proveedor") && !proveedorNotFound && (
+                      <Typography variant="caption" sx={{ color: '#d32f2f', mt: 0.5, display: 'block', fontWeight: 600 }}>
+                        Campo obligatorio
+                      </Typography>
+                    )}
+                    {proveedorNotFound && (
+                      <Typography variant="caption" sx={{ color: 'warning.main', mt: 0.5, display: 'block', fontWeight: 600 }}>
+                        ⚠️ El registro original fue eliminado. Por favor, seleccione uno nuevo.
+                      </Typography>
+                    )}
+                  </>
                 )}
               </Grid>
 
@@ -771,7 +836,7 @@ if (!estadoVal && cityVal && ciudades.length > 0) {
                   </Grid>
                   <Grid size={6}>
                     {renderLabel("IP NETUNO", true)}
-                    <TextField name="ipNetuno" label="" fullWidth value={ipNetuno} onChange={handleIpChange} size="small" error={getErrorProp("ipNetuno")} helperText={getErrorProp("ipNetuno") ? "Campo obligatorio" : ""} />
+                    <TextField name="ipNetuno" label="" fullWidth value={ipNetuno} onChange={handleIpChange} size="small"  />
                   </Grid>
                   <Grid size={6}>
                     {renderLabel("VLAN", true)}
@@ -822,7 +887,6 @@ if (!estadoVal && cityVal && ciudades.length > 0) {
                   <Grid size={6}>
                     {renderLabel("Nodo A ", true)}
                     <TextField name="nodoA" label="" fullWidth value={nodoAValue} onChange={handleNodoAChange} size="small" error={getErrorProp("nodoA")} helperText={getErrorProp("nodoA") ? "Campo obligatorio" : "💡 Registrar preferiblemente la troncal"} sx={{ '& .MuiFormHelperText-root:not(.Mui-error)': { bgcolor: '#f0f9ff', color: '#0369a1', px: 1, py: 0.5, borderRadius: '4px', fontSize: '0.72rem', fontWeight: 500, mt: 0.5 } }} />
-
                   </Grid>
                   <Grid size={6}>
                     {renderLabel("Nodo B", true)}

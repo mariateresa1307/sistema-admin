@@ -120,12 +120,6 @@ const extractIpFromLog = (log: AuditLog): string | null => {
   return null;
 };
 
-const extractRecordNameFromOldValue = (oldValue: any): string => {
-  if (!oldValue) return '—';
-  const name = oldValue.valor || oldValue.name || oldValue.nombre || oldValue.title || oldValue.label;
-  return name || '—';
-};
-
 const JsonViewer = ({
   data,
   title,
@@ -139,13 +133,22 @@ const JsonViewer = ({
 }) => {
   if (!data) {
     return (
-      <Typography variant="body2" sx={{ color: '#94a3b8', fontStyle: 'italic' }}>
-        Sin datos
+      <Typography variant="body2" sx={{ color: '#94a3b8', fontStyle: 'italic', p: 1 }}>
+        Sin datos disponibles
       </Typography>
     );
   }
 
   const isPlainObject = typeof data === 'object' && !Array.isArray(data);
+  const isEmpty = isPlainObject && Object.keys(data).length === 0;
+
+  if (isEmpty) {
+    return (
+      <Typography variant="body2" sx={{ color: '#94a3b8', fontStyle: 'italic', p: 1 }}>
+        Sin datos disponibles
+      </Typography>
+    );
+  }
 
   return (
     <Box>
@@ -229,13 +232,6 @@ const JsonViewer = ({
 export const AuditDetailModal = ({ open, onClose, log }: AuditDetailModalProps) => {
   const { lookupMap, resolveAuditJson, ready, resolveText } = useIdResolver();
 
-  React.useEffect(() => {
-    if (log) {
-      console.log('🔍 [AuditDetailModal] Log completo:', log);
-      console.log('🔍 [AuditDetailModal] oldValue:', log.oldValue);
-    }
-  }, [log]);
-
   const config = useMemo(() => {
     if (!log) return DEFAULT_CONFIG;
     return ACTION_CONFIG[log.action] || DEFAULT_CONFIG;
@@ -251,23 +247,36 @@ export const AuditDetailModal = ({ open, onClose, log }: AuditDetailModalProps) 
     return ready ? resolveAuditJson(log.newValue) : parseJsonSafely(log.newValue);
   }, [log?.newValue, ready, resolveAuditJson]);
 
+  // ✅ Limpieza de datos para eliminar ruido de sistema (evita mostrar _id, createdAt, etc.)
+  const cleanOldData = useMemo(() => {
+    if (!oldValueParsed || typeof oldValueParsed !== 'object' || Array.isArray(oldValueParsed)) return oldValueParsed;
+    const { _id, createdAt, updatedAt, __v, fechaAsignacionOpA, ...rest } = oldValueParsed as any;
+    return rest;
+  }, [oldValueParsed]);
+
+  const cleanNewData = useMemo(() => {
+    if (!newValueParsed || typeof newValueParsed !== 'object' || Array.isArray(newValueParsed)) return newValueParsed;
+    const { _id, createdAt, updatedAt, __v, fechaAsignacionOpA, ...rest } = newValueParsed as any;
+    return rest;
+  }, [newValueParsed]);
+
+  // ✅ Calcular claves cambiadas sobre los datos LIMPIOS para evitar falsos positivos
   const changedKeys = useMemo(
-    () => getChangedKeys(oldValueParsed, newValueParsed),
-    [oldValueParsed, newValueParsed],
+    () => getChangedKeys(cleanOldData, cleanNewData),
+    [cleanOldData, cleanNewData],
   );
+
+  // ✅ Extracción inteligente del número de ticket para mostrarlo en lugar del ObjectId crudo
+  const ticketIdentifier = useMemo(() => {
+    const data = cleanNewData || cleanOldData;
+    return data?.caseNumber || data?.numeroTicket || null;
+  }, [cleanOldData, cleanNewData]);
 
   const eventDate = useMemo(() => {
     if (!log) return null;
     const date = extractDateFromLog(log);
     return date ? dayjs(date) : null;
   }, [log]);
-
-  const deletedRecordName = useMemo(() => {
-    if (log?.action === 'DELETE') {
-      return extractRecordNameFromOldValue(oldValueParsed);
-    }
-    return null;
-  }, [log?.action, oldValueParsed]);
 
   const isSessionAction = useMemo(() => {
     if (!log?.action) return false;
@@ -281,7 +290,6 @@ export const AuditDetailModal = ({ open, onClose, log }: AuditDetailModalProps) 
 
   const renderChangesSection = () => {
     if (!log.action) return null;
-
     const action = log.action.toUpperCase();
 
     if (action === 'CREATE') {
@@ -290,7 +298,7 @@ export const AuditDetailModal = ({ open, onClose, log }: AuditDetailModalProps) 
           <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#1565c0', fontWeight: 700, letterSpacing: '0.5px', display: 'block', mb: 0.5 }}>
             Registro Creado
           </Typography>
-          <JsonViewer data={newValueParsed} title="" showLabel={false} />
+          <JsonViewer data={cleanNewData} title="" showLabel={false} />
         </Grid>
       );
     }
@@ -298,72 +306,40 @@ export const AuditDetailModal = ({ open, onClose, log }: AuditDetailModalProps) 
     if (action === 'UPDATE') {
       return (
         <>
-          <Grid size={12}>
-            <Typography
-              variant="caption"
-              sx={{
-                color: '#94a3b8',
-                fontStyle: 'italic',
-                display: 'block',
-                textAlign: 'center',
-                mb: 1,
-              }}
-            >
-            </Typography>
-          </Grid>
-
           <Grid size={{ xs: 12, md: 6 }}>
             <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#ef6c00', fontWeight: 700, letterSpacing: '0.5px', display: 'block', mb: 0.5 }}>
               Valor Anterior
             </Typography>
-            <JsonViewer data={oldValueParsed} title="" showLabel={false} highlightKeys={changedKeys} />
+            <JsonViewer data={cleanOldData} title="" showLabel={false} highlightKeys={changedKeys} />
           </Grid>
           <Grid size={{ xs: 12, md: 6 }}>
             <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#2e7d32', fontWeight: 700, letterSpacing: '0.5px', display: 'block', mb: 0.5 }}>
               Valor Actual
             </Typography>
-            <JsonViewer data={newValueParsed} title="" showLabel={false} highlightKeys={changedKeys} />
+            <JsonViewer data={cleanNewData} title="" showLabel={false} highlightKeys={changedKeys} />
           </Grid>
         </>
       );
     }
 
     if (action === 'DELETE') {
-      if (!oldValueParsed || typeof oldValueParsed !== 'object' || Array.isArray(oldValueParsed)) {
+      if (!cleanOldData || typeof cleanOldData !== 'object' || Array.isArray(cleanOldData)) {
         return (
           <Grid size={12}>
             <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#c62828', fontWeight: 700, letterSpacing: '0.5px', display: 'block', mb: 0.5 }}>
               Registro Eliminado
             </Typography>
-            <JsonViewer data={oldValueParsed} title="" showLabel={false} />
+            <JsonViewer data={cleanOldData} title="" showLabel={false} />
           </Grid>
         );
       }
 
-      const recordName =
-        oldValueParsed.name ||
-        oldValueParsed.valor ||
-        oldValueParsed.nombre ||
-        oldValueParsed.subject ||
-        oldValueParsed.caseNumber ||
-        oldValueParsed.email ||
-        oldValueParsed.id_circuito ||
-        log.recordId ||
-        'Registro sin nombre';
-
-      const primaryIdentifier =
-        oldValueParsed.caseNumber ||
-        oldValueParsed.id_circuito ||
-        oldValueParsed.id_netuno ||
-        oldValueParsed.idRBS ||
-        oldValueParsed.idDOG ||
-        (typeof log.recordId === 'string' && log.recordId) ||
-        null;
-
-      const excludeKeys = new Set(['_id', 'name', 'valor', 'nombre', 'createdAt', 'updatedAt']);
-
-      const detailEntries = Object.entries(oldValueParsed).filter(
-        ([key, val]) => !excludeKeys.has(key) && val !== null && val !== undefined && val !== '',
+      const recordName = cleanOldData.name || cleanOldData.valor || cleanOldData.nombre || cleanOldData.subject || cleanOldData.caseNumber || cleanOldData.email || cleanOldData.id_circuito || log.recordId || 'Registro sin nombre';
+      const primaryIdentifier = cleanOldData.caseNumber || cleanOldData.id_circuito || cleanOldData.id_netuno || (typeof log.recordId === 'string' && log.recordId) || null;
+      
+      // Ya están limpios, pero filtramos valores vacíos para mayor limpieza
+      const detailEntries = Object.entries(cleanOldData).filter(
+        ([_, val]) => val !== null && val !== undefined && val !== ''
       );
 
       return (
@@ -380,10 +356,7 @@ export const AuditDetailModal = ({ open, onClose, log }: AuditDetailModalProps) 
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
               <DeleteIcon sx={{ color: '#c62828', fontSize: 20 }} />
-              <Typography
-                variant="caption"
-                sx={{ textTransform: 'uppercase', color: '#c62828', fontWeight: 700, letterSpacing: '0.5px' }}
-              >
+              <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#c62828', fontWeight: 700, letterSpacing: '0.5px' }}>
                 Registro Eliminado
               </Typography>
             </Box>
@@ -412,20 +385,8 @@ export const AuditDetailModal = ({ open, onClose, log }: AuditDetailModalProps) 
             )}
           </Box>
 
-          <Box
-            sx={{
-              bgcolor: '#f8fafc',
-              border: '1px solid #e2e8f0',
-              borderRadius: '8px',
-              p: 2,
-              maxHeight: 400,
-              overflow: 'auto',
-            }}
-          >
-            <Typography
-              variant="caption"
-              sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700, letterSpacing: '0.5px', display: 'block', mb: 1 }}
-            >
+          <Box sx={{ bgcolor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', p: 2, maxHeight: 400, overflow: 'auto' }}>
+            <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700, letterSpacing: '0.5px', display: 'block', mb: 1 }}>
               Datos del Registro ({detailEntries.length} campos)
             </Typography>
 
@@ -434,40 +395,11 @@ export const AuditDetailModal = ({ open, onClose, log }: AuditDetailModalProps) 
                 const displayValue = formatValue(value);
                 return (
                   <Grid size={{ xs: 12, sm: 6 }} key={key}>
-                    <Box
-                      sx={{
-                        px: 1.5,
-                        py: 1,
-                        borderRadius: '6px',
-                        bgcolor: '#ffffff',
-                        border: '1px solid #e2e8f0',
-                        height: '100%',
-                      }}
-                    >
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          textTransform: 'uppercase',
-                          color: '#64748b',
-                          fontWeight: 700,
-                          fontSize: '0.65rem',
-                          letterSpacing: '0.5px',
-                          display: 'block',
-                          mb: 0.25,
-                        }}
-                      >
+                    <Box sx={{ px: 1.5, py: 1, borderRadius: '6px', bgcolor: '#ffffff', border: '1px solid #e2e8f0', height: '100%' }}>
+                      <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700, fontSize: '0.65rem', letterSpacing: '0.5px', display: 'block', mb: 0.25 }}>
                         {key}
                       </Typography>
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          color: '#0f172a',
-                          fontWeight: 600,
-                          fontSize: '0.85rem',
-                          wordBreak: 'break-word',
-                          lineHeight: 1.4,
-                        }}
-                      >
+                      <Typography variant="body2" sx={{ color: '#0f172a', fontWeight: 600, fontSize: '0.85rem', wordBreak: 'break-word', lineHeight: 1.4 }}>
                         {displayValue}
                       </Typography>
                     </Box>
@@ -610,13 +542,16 @@ export const AuditDetailModal = ({ open, onClose, log }: AuditDetailModalProps) 
                   <Chip label={formatModuleName(log.module || (log as any).module || (log as any).moduleId)} size="small" sx={{ bgcolor: '#e8eaf6', color: '#000027', fontWeight: 600, fontSize: '0.75rem' }} />
                 </Grid>
 
+                {/* ✅ MUESTRA EL NÚMERO DE TICKET LEGIBLE EN LUGAR DEL OBJECTID CRUDO */}
                 {log.recordId && (
                   <Grid size={12}>
                     <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700, letterSpacing: '0.5px', display: 'block', mb: 0.5 }}>
-                      ID del Registro
+                      Registro
                     </Typography>
                     <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.8rem', color: '#475569', bgcolor: '#f8fafc', px: 1.5, py: 0.5, borderRadius: '6px', display: 'inline-block' }}>
-                      {lookupMap.get(String(log.recordId)) || log.recordId}
+                      {ticketIdentifier 
+                        ? `Ticket: ${ticketIdentifier}` 
+                        : (lookupMap.get(String(log.recordId)) || log.recordId)}
                     </Typography>
                   </Grid>
                 )}
@@ -632,8 +567,8 @@ export const AuditDetailModal = ({ open, onClose, log }: AuditDetailModalProps) 
                   </Grid>
                 )}
 
-                {/* ✅ Oculto en LOGIN/LOGOUT/LOGIN_FAILED */}
-                {(oldValueParsed || newValueParsed) && !isSessionAction && (
+                {/* ✅ Usa cleanOldData y cleanNewData para consistencia */}
+                {(cleanOldData || cleanNewData) && !isSessionAction && (
                   <>
                     <Grid size={12}>
                       <Divider sx={{ my: 2 }}>

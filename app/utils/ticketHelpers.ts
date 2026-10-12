@@ -54,7 +54,7 @@ export interface TicketRecord {
   fechaAsignacionOpA?: string;
   createdAt?: Date;
   updatedAt?: Date;
-  escaladoPor?: string; 
+  escaladoPor?: string;
 }
 
 export interface TicketFormData {
@@ -138,8 +138,7 @@ export const initialFormState: TicketFormData = {
   severidad: '',
   imputable: '',
   afectacion: false,
-  escaladoPor: '', 
-  
+  escaladoPor: '',
 };
 
 export const getLocalDateTimeString = (date = new Date()): string => {
@@ -152,12 +151,39 @@ export const formatTTZoho = (value: string | undefined | null): string => {
   const str = String(value).trim();
   return str.startsWith('#') ? str : `#${str}`;
 };
+
+// ✅ Parser para fechas legacy tipo "05/10/2026, 03:25 p. m." / "05/10/2026 10:15 a. m."
+const parseFechaLegacy = (value: string): dayjs.Dayjs | null => {
+  const m = value.match(
+    /(\d{1,2})\/(\d{1,2})\/(\d{4}),?\s+(\d{1,2}):(\d{2})\s*(a\.?\s*m\.?|p\.?\s*m\.?)?/i
+  );
+  if (!m) return null;
+  const [, d, mo, y, h, mi, meridiem] = m;
+  let hour = parseInt(h, 10);
+  if (meridiem) {
+    if (/p\.?\s*m\.?/i.test(meridiem) && hour < 12) hour += 12;
+    if (/a\.?\s*m\.?/i.test(meridiem) && hour === 12) hour = 0;
+  }
+  const result = dayjs(new Date(+y, +mo - 1, +d, hour, +mi));
+  return result.isValid() ? result : null;
+};
+
+// ✅ Formato UNIFICADO: DD/MM/YYYY HH:mm (24h, sin coma, sin segundos)
 export const formatToHumanDate = (dateTimeStr: string): string => {
   if (!dateTimeStr) return '';
-  const cleanStr = dateTimeStr.includes('T') ? dateTimeStr.replace('T', ' ') : dateTimeStr;
-  const [datePart, timePart] = cleanStr.split(' ');
-  const [year, month, day] = datePart.split('-');
-  return `${day}/${month}/${year} ${timePart}`;
+
+  // 1. Intentar con dayjs (maneja ISO, T, y muchos formatos estándar)
+  let d = dayjs(dateTimeStr);
+
+  // 2. Si no es válido, intentar parsear formato legacy (con a.m./p.m.)
+  if (!d.isValid()) {
+    d = parseFechaLegacy(dateTimeStr) ?? dayjs(NaN);
+  }
+
+  // 3. Si sigue inválido, devolver el string original como fallback
+  if (!d.isValid()) return dateTimeStr;
+
+  return d.format('DD/MM/YYYY HH:mm');
 };
 
 export const diffMin = (start: string, end: string): number => {
@@ -171,7 +197,7 @@ export const generarNumeroTicket = (prefijo: string = 'TCKT', actual?: string): 
   if (actual && /^[A-Z]{4}-\d{6}$/.test(actual)) {
     return actual;
   }
-  
+
   // Si no es válido o está incompleto (ej: "COMP-"), generar uno nuevo con 6 dígitos aleatorios
   const numeroAleatorio = Math.floor(100000 + Math.random() * 900000).toString();
   return `${prefijo}-${numeroAleatorio}`;
@@ -238,11 +264,11 @@ export const mapTicketToFormData = (
 
   let descripcion = ticket.description || '';
   const isClosed = ticket.status === TICKET_STATUS.CERRADO || ticket.status === 'CERRADO';
-  
+
   if (isClosed && horaCierre) {
     const fechaCierreLocal = toDateTimeLocal(horaCierre);
     const fechaCierreFormateada = fechaCierreLocal ? formatToHumanDate(fechaCierreLocal) : formatToHumanDate(horaCierre);
-    
+
     if (!descripcion.includes('Fecha y hora de cierre ticket:')) {
       descripcion = (descripcion.trim() ? descripcion.trim() + '\n' : '') + `Fecha y hora de cierre ticket: ${fechaCierreFormateada}`;
     } else {
@@ -294,7 +320,6 @@ export const mapTicketToFormData = (
     turnoAsignado: ticket.turnoAsignado === 'NOCTURNO' ? 'NOCTURNO' : 'DIURNO',
     operador: ticket.operador || '',
     escaladoPor: ticket.escaladoPor || '',
-    
   };
 };
 
@@ -334,13 +359,13 @@ export const mapFormToUpdatePayload = (form: TicketFormData & Record<string, unk
   operador: form.operador,
   severidad: form.severidad,
   imputable: form.imputable,
-  escaladoPor: form.escaladoPor,  
+  escaladoPor: form.escaladoPor,
   tDeteccion: form.tDeteccion as number | undefined,
   tAtencion: form.tAtencion as number | undefined,
   tEscalado: form.tEscalado as number | undefined,
   cCierreSoporte: form.cCierreSoporte as number | undefined,
   mttrTotal: form.mttrTotal as number | undefined, // MTTR (Mean Time To Repair) del ticket: el tiempo total de resolución, expresado en minutos. = horaInicioFalla  - horaCierreFalla
-  status: form.estatus, 
+  status: form.estatus,
 });
 
 export const calcularTiempos = (form: TicketFormData) => {
@@ -355,4 +380,22 @@ export const calcularTiempos = (form: TicketFormData) => {
     mttrTotal: diffMin(form.horaInicioFalla, cierreFalla), // MTTR (Mean Time To Repair) del ticket: el tiempo total de resolución, expresado en minutos. = horaInicioFalla  - horaCierreFalla
     turnoAsignado: calcularTurno(form.horaDeteccionNoc),
   };
+};
+
+// ✅ Normaliza TODAS las líneas de fecha de la descripción al formato DD/MM/YYYY HH:mm
+// Útil para mostrar `description` en modales de detalle sin tocar la BD
+export const normalizeDescripcionFechas = (descripcion: string): string => {
+  if (!descripcion) return descripcion;
+
+  return descripcion.replace(
+    /((?:Fecha y Hora apertura Ticket|Fecha y Hora Inicio Afectación|Fecha y hora de fin de Afectación|Fecha y hora de cierre ticket)\s*:\s*)([^\n]+)/gi,
+    (_match, prefix: string, value: string) => {
+      const clean = (value || '').trim();
+      if (!clean) return prefix + clean;
+      // Si ya tiene el formato correcto (DD/MM/YYYY HH:mm 24h), no lo toca
+      if (/^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}$/.test(clean)) return prefix + clean;
+      // Cualquier otro formato (con "p. m.", coma, segundos, ISO...) se unifica
+      return prefix + formatToHumanDate(clean);
+    }
+  );
 };
