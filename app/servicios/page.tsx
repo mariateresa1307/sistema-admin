@@ -286,21 +286,23 @@ export default function RBSPage() {
           setIsDetailOpen(false);
           setIsDialogOpen(true);
         }}
-        onDeleteSuccess={() => {
-    // ✅ Actualiza la fila localmente al instante
-    if (selectedService?._id) {
-      const id = String(selectedService._id);
-      const nuevoStatus = selectedService.status === "Activo" ? "Inactivo" : "Activo";
-      setRows((prev) =>
-        prev.map((r) =>
-          String((r as any)._id) === id ? { ...r, status: nuevoStatus } : r
-        )
-      );
-    }
-    setIsDetailOpen(false);
-    setSelectedService(null);
-    setRefreshTrigger((prev) => prev + 1);
-  }}
+               onDeleteSuccess={() => {
+          if (selectedService?._id) {
+            const id = String(selectedService._id);
+            
+            // ✅ FIX: Normalización robusta para coincidir exactamente con la lógica del backend
+            const currentStatus = (selectedService.status || "Activo").toString().trim();
+            const nuevoStatus = currentStatus === "Activo" ? "Inactivo" : "Activo";
+            
+            setRows((prev) =>
+              prev.map((r) =>
+                String((r as any)._id) === id ? { ...r, status: nuevoStatus } : r
+              )
+            );
+          }
+          setIsDetailOpen(false);
+          setSelectedService(null);
+        }}
       />
     </>
   );

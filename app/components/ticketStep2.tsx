@@ -9,7 +9,7 @@ import {
   Chip,
 } from '@mui/material';
 import PersonIcon from '@mui/icons-material/Person';
-import { NIVEL_SEVERIDAD, IMPUTABLE, TICKET_STATUS , ESCALADO_POR } from 'app/utils/constants';
+import { NIVEL_SEVERIDAD, IMPUTABLE, TICKET_STATUS, ESCALADO_POR } from 'app/utils/constants';
 import { getNivelSeveridadConfig } from 'app/utils/auxiliares';
 import { TicketFormData } from '../utils/ticketHelpers';
 import { ConfiguracionInterface } from '../utils/types';
@@ -65,8 +65,30 @@ export const TicketStep2 = React.memo(
       });
     }, [operadores, form.operatorResponsable, form.operatorAsignado]);
 
-    // Verificar si el ticket está cerrado
     const isClosed = form.estatus === TICKET_STATUS.CERRADO || form.estatus === 'CERRADO';
+
+    // ✅ Detectar caso PUNTUAL sin afectación
+    const isPuntualSinAfectacion =
+      (form.tipoIncidencia || '').toString().toUpperCase().includes('PUNTUAL') &&
+      form.afectacion === false;
+
+    // ✅ Sincronización principal: cubre carga inicial + cambios manuales
+    useEffect(() => {
+      if (isPuntualSinAfectacion && form.horaInicioFalla) {
+        if (!form.horaFinAfectacion || form.horaFinAfectacion !== form.horaInicioFalla) {
+          console.log('🔄 [TicketStep2] Sincronizando Fin Afectación = Inicio Falla');
+          onFieldChange('horaFinAfectacion', form.horaInicioFalla);
+        }
+      }
+    }, [isPuntualSinAfectacion, form.horaInicioFalla, form.horaFinAfectacion, onFieldChange]);
+
+    // ✅ Re-sincronizar cuando cambia tipo de incidencia o afectación
+    useEffect(() => {
+      if (isPuntualSinAfectacion && form.horaInicioFalla && form.horaFinAfectacion !== form.horaInicioFalla) {
+        console.log('🔄 [TicketStep2] Re-sincronizando por cambio de condiciones');
+        onFieldChange('horaFinAfectacion', form.horaInicioFalla);
+      }
+    }, [form.tipoIncidencia, form.afectacion, isPuntualSinAfectacion, form.horaInicioFalla, form.horaFinAfectacion, onFieldChange]);
 
     useEffect(() => {
       console.log('🔍 [TicketStep2] Estado del formulario:', {
@@ -77,15 +99,13 @@ export const TicketStep2 = React.memo(
       });
     }, [form.requiereEscalamiento, form.escaladoA, grupoDestino, isClosed]);
 
-    // ✅ CORRECCIÓN: Incluir HTMLTextAreaElement para campos multiline
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       const { name, value } = e.target;
-      
-      // Log de depuración para verificar que el cambio se detecta
+
       if (name === 'descripcion') {
         console.log('📝 [TicketStep2] Descripción cambiada a:', value);
       }
-      
+
       onFieldChange(name as keyof TicketFormData, value);
     };
 
@@ -119,7 +139,6 @@ export const TicketStep2 = React.memo(
 
     const cierreFallaValue = formatCierreFalla();
 
-    // ✅ VALIDACIÓN BLINDADA Y SINCRONIZADA
     const escaladoPorRequired = !isClosed && (!form.escaladoPor || String(form.escaladoPor).trim() === '');
     const imputableRequired = !isClosed && (!form.imputable || String(form.imputable).trim() === '');
 
@@ -213,8 +232,13 @@ export const TicketStep2 = React.memo(
             size="small"
             InputLabelProps={{ shrink: true }}
             inputProps={{ onClick: handleDateTimeClick }}
-            disabled={isClosed}
-            sx={{ '& input': { cursor: 'pointer' }, fontFamily: corporateFont }}
+            disabled={isClosed || isPuntualSinAfectacion}
+            sx={{ 
+              '& input': { cursor: (isClosed || isPuntualSinAfectacion) ? 'not-allowed' : 'pointer' }, 
+              fontFamily: corporateFont,
+              ...(isPuntualSinAfectacion && { bgcolor: '#f0f4f8' }),
+            }}
+            helperText={isPuntualSinAfectacion ? '🔒 Igual a inicio de falla' : ''}
           />
         </Grid>
 
@@ -390,7 +414,7 @@ export const TicketStep2 = React.memo(
           />
         </Grid>
 
-            {/* Operador Asignado */}
+        {/* Operador Asignado */}
         <Grid size={{ xs: 12, md: 4 }}>
           <TextField
             select
@@ -401,14 +425,12 @@ export const TicketStep2 = React.memo(
             value={form.operatorAsignado ?? ''}
             onChange={(e) => onFieldChange('operatorAsignado', e.target.value)}
             size="small"
-            // ✅ Muestra error si el asignado es igual al responsable
             error={form.operatorAsignado === form.operatorResponsable && form.operatorAsignado !== ''}
-            helperText={form.operatorAsignado === form.operatorResponsable && form.operatorAsignado !== '' 
-              ? 'El operador asignado no puede ser el mismo que el responsable' 
+            helperText={form.operatorAsignado === form.operatorResponsable && form.operatorAsignado !== ''
+              ? 'El operador asignado no puede ser el mismo que el responsable'
               : ''}
           >
             <MenuItem value="">Sin asignar</MenuItem>
-            {/* ✅ FILTRO: Excluye al operador responsable de la lista de opciones */}
             {operadores
               .filter((op) => op._id !== form.operatorResponsable)
               .map((op) => (
@@ -447,19 +469,19 @@ export const TicketStep2 = React.memo(
           </TextField>
         </Grid>
 
-        {/* Escalado por - ✅ BLINDADO */}
+        {/* Escalado por */}
         <Grid size={{ xs: 12, sm: 4 }}>
           <TextField
             select
             fullWidth
-            required={escaladoPorRequired} 
+            required={escaladoPorRequired}
             label="Escalado por"
             name="escaladoPor"
             value={form.escaladoPor ?? ""}
             onChange={handleChange}
             size="small"
             disabled={isClosed}
-            error={escaladoPorRequired} 
+            error={escaladoPorRequired}
             helperText={escaladoPorRequired ? "Campo obligatorio para poder cerrar" : ""}
             sx={{ fontFamily: corporateFont }}
           >
@@ -470,19 +492,19 @@ export const TicketStep2 = React.memo(
           </TextField>
         </Grid>
 
-        {/* Imputable a - ✅ BLINDADO */}
+        {/* Imputable a */}
         <Grid size={{ xs: 12, sm: 4 }}>
           <TextField
             select
             fullWidth
-            required={imputableRequired} 
+            required={imputableRequired}
             label="Imputable a"
             name="imputable"
             value={form.imputable ?? ""}
             onChange={handleChange}
             size="small"
             disabled={isClosed}
-            error={imputableRequired} 
+            error={imputableRequired}
             helperText={imputableRequired ? "Campo obligatorio para poder cerrar" : ""}
             sx={{ fontFamily: corporateFont }}
           >

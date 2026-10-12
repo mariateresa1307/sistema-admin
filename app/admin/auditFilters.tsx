@@ -60,7 +60,7 @@ export default function AuditFilters() {
       const response = await getAuditLogs(params);
       
       console.log('📥 [Frontend] Respuesta:', response.data);
-      debugger;
+  
       setLogs(response.data.data || []);
       setPagination((prev) => ({ 
         ...prev, 

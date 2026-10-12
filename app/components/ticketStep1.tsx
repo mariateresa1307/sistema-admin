@@ -45,7 +45,13 @@ export const TicketStep1 = React.memo(
     const detalleArray = Array.isArray(data?.detalle) ? data.detalle : [];
     const ciudadesOptionsArray = Array.isArray(data?.ciudadesOptions) ? data.ciudadesOptions : [];
     const localidadesOptionsArray = Array.isArray(data?.localidadesOptions) ? data.localidadesOptions : [];
-    const serviciosAfectadosArray = Array.isArray(data?.serviciosAfectados) ? (data.serviciosAfectados as ServicioAfectado[]) : [];
+    const serviciosAfectadosArrayRaw = Array.isArray(data?.serviciosAfectados) ? (data.serviciosAfectados as ServicioAfectado[]) : [];
+
+// ✅ Filtrar servicios activos (excluir Inactivos)
+const serviciosAfectadosArray = serviciosAfectadosArrayRaw.filter((s: any) => {
+  const status = (s.status || s.estado || '').toString().trim().toLowerCase();
+  return status !== 'inactivo' && status !== 'inactive';
+});
 
     // lista completa de localidades
     const todasLocalidadesArray = Array.isArray((data as any)?.todasLasLocalidades)
@@ -56,9 +62,11 @@ export const TicketStep1 = React.memo(
 
     const isFallaMasiva = form.tipoIncidencia === TIPO_INCIDENCIA.FALLA_MASIVA;
     const showTipoClienteInput = !isFallaMasiva;
-    
+
     const selectedTipoCliente = tipoClienteArray.find((tc) => tc._id === form.tipoCliente);
     const isResidencial = selectedTipoCliente?.valor === TIPO_CLIENTE.RESIDENCIAL;
+    const esPuntual = (form.tipoIncidencia || '').toString().toUpperCase().includes('PUNTUAL');
+    const mostrarServicios = !isResidencial && (form.afectacion === true || esPuntual);
     const isClosed = form.estatus === TICKET_STATUS.CERRADO || form.estatus === 'CERRADO';
     const isLoading = data?.loading;
 
@@ -132,11 +140,16 @@ export const TicketStep1 = React.memo(
       }
     }, [form.ciudad, localidadesFiltradas, estadoResuelto, form.localidad, form.estado, onFieldChange, todasLocalidadesCargadas]);
 
-    useEffect(() => {
-      if (isFallaMasiva && form.afectacion === true && data.loadAllServicios) {
-        data.loadAllServicios();
-      }
-    }, [isFallaMasiva, form.afectacion, data.loadAllServicios]);
+  useEffect(() => {
+  // Cargar todos los servicios cuando sea MASIVA con afectación
+  if (isFallaMasiva && form.afectacion === true && data.loadAllServicios) {
+    data.loadAllServicios();
+  }
+  // ✅ NUEVO: Limpiar servicios si NO es PUNTUAL y NO hay afectación
+  if (!esPuntual && form.afectacion !== true && form.serviciosAfectados?.length > 0) {
+    onServiciosAfectadosChange([]);
+  }
+}, [isFallaMasiva, form.afectacion, data.loadAllServicios, esPuntual, form.serviciosAfectados, onServiciosAfectadosChange]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const { name, value, type } = e.target;
@@ -296,7 +309,7 @@ export const TicketStep1 = React.memo(
               onChange={(e) => {
                 const nuevoTipoId = e.target.value;
                 onTipoClienteChange(nuevoTipoId);
-                onServiciosAfectadosChange([]); 
+                onServiciosAfectadosChange([]);
               }}
               size="small"
               disabled={isClosed || isLoading}
@@ -385,7 +398,7 @@ export const TicketStep1 = React.memo(
         )}
 
         {/*Servicios Afectados: Se muestra si NO es residencial Y afectacion es true */}
-        {!isResidencial && form.afectacion === true && (
+       {mostrarServicios && (
           <Grid size={{ xs: 12, sm: 4 }}>
             <Autocomplete
               multiple

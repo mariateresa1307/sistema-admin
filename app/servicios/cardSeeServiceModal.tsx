@@ -66,20 +66,11 @@ export const CardSeeServiceModal = ({
     type: "warning" as "warning" | "info" | "success",
   });
 
-
   const normalizeToArray = (response: any): any[] => {
     if (!response?.data) return [];
-
-    // Si response.data ya es el array directamente
     if (Array.isArray(response.data)) return response.data;
-
-    // Si response.data tiene estructura paginada { data: [...], total: X }
     if (Array.isArray(response.data.data)) return response.data.data;
-
-    // Si response.data tiene estructura { results: [...] }
     if (Array.isArray(response.data.results)) return response.data.results;
-
-    // Fallback: array vacío
     return [];
   };
 
@@ -141,7 +132,9 @@ export const CardSeeServiceModal = ({
     obtenerNombreTipoCliente();
   }, [open, service]);
 
-  const isActivo = service?.status === "Activo";
+  // ✅ FIX: Normalización de la comprobación de estado para evitar falsos negativos visuales
+  const currentStatus = (service?.status || "Activo").toString().trim();
+  const isActivo = currentStatus === "Activo";
   const accionTexto = isActivo ? "desactivar" : "reactivar";
   const nuevoEstado = isActivo ? "Inactivo" : "Activo";
 
@@ -153,7 +146,6 @@ export const CardSeeServiceModal = ({
       title: isActivo ? "Desactivar Servicio" : "Reactivar Servicio",
       message: `¿Estás seguro de que deseas ${accionTexto} el servicio "${service.name}"? El registro se marcará como "${nuevoEstado}".`,
       type: "warning",
-
       onConfirm: async () => {
         setConfirmDialog((prev) => ({ ...prev, open: false }));
         try {
@@ -166,7 +158,6 @@ export const CardSeeServiceModal = ({
               },
             }),
           );
-
           
           if (onDeleteSuccess) {
             onDeleteSuccess();
@@ -250,7 +241,6 @@ export const CardSeeServiceModal = ({
           { label: "VLAN", value: s.vlan },
           { label: "NODO A", value: s.nodoA },
           { label: "IP NETUNO", value: s.ipNetuno },
-
         ];
       default:
         return [];
@@ -259,7 +249,6 @@ export const CardSeeServiceModal = ({
 
   return (
     <>
-      {/* MODAL VISOR DE IMAGEN A PANTALLA COMPLETA */}
       <Dialog
         open={isImageModalOpen}
         onClose={() => setIsImageModalOpen(false)}
@@ -383,7 +372,6 @@ export const CardSeeServiceModal = ({
 
                 <Divider sx={{ mb: 3.5, borderColor: "#c0c8d0" }} />
 
-                {/* SECCIÓN DE IMAGEN */}
                 {service.diagramaRed && (
                   <Grid size={12} sx={{ mb: 3 }}>
                     <Box
@@ -468,7 +456,6 @@ export const CardSeeServiceModal = ({
                     </Grid>
                   ))}
 
-                  {/*  SECCIÓN DE FECHAS: Creado y Actualizado */}
                   {(service.createdAt || service.updatedAt) && (
                     <Grid size={12}>
                       <Divider sx={{ my: 2 }} />
