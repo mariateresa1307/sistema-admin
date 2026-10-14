@@ -37,6 +37,6 @@
   ],
   "exclude": [
     "node_modules",
-    "app/home/backup.ts"
+    "backup.ts"
   ]
 }

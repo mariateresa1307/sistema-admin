@@ -122,6 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       const MODULE_PERMISSIONS: Record<string, string[]> = {
         dashboard: ['admin', 'editor', 'operador'],
+        tickets: ['admin', 'editor', 'operador'],
         servicios: ['admin', 'editor', 'operador'],
         usuarios: ['admin'],
         reportes: ['admin'],

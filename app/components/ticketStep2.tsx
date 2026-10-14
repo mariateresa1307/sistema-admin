@@ -419,13 +419,13 @@ export const TicketStep2 = React.memo(
           <TextField
             select
             fullWidth
-            required
             disabled={isClosed}
+            required={false}
             label="Operador Asignado"
             value={form.operatorAsignado ?? ''}
             onChange={(e) => onFieldChange('operatorAsignado', e.target.value)}
             size="small"
-            error={form.operatorAsignado === form.operatorResponsable && form.operatorAsignado !== ''}
+            error={form.operatorAsignado === form.operatorResponsable }
             helperText={form.operatorAsignado === form.operatorResponsable && form.operatorAsignado !== ''
               ? 'El operador asignado no puede ser el mismo que el responsable'
               : ''}

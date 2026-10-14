@@ -16,7 +16,7 @@ import { HomeRefreshProvider, useHomeRefresh } from "../context/homeRefreshConte
 import { useAuth } from "../context/authContext";
 import { filterMenuByRole } from "../utils/permissions";
 import AcUnitIcon from '@mui/icons-material/AcUnit';
-import TicketModal from "../home/ticketModal";
+import TicketModal from "../tickets/ticketModal";
 import { motion } from "motion/react";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
 import TuneIcon from '@mui/icons-material/Tune';
@@ -24,6 +24,8 @@ import { logout } from '@/lib/api';
 import { NotificationBell } from '../components/NotificationBell';
 import { ChangePasswordModal } from "../components/ChangePasswordModal"; 
 import api from '@/lib/api'; 
+import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
+
 
 const DRAWER_WIDTH = 260;
 const APP_BAR_HEIGHT = 64;
@@ -44,6 +46,7 @@ type UserData = {
 
 const MENU_ITEMS: MenuItemType[] = [
   { label: "Dashboard", path: "/home", icon: <Dashboard />, module: "dashboard" },
+   { label: "Tickets", path: "/tickets", icon: <ConfirmationNumberIcon />, module: "tickets" },
   {
     label: "Gestión", path: "#", icon: <People />,
     children: [

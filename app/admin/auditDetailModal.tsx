@@ -75,12 +75,23 @@ const parseJsonSafely = (value: string | undefined | null): any => {
 
 const getChangedKeys = (oldObj: any, newObj: any): Set<string> => {
   const changed = new Set<string>();
-  if (!newObj || typeof newObj !== 'object' || Array.isArray(newObj)) return changed;
+  
+  // Si no hay newObj válido, retornar set vacío
+  if (!newObj || typeof newObj !== 'object' || Array.isArray(newObj)) {
+    console.log('⚠️ [getChangedKeys] newObj inválido');
+    return changed;
+  }
 
+  // oldObj seguro
   const oldSafe = oldObj && typeof oldObj === 'object' && !Array.isArray(oldObj) ? oldObj : {};
 
+  // Comparar cada clave del newObj
   Object.keys(newObj).forEach((key) => {
-    if (JSON.stringify(oldSafe[key]) !== JSON.stringify(newObj[key])) {
+    const oldVal = oldSafe[key];
+    const newVal = newObj[key];
+    
+    // Comparación profunda con JSON
+    if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
       changed.add(key);
     }
   });
@@ -260,11 +271,19 @@ export const AuditDetailModal = ({ open, onClose, log }: AuditDetailModalProps) 
     return rest;
   }, [newValueParsed]);
 
-  // ✅ Calcular claves cambiadas sobre los datos LIMPIOS para evitar falsos positivos
-  const changedKeys = useMemo(
-    () => getChangedKeys(cleanOldData, cleanNewData),
-    [cleanOldData, cleanNewData],
-  );
+// 🔍 DEBUG: Verificar qué hay en los datos
+console.log('🔍 [AuditModal] oldValueParsed:', oldValueParsed);
+console.log('🔍 [AuditModal] newValueParsed:', newValueParsed);
+console.log(' [AuditModal] cleanOldData:', cleanOldData);
+console.log('🔍 [AuditModal] cleanNewData:', cleanNewData);
+console.log(' [AuditModal] cleanOldData keys:', cleanOldData ? Object.keys(cleanOldData).length : 0);
+console.log(' [AuditModal] cleanNewData keys:', cleanNewData ? Object.keys(cleanNewData).length : 0);
+
+// ✅ Calcular claves cambiadas sobre los datos LIMPIOS para evitar falsos positivos
+const changedKeys = useMemo(
+  () => getChangedKeys(cleanOldData, cleanNewData),
+  [cleanOldData, cleanNewData],
+);
 
   // ✅ Extracción inteligente del número de ticket para mostrarlo en lugar del ObjectId crudo
   const ticketIdentifier = useMemo(() => {
@@ -288,39 +307,52 @@ export const AuditDetailModal = ({ open, onClose, log }: AuditDetailModalProps) 
 
   const IconComponent = config.icon;
 
-  const renderChangesSection = () => {
-    if (!log.action) return null;
-    const action = log.action.toUpperCase();
+const renderChangesSection = () => {
+  if (!log.action) return null;
+  const action = log.action.toUpperCase();
 
-    if (action === 'CREATE') {
+  if (action === 'CREATE') {
+    return (
+      <Grid size={12}>
+        <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#1565c0', fontWeight: 700, letterSpacing: '0.5px', display: 'block', mb: 0.5 }}>
+          Registro Creado
+        </Typography>
+        <JsonViewer data={cleanNewData} title="" showLabel={false} />
+      </Grid>
+    );
+  }
+
+ if (action === 'UPDATE') {
+    //  VERIFICAR SI HAY DATOS VÁLIDOS
+    if (!cleanOldData && !cleanNewData) {
       return (
         <Grid size={12}>
-          <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#1565c0', fontWeight: 700, letterSpacing: '0.5px', display: 'block', mb: 0.5 }}>
-            Registro Creado
-          </Typography>
-          <JsonViewer data={cleanNewData} title="" showLabel={false} />
+          <Box sx={{ p: 2, bgcolor: '#fff8e1', borderRadius: '8px', border: '1px solid #ffe082' }}>
+            <Typography variant="body2" sx={{ color: '#666' }}>
+              No hay datos de comparación disponibles para esta actualización.
+            </Typography>
+          </Box>
         </Grid>
       );
     }
 
-    if (action === 'UPDATE') {
-      return (
-        <>
-          <Grid size={{ xs: 12, md: 6 }}>
-            <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#ef6c00', fontWeight: 700, letterSpacing: '0.5px', display: 'block', mb: 0.5 }}>
-              Valor Anterior
-            </Typography>
-            <JsonViewer data={cleanOldData} title="" showLabel={false} highlightKeys={changedKeys} />
-          </Grid>
-          <Grid size={{ xs: 12, md: 6 }}>
-            <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#2e7d32', fontWeight: 700, letterSpacing: '0.5px', display: 'block', mb: 0.5 }}>
-              Valor Actual
-            </Typography>
-            <JsonViewer data={cleanNewData} title="" showLabel={false} highlightKeys={changedKeys} />
-          </Grid>
-        </>
-      );
-    }
+    return (
+      <>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#ef6c00', fontWeight: 700, letterSpacing: '0.5px', display: 'block', mb: 0.5 }}>
+            Valor Anterior
+          </Typography>
+          <JsonViewer data={cleanOldData} title="" showLabel={false} highlightKeys={changedKeys} />
+        </Grid>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#2e7d32', fontWeight: 700, letterSpacing: '0.5px', display: 'block', mb: 0.5 }}>
+            Valor Actual
+          </Typography>
+          <JsonViewer data={cleanNewData} title="" showLabel={false} highlightKeys={changedKeys} />
+        </Grid>
+      </>
+    );
+  }
 
     if (action === 'DELETE') {
       if (!cleanOldData || typeof cleanOldData !== 'object' || Array.isArray(cleanOldData)) {
@@ -423,24 +455,25 @@ export const AuditDetailModal = ({ open, onClose, log }: AuditDetailModalProps) 
     return null;
   };
 
-  const getActionDividerConfig = (action: string, changesCount = 0) => {
-    switch (action.toUpperCase()) {
-      case 'DELETE':
-        return { label: 'Datos Eliminados', icon: <DeleteIcon sx={{ fontSize: 16 }} />, bgcolor: '#ffebee', color: '#c62828' };
-      case 'CREATE':
-        return { label: 'Datos Creados', icon: <AddCircleIcon sx={{ fontSize: 16 }} />, bgcolor: '#e3f2fd', color: '#1565c0' };
-      case 'UPDATE':
-      default:
-        return {
-          label: changesCount > 0
-            ? `${changesCount} ${changesCount === 1 ? 'Cambio Realizado' : 'Cambios Realizados'}`
-            : 'Sin Cambios Detectados',
-          icon: <CompareArrowsIcon sx={{ fontSize: 16 }} />,
-          bgcolor: changesCount > 0 ? '#fff3e0' : '#f1f5f9',
-          color: changesCount > 0 ? '#ef6c00' : '#64748b'
-        };
-    }
-  };
+const getActionDividerConfig = (action: string, changesCount = 0) => {
+  switch (action.toUpperCase()) {
+    case 'DELETE':
+      return { label: 'Datos Eliminados', icon: <DeleteIcon sx={{ fontSize: 16 }} />, bgcolor: '#ffebee', color: '#c62828' };
+    case 'CREATE':
+      return { label: 'Datos Creados', icon: <AddCircleIcon sx={{ fontSize: 16 }} />, bgcolor: '#e3f2fd', color: '#1565c0' };
+    case 'UPDATE':
+    default:
+      return {
+        // ✅ CAMBIO: Solo mostrar si hay cambios reales
+        label: changesCount > 0
+          ? `${changesCount} ${changesCount === 1 ? 'Cambio Realizado' : 'Cambios Realizados'}`
+          : 'Actualización de Registro',  // ← Mensaje genérico si no hay cambios detectados
+        icon: <CompareArrowsIcon sx={{ fontSize: 16 }} />,
+        bgcolor: changesCount > 0 ? '#fff3e0' : '#f1f5f9',
+        color: changesCount > 0 ? '#ef6c00' : '#64748b'
+      };
+  }
+};
 
   const dividerConfig = getActionDividerConfig(log.action, changedKeys.size);
 
@@ -543,26 +576,36 @@ export const AuditDetailModal = ({ open, onClose, log }: AuditDetailModalProps) 
                 </Grid>
 
                 {/* ✅ MUESTRA EL NÚMERO DE TICKET LEGIBLE EN LUGAR DEL OBJECTID CRUDO */}
-                {log.recordId && (
-                  <Grid size={12}>
-                    <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700, letterSpacing: '0.5px', display: 'block', mb: 0.5 }}>
-                      Registro
-                    </Typography>
-                    <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.8rem', color: '#475569', bgcolor: '#f8fafc', px: 1.5, py: 0.5, borderRadius: '6px', display: 'inline-block' }}>
-                      {ticketIdentifier 
-                        ? `Ticket: ${ticketIdentifier}` 
-                        : (lookupMap.get(String(log.recordId)) || log.recordId)}
-                    </Typography>
-                  </Grid>
-                )}
+               {log.recordId && (
+  <Grid size={12}>
+    <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700, letterSpacing: '0.5px', display: 'block', mb: 0.5 }}>
+      Registro
+    </Typography>
+    <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.8rem', color: '#475569', bgcolor: '#f8fafc', px: 1.5, py: 0.5, borderRadius: '6px', display: 'inline-block' }}>
+      {ticketIdentifier 
+        ? `Ticket: ${ticketIdentifier}` 
+        : (lookupMap.get(String(log.recordId)) || log.recordId)}
+    </Typography>
+  </Grid>
+)}
 
+                 {/* ✅ DETALLES MEJORADOS: Reemplaza el ID crudo por el número de ticket si está disponible */}
                 {log.details && (
                   <Grid size={12}>
                     <Typography variant="caption" sx={{ textTransform: 'uppercase', color: '#64748b', fontWeight: 700, letterSpacing: '0.5px', display: 'block', mb: 0.5 }}>
                       Detalles
                     </Typography>
                     <Typography variant="body2" sx={{ color: '#334155', fontWeight: 500 }}>
-                      {resolveText(log.details)}
+                      {(() => {
+                        let detailsText = resolveText(log.details);
+                        
+                        // ✅ Si tenemos el número de ticket y el texto contiene "ID: <objectId>", lo reemplazamos
+                        if (ticketIdentifier && /ID:\s*[a-fA-F0-9]{24}/i.test(detailsText)) {
+                          detailsText = detailsText.replace(/ID:\s*[a-fA-F0-9]{24}/i, `Ticket: ${ticketIdentifier}`);
+                        }
+                        
+                        return detailsText;
+                      })()}
                     </Typography>
                   </Grid>
                 )}

@@ -1,166 +1,194 @@
 "use client";
-import React, { useState, useCallback, useMemo } from "react";
-import { ContainerBox } from "../components/containerBox";
-import { MetricsCarousel } from "./metricsCarousel";
-import { TicketDetailModal } from "./cardDetailModal";
-import { Tabs, Tab, Box, Typography, Chip } from "@mui/material";
-import TicketModal from "../home/ticketModal";
-import { Tickets } from "app/utils/types";
-import { TicketRecord } from "app/utils/ticketHelpers";
-import { TICKET_STATUS } from "app/utils/constants";
-import { useHomeRefresh } from "../context/homeRefreshContext";
-import ActiveTicketsTab from "./tabs/activeTicketsTab";
-import AssignedTicketsTab from "./tabs/assignedTicketsTab";
-import ClosedTicketsTab from "./tabs/closedTicketsTab";
 
-const corporateFont = 'Calibri, Arial, sans-serif';
+import React from "react";
+import { useRouter } from "next/navigation";
+import { motion, type Variants } from "framer-motion";
+import { 
+  Box, 
+  Typography, 
+  Button, 
+  Container,
+} from "@mui/material";
+import HomeIcon from "@mui/icons-material/Home";
+import SearchIcon from "@mui/icons-material/Search";
+import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 
-interface TabDefinition {
-  label: string;
-  statusFilter?: string;
-  operatorFilter?: boolean;
-  icon?: string;
-}
+export default function NotFoundPage() {
+  const router = useRouter();
 
-const TABS: TabDefinition[] = [
-  { label: "Activos y En Gestión", statusFilter: undefined, icon: "📋" },
-  { label: "Mis Tickets Asignados", operatorFilter: true, statusFilter: TICKET_STATUS.ACTIVO, icon: "👤" },
-  { label: "Tickets Cerrados", statusFilter: TICKET_STATUS.CERRADO, icon: "✅" },
-];
-
-export default function HomePage() {
-  const [activeTab, setActiveTab] = useState(0);
-  const [tabCounts, setTabCounts] = useState<number[]>([0, 0, 0]);
-  const { refreshHomeData } = useHomeRefresh();
-  const [selectedTicket, setSelectedTicket] = useState<TicketRecord | null>(null);
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [ticketToEdit, setTicketToEdit] = useState<Tickets | null>(null);
-  const currentUserId = useMemo(() => {
-    if (typeof window === 'undefined') return null;
-    try {
-      const userData = localStorage.getItem('userData');
-      if (!userData) return null;
-      const user = JSON.parse(userData);
-      return user._id || null;
-    } catch (error) {
-      console.error('Error parsing userData:', error);
-      return null;
+  // Variantes de animación para Framer Motion
+  const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: { 
+      opacity: 1,
+      transition: { staggerChildren: 0.2, delayChildren: 0.3 }
     }
-  }, []);
+  };
 
-  const updateTabCount = useCallback((tabIndex: number, count: number) => {
-    setTabCounts(prev => {
-      if (prev[tabIndex] === count) return prev;
-      const newCounts = [...prev];
-      newCounts[tabIndex] = count;
-      return newCounts;
-    });
-  }, []);
+  const itemVariants: Variants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 100 } }
+  };
 
-  const handleCloseModal = useCallback(() => {
-    setIsDialogOpen(false);
-    setTicketToEdit(null);
-    refreshHomeData();
-  }, [refreshHomeData]);
-
-  const handleSaveTicket = useCallback((updatedTicketData?: any) => {
-    setIsDialogOpen(false);
-    setTicketToEdit(null);
-    
-    if (isDetailOpen && updatedTicketData) {
-      setSelectedTicket(updatedTicketData as TicketRecord);
-    }
-    
-    refreshHomeData();
-  }, [refreshHomeData, isDetailOpen]);
-
-  const handleTransitionToEdit = useCallback((ticket: Tickets) => {
-    setIsDetailOpen(false);
-    setTicketToEdit(ticket);
-    setIsDialogOpen(true);
-  }, []);
-
-  const handleCellClick = useCallback((params: any) => {
-    if (params.row) {
-      setSelectedTicket(params.row as TicketRecord);
-      setIsDetailOpen(true);
-    }
-  }, []);
+  const floatVariants: Variants = {
+    animate: {
+    y: [0, -10, 0],
+    rotate: [0, 2, -2, 0],
+    transition: {
+      duration: 3,
+      repeat: Infinity,
+      ease: "easeInOut", // TypeScript lo ve como tipo 'string' genérico
+    },
+  },
+  };
 
   return (
-    <ContainerBox title="Administración de Incidencias y actividades" subtitle="Monitorización en tiempo real de operaciones.">
-      <MetricsCarousel />
+    <Box
+      sx={{
+        minHeight: "100vh",
+        width: "100%",
+        background: "#eef0f8", // ✅ Fondo claro solicitado
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        position: "relative",
+        overflow: "hidden",
+        fontFamily: "'Inter', 'Roboto', sans-serif",
+      }}
+    >
+      {/* Elementos decorativos flotantes de fondo (ajustados para fondo claro) */}
+      <motion.div
+        variants={floatVariants}
+        animate="animate"
+        style={{
+          position: "absolute",
+          top: "15%",
+          left: "10%",
+          width: 80,
+          height: 80,
+          borderRadius: "50%",
+          background: "rgba(99, 102, 241, 0.1)",
+          filter: "blur(40px)",
+        }}
+      />
+      <motion.div
+        variants={floatVariants}
+        animate="animate"
+        style={{
+          position: "absolute",
+          bottom: "20%",
+          right: "15%",
+          width: 120,
+          height: 120,
+          borderRadius: "50%",
+          background: "rgba(236, 72, 153, 0.1)",
+          filter: "blur(50px)",
+          animationDelay: "1s"
+        }}
+      />
 
-      <Box sx={{ borderBottom: 1, borderColor: '#e0e0e0', mb: 2 }}>
-        <Tabs
-          value={activeTab}
-          onChange={(e, newValue) => setActiveTab(newValue)}
-          variant="fullWidth"
-          sx={{
-            '& .MuiTab-root': { fontFamily: corporateFont, fontWeight: 600, fontSize: '0.9rem', textTransform: 'none', color: '#64748b', minHeight: '48px' },
-            '& .MuiTab-root.Mui-selected': { color: '#121227', fontWeight: 700 },
-            '& .MuiTabs-indicator': { backgroundColor: '#6BB1E2', height: '3px' },
-          }}
+      <Container maxWidth="md">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          style={{ textAlign: "center" }}
         >
-          {TABS.map((tab, index) => (
-            <Tab
-              key={index}
-              label={
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Typography sx={{ fontSize: '1.1rem' }}>{tab.icon}</Typography>
-                  <Typography>{tab.label}</Typography>
-                  {tabCounts[index] >= 0 && (
-                    <Chip
-                      label={tabCounts[index]}
-                      size="small"
-                      sx={{
-                        bgcolor: index === activeTab ? '#6BB1E2' : '#e2e8f0',
-                        color: index === activeTab ? '#FFFFFF' : '#475569',
-                        fontWeight: 700,
-                        fontSize: '0.75rem',
-                        height: '20px',
-                        fontFamily: corporateFont,
-                      }}
-                    />
-                )}
-                </Box>
-              }
-            />
-          ))}
-        </Tabs>
-      </Box>
+          {/* Número 404 Gigante con efecto (Gradiente más oscuro para contraste) */}
+          <motion.div variants={itemVariants}>
+            <Typography
+              variant="h1"
+              sx={{
+                fontSize: { xs: "8rem", md: "12rem" },
+                fontWeight: 900,
+                background: "linear-gradient(to right, #2563eb, #7c3aed, #db2777)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                lineHeight: 1,
+                mb: 2,
+                textShadow: "0 10px 30px rgba(37, 99, 235, 0.15)",
+              }}
+            >
+              404
+            </Typography>
+          </motion.div>
 
-      {activeTab === 1 && !currentUserId && (
-        <Box sx={{ mb: 2, p: 2, bgcolor: '#fff3cd', borderRadius: '8px', border: '1px solid #ffe69c' }}>
-          <Typography sx={{ color: '#856404', fontFamily: corporateFont, fontSize: '0.9rem' }}>
-            ⚠️ No se pudo identificar al usuario. Por favor, inicia sesión nuevamente.
-          </Typography>
-        </Box>
-      )}
+          {/* Mensaje con personalidad (Colores oscuros para legibilidad) */}
+          <motion.div variants={itemVariants}>
+            <Typography
+              variant="h4"
+              sx={{
+                color: "#0f172a",
+                fontWeight: 700,
+                mb: 2,
+                fontSize: { xs: "1.5rem", md: "2rem" },
+              }}
+            >
+              La página que estás buscando no existe.
 
-      <Box sx={{ mb: 2 }}>
-        {activeTab === 0 && <ActiveTicketsTab onCellClick={handleCellClick} onCountChange={(count) => updateTabCount(0, count)} />}
-        {activeTab === 1 && <AssignedTicketsTab currentUserId={currentUserId} onCellClick={handleCellClick} onCountChange={(count) => updateTabCount(1, count)} />}
-        {activeTab === 2 && <ClosedTicketsTab onCellClick={handleCellClick} onCountChange={(count) => updateTabCount(2, count)} />}
-      </Box>
+            </Typography>
+            <Typography
+              variant="body1"
+              sx={{
+                color: "#475569",
+                maxWidth: "500px",
+                mx: "auto",
+                mb: 4,
+                fontSize: "1.1rem",
+                lineHeight: 1.6,
+              }}
+            >
+             La página que estás buscando no está disponible. Pero no te preocupes, estamos trabajando en ello con ElGe.
+            </Typography>
+          </motion.div>
 
-      <TicketModal 
-        open={isDialogOpen} 
-        onClose={handleCloseModal} 
-        onSave={handleSaveTicket} 
-        ticketToEdit={ticketToEdit} 
-      />
-      
-      <TicketDetailModal 
-        open={isDetailOpen} 
-        onClose={() => {
-          setIsDetailOpen(false);
-          setSelectedTicket(null);
-        }} 
-        ticket={selectedTicket} 
-        onEditClick={() => selectedTicket && handleTransitionToEdit(selectedTicket as Tickets)} 
-      />
-    </ContainerBox>
+          {/* Botones de acción (Ajustados para fondo claro) */}
+          <motion.div 
+            variants={itemVariants}
+            style={{ 
+              display: "flex", 
+              gap: "16px", 
+              justifyContent: "center",
+              flexWrap: "wrap"
+            }}
+          >
+            <Button
+              variant="contained"
+              size="large"
+              onClick={() => router.push("/tickets")}
+              startIcon={<HomeIcon />}
+              sx={{
+                bgcolor: "#2563eb",
+                color: "white",
+                fontWeight: 700,
+                px: 4,
+                py: 1.5,
+                borderRadius: "12px",
+                textTransform: "none",
+                fontSize: "1rem",
+                boxShadow: "0 8px 20px rgba(37, 99, 235, 0.3)",
+                "&:hover": {
+                  bgcolor: "#1d4ed8",
+                  boxShadow: "0 12px 25px rgba(37, 99, 235, 0.4)",
+                  transform: "translateY(-2px)",
+                },
+                transition: "all 0.3s ease",
+              }}
+            >
+              Volver al Inicio
+            </Button>
+        
+          </motion.div>
+
+          {/* Elemento decorativo inferior */}
+          <motion.div 
+            variants={itemVariants}
+            style={{ marginTop: "60px", opacity: 0.5 }}
+          >
+            <ErrorOutlineIcon sx={{ fontSize: 40, color: "#64748b" }} />
+          </motion.div>
+        </motion.div>
+      </Container>
+    </Box>
   );
 }

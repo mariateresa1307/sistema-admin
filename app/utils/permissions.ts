@@ -10,6 +10,7 @@ export type UserRole = typeof ROLES[keyof typeof ROLES];
 // ✅ Permisos usando roles en español
 export const MODULE_PERMISSIONS: Record<string, string[]> = {
   dashboard: [ROLES.ADMIN, ROLES.EDITOR, ROLES.OPERADOR],
+  tickets: [ROLES.ADMIN, ROLES.EDITOR, ROLES.OPERADOR],
   servicios: [ROLES.ADMIN, ROLES.EDITOR, ROLES.OPERADOR],
   usuarios: [ROLES.ADMIN],
   reportes: [ROLES.ADMIN],

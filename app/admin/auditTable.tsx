@@ -66,6 +66,24 @@ const formatModuleName = (moduleId: string | undefined | null): string => {
   return modules[moduleId.toUpperCase()] || moduleId;
 };
 
+const extractTicketNumber = (log: any): string | null => {
+  // Intenta extraer de newValue primero, luego de oldValue
+  const sources = [log.newValue, log.oldValue];
+  
+  for (const source of sources) {
+    if (!source) continue;
+    try {
+      const parsed = typeof source === 'string' ? JSON.parse(source) : source;
+      if (parsed?.caseNumber || parsed?.numeroTicket) {
+        return parsed.caseNumber || parsed.numeroTicket;
+      }
+    } catch {
+      // Si falla el parseo, continúa con la siguiente fuente
+    }
+  }
+  return null;
+};
+
 export default function AuditTable({ data, loading, total, page, limit, onPageChange, onRowsPerPageChange }: Props) {
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
   const { resolveText } = useIdResolver();
@@ -95,9 +113,7 @@ export default function AuditTable({ data, loading, total, page, limit, onPageCh
           <TableHead>
             <TableRow sx={{ bgcolor: '#080769' }}>
               {['Fecha / Hora', 'Usuario', 'Acción', 'Módulo', 'IP', 'Detalles'].map((h) => (
-                <TableCell key={h} sx={{ fontWeight: 700, color: '#fff', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px', py: 1.5 }}>
-                  {h}
-                </TableCell>
+                <TableCell key={h} sx={{ color: '#fff', fontWeight: 600 }}>{h}</TableCell>
               ))}
             </TableRow>
           </TableHead>
@@ -137,11 +153,22 @@ export default function AuditTable({ data, loading, total, page, limit, onPageCh
                     </Typography>
                   </TableCell>
                   <TableCell>
-                    <Tooltip title={resolveText(log.details)}>
-                      <Typography variant="body2" sx={{ maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.8rem', color: '#64748b' }}>
-                        {resolveText(log.details) || '—'}
-                      </Typography>
-                    </Tooltip>
+                    {(() => {
+                      const ticketNumber = extractTicketNumber(log);
+                      let displayDetails = resolveText(log.details) || '—';
+
+                      if (ticketNumber && /ID:\s*[a-fA-F0-9]{24}/i.test(displayDetails)) {
+                        displayDetails = displayDetails.replace(/ID:\s*[a-fA-F0-9]{24}/i, `Ticket: ${ticketNumber}`);
+                      }
+
+                      return (
+                        <Tooltip title={displayDetails}>
+                          <Typography variant="body2" sx={{ maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.8rem', color: '#64748b' }}>
+                            {displayDetails}
+                          </Typography>
+                        </Tooltip>
+                      );
+                    })()}
                   </TableCell>
                 </TableRow>
               );
