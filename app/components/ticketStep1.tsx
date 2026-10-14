@@ -5,7 +5,7 @@ import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import { TIPO_INCIDENCIA, TIPO_CLIENTE, TICKET_STATUS } from 'app/utils/constants';
 import { TipoIncidenciaKey, SimpleConfigOpt } from '../utils/types';
 import { TicketFormData, ServicioAfectado } from '../utils/ticketHelpers';
-import { UseTicketData } from '../home/hooks/useTicketData';
+import { useTicketData } from '../tickets/hooks/useTicketData';
 import ElementoModal from '../components/elementoTicketModal';
 
 const filterOptions = createFilterOptions({
@@ -14,7 +14,7 @@ const filterOptions = createFilterOptions({
 
 interface TicketStep1Props {
   form: TicketFormData;
-  data: ReturnType<typeof UseTicketData>;
+  data: ReturnType<typeof useTicketData>;
   operatorDisplayName: string;
   onFieldChange: (name: keyof TicketFormData, value: any) => void;
   onTipoIncidenciaChange: (tipo: string) => void;
