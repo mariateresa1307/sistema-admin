@@ -233,7 +233,7 @@ export const CardSeeServiceModal = ({
           { label: "NODO OLT", value: s.nodoOLT },
           { label: "SERIAL ONT", value: s.serialONT },
         ];
-      case "REDES COMPARTIDAS":
+      case "FTTO":
         return [
           { label: "NOMBRE CLIENTE", value: s.name },
           { label: "TIPO CLIENTE", value: loadingTipoCliente ? "Cargando..." : tipoClienteNombre || "—" },

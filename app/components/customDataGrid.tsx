@@ -382,7 +382,7 @@ export default function CustomDataGrid({
           <MenuItem value="RBS">RBS</MenuItem>
           <MenuItem value="METROLAN">METROLAN</MenuItem>
           <MenuItem value="DOG">DOG</MenuItem>
-          <MenuItem value="REDES COMPARTIDAS">REDES COMPARTIDAS</MenuItem>
+          <MenuItem value="FTTO">FTTO</MenuItem>
         </TextField>
       );
     }

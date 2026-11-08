@@ -11,6 +11,22 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import { MiscellaneousItem } from "../miscellaneous/useMiscellaneous";
 import { getNivelSeveridadConfig } from "app/utils/auxiliares";
 
+const COLUMN_NAMES: Record<string, string> = {
+  CIUDAD: "Ciudad",
+  LOCALIDAD: "Localidad",
+  CATEGORIA_RED: "Categoría de Red",
+  SUBCATEGORIA: "Subcategoría",
+  DETALLE: "Detalle",
+  CAUSA_RAIZ: "Causa Raíz",
+  SOLUCION_CASO: "Solución",
+  TIPO_CLIENTE: "Tipo de Cliente",
+  GRUPO_DESTINO: "Grupo Destino",
+  ULTIMA_MILLA: "Nombre del Última Milla",
+  PROVEEDOR: "Nombre del Proveedor",
+  INCIDENT_TYPE: "Tipo de Incidencia",
+  NETWORK_CATEGORY: "Categoría de Red",
+};
+
 interface MiscellaneousTableProps {
   rows: MiscellaneousItem[];
   localidades: MiscellaneousItem[];
@@ -71,12 +87,16 @@ export const MiscellaneousTable = ({
       return { bgcolor: "#fff3e0", color: "#e65100", icon: "⚠️" };
     }
     if (tipoUpper.includes("MASIVA")) {
-      return { bgcolor: "#ffebee", color: "#c62828", icon: "🚨" };
+      return { bgcolor: "#ffebee", color: "#c62828", icon: "" };
     }
     if (tipoUpper.includes("MANTENIMIENTO")) {
-      return { bgcolor: "#e3f2fd", color: "#1565c0", icon: "🔧" };
+      return { bgcolor: "#e3f2fd", color: "#1565c0", icon: "" };
     }
     return { bgcolor: "#f5f5f5", color: "#616161", icon: "ℹ️" };
+  };
+
+  const getColumnName = (categoria: string) => {
+    return COLUMN_NAMES[categoria] || "Valor";
   };
 
   const columns = useMemo((): GridColDef[] => {
@@ -84,7 +104,7 @@ export const MiscellaneousTable = ({
 
     baseColumns.push({
       field: "valor",
-      headerName: "Ciudad",
+      headerName: getColumnName(currentCategoria), 
       flex: 1,
       minWidth: 200,
       renderCell: (params) => (
@@ -387,7 +407,6 @@ export const MiscellaneousTable = ({
         ),
       });
     } else if (currentCategoria === "CAUSA_RAIZ") {
-      // ✅ NUEVA COLUMNA: Categorías Asociadas
       baseColumns.push({
         field: "categoriasAsociadas",
         headerName: "Categorías Asociadas",
@@ -516,7 +535,6 @@ export const MiscellaneousTable = ({
           );
         },
       });
-      // ✅ ELIMINADA la columna de "Estado" (activo) específicamente para CAUSA_RAIZ
     } else if (currentCategoria === "SOLUCION_CASO") {
       baseColumns.push({
         field: "causaRaizAsociada",

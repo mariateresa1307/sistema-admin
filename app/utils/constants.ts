@@ -12,7 +12,7 @@ export const TIPO_SERVICIO = {
   DOG: "DOG",
   METROLAN: "METROLAN",
   RBS: "RBS",
-  REDES_COMPARTIDAS: "REDES COMPARTIDAS",
+  FTTO: "FTTO",
   ENLACE: "ENLACE"
 }
 
@@ -27,7 +27,6 @@ export const ESCALADO_POR = {
 
 
 export const PRODUCTO = [
-  "FiberPonBusinessPlus100Mb",
   "FiberPonBusinessPlus200Mb",
   "FiberPonBusinessPlus400Mb",
   "FiberPonBusinessPlus600Mb",

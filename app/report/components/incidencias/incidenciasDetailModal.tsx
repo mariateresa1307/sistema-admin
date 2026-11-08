@@ -72,7 +72,7 @@ export const IncidenciasDetailModal = ({ open, onClose, incidencia }: Props) => 
         push('ID Circuito', ticket.id_circuito);
         push('Proveedor', resolveValue(ticket.proveedorDelServicioCompartido));
         break;
-      case 'REDES COMPARTIDAS':
+      case 'FTTO':
         push('Contrato', ticket.contrato);
         push('Proveedor', resolveValue(ticket.proveedorDelServicioCompartido));
         break;

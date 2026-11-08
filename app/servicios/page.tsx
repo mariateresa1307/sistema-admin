@@ -172,7 +172,7 @@ export default function RBSPage() {
       case "RBS": return `ID RBS: ${row.idRBS} | Serial: ${row.serialONT || "-"}`;
       case "ENLACE": return `ID: ${row.id_circuito} | Proveedor: ${getTipoClienteNombre(row.tipoCliente)}`;
       case "DOG": return `Circuito: ${row.id_circuito} | Contrato: ${row.contrato || "-"}`;
-      case "REDES COMPARTIDAS": return `VLAN: ${row.vlan} | Equipo: ${row.nodoA || "-"}`;
+      case "FTTO": return `VLAN: ${row.vlan} | Equipo: ${row.nodoA || "-"}`;
       default: return "N/A";
     }
   }, [getTipoClienteNombre]);
