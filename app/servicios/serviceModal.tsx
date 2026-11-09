@@ -246,8 +246,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
       check(nodoBValue, "nodoB", "Nodo B");
       check(nodoOLTValue, "nodoOLT", "Nodo OLT");
     } else if (tipoServicio === "FTTO") {
-      check(nodoAValue, "nodoA", "Nodo A");
-      check(nodoBValue, "nodoB", "Nodo B");
+     
       check(nodoOLTValue, "nodoOLT", "Nodo OLT");
       check(vlanValue, "vlan", "VLAN");
       check(productoSeleccionado, "producto", "Producto");
@@ -574,8 +573,8 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
                 <>
                   <Grid size={6}>{renderLabel("IP NETUNO")}<TextField name="ipNetuno" fullWidth value={ipNetuno} onChange={handleGenericChange(setIpNetuno, "ipNetuno")} size="small" error={getErrorProp("ipNetuno")} helperText={getErrorProp("ipNetuno") ? "Obligatorio" : ""} /></Grid>
                   <Grid size={6}>{renderLabel("Contrato")}<TextField name="contrato" fullWidth value={contratoValue} onChange={handleGenericChange(setContratoValue, "contrato")} size="small" /></Grid>
-                  <Grid size={6}>{renderLabel("Nodo A", true)}<TextField name="nodoA" fullWidth value={nodoAValue} onChange={handleGenericChange(setNodoAValue, "nodoA")} size="small" error={getErrorProp("nodoA")} helperText={getErrorProp("nodoA") ? "Obligatorio" : "💡 Preferiblemente la troncal"} sx={{ '& .MuiFormHelperText-root:not(.Mui-error)': { bgcolor: '#f0f9ff', color: '#0369a1', px: 1, py: 0.5, borderRadius: '4px', fontSize: '0.72rem', fontWeight: 500, mt: 0.5 } }} /></Grid>
-                  <Grid size={6}>{renderLabel("Nodo B", true)}<TextField name="nodoB" fullWidth value={nodoBValue} onChange={handleGenericChange(setNodoBValue, "nodoB")} size="small" error={getErrorProp("nodoB")} helperText={getErrorProp("nodoB") ? "Obligatorio" : "💡 Preferiblemente equipo de entrega"} sx={{ '& .MuiFormHelperText-root:not(.Mui-error)': { bgcolor: '#fffb001c', color: '#979090', px: 1, py: 0.5, borderRadius: '4px', fontSize: '0.72rem', fontWeight: 500, mt: 0.5 } }} /></Grid>
+                  <Grid size={6}>{renderLabel("Nodo A")}<TextField name="nodoA" fullWidth value={nodoAValue} onChange={handleGenericChange(setNodoAValue, "nodoA")} size="small" error={getErrorProp("nodoA")} helperText={getErrorProp("nodoA") ? "Obligatorio" : "💡 Preferiblemente la troncal"} sx={{ '& .MuiFormHelperText-root:not(.Mui-error)': { bgcolor: '#f0f9ff', color: '#0369a1', px: 1, py: 0.5, borderRadius: '4px', fontSize: '0.72rem', fontWeight: 500, mt: 0.5 } }} /></Grid>
+                  <Grid size={6}>{renderLabel("Nodo B")}<TextField name="nodoB" fullWidth value={nodoBValue} onChange={handleGenericChange(setNodoBValue, "nodoB")} size="small" error={getErrorProp("nodoB")} helperText={getErrorProp("nodoB") ? "Obligatorio" : "💡 Preferiblemente equipo de entrega"} sx={{ '& .MuiFormHelperText-root:not(.Mui-error)': { bgcolor: '#fffb001c', color: '#979090', px: 1, py: 0.5, borderRadius: '4px', fontSize: '0.72rem', fontWeight: 500, mt: 0.5 } }} /></Grid>
                   <Grid size={6}>{renderLabel("Nodo OLT", true)}<TextField name="oltnode" fullWidth value={nodoOLTValue} onChange={handleGenericChange(setNodoOLTValue, "nodoOLT")} size="small" error={getErrorProp("nodoOLT")} helperText={getErrorProp("nodoOLT") ? "Obligatorio" : ""} /></Grid>
                   <Grid size={6}>{renderLabel("VLAN", true)}<TextField name="vlan" fullWidth value={vlanValue} onChange={(e) => { setVlanValue(e.target.value.replace(/[^0-9-]/g, '')); setFieldErrors(prev => ({ ...prev, vlan: false })); }} size="small" inputProps={{ maxLength: 20 }} error={getErrorProp("vlan")} helperText={getErrorProp("vlan") ? "Obligatorio" : ""} /></Grid>
                   <Grid size={6}>{renderLabel("Serial ONT")}<TextField name="serialONT" fullWidth value={serialONTValue} onChange={handleGenericChange(setSerialONTValue, "serialONT")} size="small" /></Grid>
