@@ -29,7 +29,7 @@ export default function ProtectedRoute({ children, module }: ProtectedRouteProps
       }
       
       if (!hasPermission(module)) {
-        router.push("/home");
+        router.push("/dashboard");
         return;
       }
       

@@ -45,7 +45,7 @@ type UserData = {
 };
 
 const MENU_ITEMS: MenuItemType[] = [
-  { label: "Dashboard", path: "/home", icon: <Dashboard />, module: "dashboard" },
+  { label: "Dashboard", path: "/dashboard", icon: <Dashboard />, module: "dashboard" },
    { label: "Tickets", path: "/tickets", icon: <ConfirmationNumberIcon />, module: "tickets" },
   {
     label: "Gestión", path: "#", icon: <People />,

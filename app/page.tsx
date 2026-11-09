@@ -91,7 +91,7 @@ export default function LoginPage() {
           localStorage.setItem('userData', JSON.stringify(userData));
         }
         
-        window.location.href = '/home';
+        window.location.href = '/dashboard';
       }
     } catch (error: any) {
       console.error("Error de login:", error);
