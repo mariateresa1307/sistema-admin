@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import dayjs, { Dayjs } from 'dayjs';
 import { Box, Button, Alert, Typography } from '@mui/material';
 import { Download as DownloadIcon } from '@mui/icons-material';
@@ -39,16 +39,38 @@ export const IncidenciasPorServicio = () => {
   const [fechaInicio, setFechaInicio] = useState<Dayjs | null>(null);
   const [fechaFin, setFechaFin] = useState<Dayjs | null>(null);
 
+  const setDefaultMonthRange = useCallback(() => {
+    const start = dayjs().startOf('month');
+    const end = dayjs().endOf('month');
+    setFechaInicio(start);
+    setFechaFin(end);
+    return { start, end };
+  }, []);
+
   const handleFiltroPrincipalChange = useCallback(
     (value: string) => {
       setFiltroPrincipal(value);
+      
+      //  Al cambiar el filtro principal, establecer el rango del mes actual
+      const { start, end } = setDefaultMonthRange();
+      
       if (value === 'tipoServicio') {
-        setFilters((prev) => ({ ...prev, proveedor: '' }));
+        setFilters((prev) => ({ 
+          ...prev, 
+          proveedor: '',
+          fechaInicio: start.format('YYYY-MM-DD'),
+          fechaFin: end.format('YYYY-MM-DD'),
+        }));
       } else if (value === 'proveedor') {
-        setFilters((prev) => ({ ...prev, tipoServicio: '' }));
+        setFilters((prev) => ({ 
+          ...prev, 
+          tipoServicio: '',
+          fechaInicio: start.format('YYYY-MM-DD'),
+          fechaFin: end.format('YYYY-MM-DD'),
+        }));
       }
     },
-    [setFilters],
+    [setFilters, setDefaultMonthRange],
   );
 
   const handleTipoServicioChange = useCallback(
@@ -75,8 +97,6 @@ const handleMesChange = useCallback(
       ...prev,
       fechaInicio: fechaInicio ? fechaInicio.format('YYYY-MM-DD') : null,
       fechaFin: fechaFin ? fechaFin.format('YYYY-MM-DD') : null,
-      // ✅ CRUCIAL: Si hay rango de fechas, anulamos 'mes' para que el backend use el rango
-      mes: (fechaInicio && fechaFin) ? null : prev.mes,
     }));
     
     loadData();
@@ -84,19 +104,28 @@ const handleMesChange = useCallback(
 
   const handleClearFilters = useCallback(() => {
     setFiltroPrincipal('');
-    setFechaInicio(null);
-    setFechaFin(null);
+    //  Resetear al rango del mes actual
+    const { start, end } = setDefaultMonthRange();
+    
     setFilters({ 
       tipoServicio: '', 
       proveedor: '', 
-      fechaInicio: null, 
-      fechaFin: null,
-      mes: dayjs(),
+      mes: null,
+      fechaInicio: start.format('YYYY-MM-DD'), 
+      fechaFin: end.format('YYYY-MM-DD'),
     });
     loadData();
-  }, [setFilters, loadData]);
+  }, [setFilters, loadData, setDefaultMonthRange]);
 
-
+   useEffect(() => {
+    const { start, end } = setDefaultMonthRange();
+    setFilters(prev => ({
+      ...prev,
+      fechaInicio: start.format('YYYY-MM-DD'),
+      fechaFin: end.format('YYYY-MM-DD'),
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleExport = useCallback(async () => {
     setExportando(true);
@@ -112,18 +141,22 @@ const handleMesChange = useCallback(
         torta: torta ? `${torta.length} chars` : 'undefined',
       });
 
-      const periodo = filters.fechaInicio && filters.fechaFin 
+      const periodoStr = filters.fechaInicio && filters.fechaFin 
         ? `${filters.fechaInicio}_a_${filters.fechaFin}` 
-        : (filters.mes ? filters.mes.format('YYYY-MM') : 'periodo');
+        : 'periodo_desconocido';
+
+      // Nota: Las funciones de exportación pueden esperar un objeto Dayjs en 'mes', 
+      // le pasamos fechaInicio como fallback para mantener compatibilidad sin errores.
+      const fechaParaExport = filters.fechaInicio ? dayjs(filters.fechaInicio) : dayjs();
 
       if (filters.proveedor) {
-        await exportIncidenciasPorProveedorCsv(dataPorProveedor, filters.mes ?? dayjs(), {
+        await exportIncidenciasPorProveedorCsv(dataPorProveedor, fechaParaExport, {
           barras,
           torta,
           serviciosAfectados: barData.length,
         });
       } else {
-        await exportIncidenciasCsv(data, filters.mes ?? dayjs(), {
+        await exportIncidenciasCsv(data, fechaParaExport, {
           barras,
           torta,
           serviciosAfectados: barData.length,
@@ -134,18 +167,18 @@ const handleMesChange = useCallback(
     } finally {
       setExportando(false);
     }
-  }, [data, dataPorProveedor, filters.mes, filters.proveedor,
+  }, [data, dataPorProveedor, filters.fechaInicio, filters.fechaFin, filters.proveedor,
     servicioChartData, servicioChartDataPorProveedor,
     tipoServicioChartData, tipoServicioChartDataPorProveedor]);
 
   return (
-    <Box>
+        <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 2 }}>
         <Typography variant="h6" sx={{ fontWeight: 700, color: '#080769' }}>
           {filters.proveedor ? `Incidencias por Proveedor` : 'Incidencias por Servicio'}
         </Typography>
 
-       <Button
+        <Button
           variant="contained"
           startIcon={<DownloadIcon />}
           onClick={handleExport}
@@ -164,20 +197,19 @@ const handleMesChange = useCallback(
 
       <IncidenciasFilters
         filtroPrincipal={filtroPrincipal}
+        mes={filters.mes}
         tipoServicio={filters.tipoServicio}
         proveedor={filters.proveedor}
-        mes={filters.mes}
         loading={loading}
         proveedoresList={proveedores}
         onFiltroPrincipalChange={handleFiltroPrincipalChange}
         onTipoServicioChange={handleTipoServicioChange}
         onProveedorChange={handleProveedorChange}
-        onMesChange={handleMesChange}
         fechaInicio={fechaInicio}
         fechaFin={fechaFin}
         onFechaInicioChange={setFechaInicio}
         onFechaFinChange={setFechaFin}
-       onRefresh={handleApplyFilters} 
+        onRefresh={handleApplyFilters} 
         onClear={handleClearFilters}
       />
 

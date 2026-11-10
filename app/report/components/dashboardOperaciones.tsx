@@ -31,20 +31,21 @@ const CARDS_SOLO_GRAFICA = [
 
 export const DashboardOperaciones = () => {
   const [openModal, setOpenModal] = useState(false);
+
   const [filters, setFilters] = useState({
     grupo: 'A',
     plataforma: 'TODAS',
     cliente: 'TODOS',
-    mes: dayjs(),
+    fechaInicio: dayjs().startOf('month') as Dayjs | null,
+    fechaFin: dayjs().endOf('month') as Dayjs | null,
   });
+
   const [searchedGrupo, setSearchedGrupo] = useState<string | null>(null);
   const [reportPreview, setReportPreview] = useState<ReportePreview>({});
-  
-  // ✅ ESTADOS PARA DATOS DINÁMICOS
+  // ESTADOS PARA DATOS DINÁMICOS
   const [categoriasRed, setCategoriasRed] = useState<{ _id: string; valor: string }[]>([]);
   const [tiposCliente, setTiposCliente] = useState<{ _id: string; valor: string }[]>([]);
-
-  // ✅ CARGAR CATEGORÍAS Y TIPOS DE CLIENTE DESDE MISCELLANEOUS
+  // CARGAR CATEGORÍAS Y TIPOS DE CLIENTE DESDE MISCELLANEOUS
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -84,22 +85,25 @@ export const DashboardOperaciones = () => {
   };
 
   const handleSearchFilter = () => {
-    const mesString = dayjs(filters.mes).format('YYYY-MM');
     setReportPreview({});
     setSearchedGrupo(filters.grupo);
-    getReportPreview({ ...filters, mes: mesString }).then((resultReport) => {
+    
+    const payload = {
+      ...filters,
+      fechaInicio: filters.fechaInicio ? dayjs(filters.fechaInicio).format('YYYY-MM-DD') : undefined,
+      fechaFin: filters.fechaFin ? dayjs(filters.fechaFin).format('YYYY-MM-DD') : undefined,
+    };
+    
+    getReportPreview(payload).then((resultReport) => {
       setReportPreview(resultReport.data || {});
     });
   };
 
-  const handleMesChange = (newValue: Dayjs | null) => {
-    if (newValue) {
-      updateFilter({ mes: newValue });
-    }
-  };
-
   const handleExportar = async () => {
     try {
+      // ✅ Usamos fechaInicio como 'mes' para cumplir con la interfaz de las funciones de exportación
+      const mesParaExport = filters.fechaInicio ?? dayjs();
+
       if (filters.grupo === 'A') {
         const ticketsDetalle = (reportPreview as any).ticketsDetalle || [];
         if (ticketsDetalle.length === 0) {
@@ -108,7 +112,8 @@ export const DashboardOperaciones = () => {
           }));
           return;
         }
-        await exportReporteGrupoAExcel({ reportPreview, mes: filters.mes, tickets: ticketsDetalle });
+        await exportReporteGrupoAExcel({ reportPreview, mes: mesParaExport, tickets: ticketsDetalle });
+        
       } else if (filters.grupo === 'B') {
         const tiempoPorServicio = (reportPreview as any).tiempoPorServicio || [];
         const fallasRecurrentes = (reportPreview as any).fallasRecurrentes || [];
@@ -119,7 +124,8 @@ export const DashboardOperaciones = () => {
           }));
           return;
         }
-        await exportReporteGrupoBExcel({ reportPreview, mes: filters.mes, tiempoPorServicio, fallasRecurrentes, ticketsDetalle });
+        await exportReporteGrupoBExcel({ reportPreview, mes: mesParaExport, tiempoPorServicio, fallasRecurrentes, ticketsDetalle });
+        
       } else if (filters.grupo === 'C') {
         const ticketsPorOperador = (reportPreview as any).ticketsPorOperador || [];
         const promedioPorOperador = (reportPreview as any).promedioPorOperador || 0;
@@ -131,7 +137,8 @@ export const DashboardOperaciones = () => {
           }));
           return;
         }
-        await exportReporteGrupoCExcel({ reportPreview, mes: filters.mes, ticketsPorOperador, promedioPorOperador, cantidadOperadores });
+        await exportReporteGrupoCExcel({ reportPreview, mes: mesParaExport, ticketsPorOperador, promedioPorOperador, cantidadOperadores });
+        
       } else if (filters.grupo === 'D') {
         const incidentesMayoresPorMes = (reportPreview as any).incidentesMayoresPorMes || [];
         const rankingServicios = (reportPreview as any).rankingServicios || [];
@@ -141,7 +148,8 @@ export const DashboardOperaciones = () => {
           }));
           return;
         }
-        await exportReporteGrupoDExcel({ reportPreview, mes: filters.mes });
+        await exportReporteGrupoDExcel({ reportPreview, mes: mesParaExport });
+        
       } else {
         window.dispatchEvent(new CustomEvent('app-notification', {
           detail: { message: `La exportación para el Grupo ${filters.grupo} aún no está disponible`, severity: 'info' },
@@ -168,7 +176,7 @@ export const DashboardOperaciones = () => {
     D: <GrupoD reportPreview={reportPreview ?? {}} />,
   };
 
-  return (
+   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Box>
@@ -194,7 +202,9 @@ export const DashboardOperaciones = () => {
 
       <Paper elevation={0} sx={{ p: 3, mb: 4, border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
         <Grid container spacing={2} alignItems="center">
-          <Grid size={{ xs: 12, md: 12, lg: 3 }}>
+          
+          {/* 1. Grupo KPI */}
+          <Grid size={{ xs: 12, md: 6, lg: 2 }}>
             <TextField
               fullWidth
               label="Grupo KPI"
@@ -210,8 +220,8 @@ export const DashboardOperaciones = () => {
             </TextField>
           </Grid>
 
-          {/* ✅ PLATAFORMA - Usa categorías dinámicas */}
-          <Grid size={{ xs: 12, md: 12, lg: 2 }}>
+          {/* 2. Plataforma */}
+          <Grid size={{ xs: 12, md: 6, lg: 2 }}>
             <TextField
               fullWidth
               label="Plataforma"
@@ -229,8 +239,8 @@ export const DashboardOperaciones = () => {
             </TextField>
           </Grid>
 
-          {/* ✅ TIPO CLIENTE - Usa tipos dinámicos de Miscellaneous */}
-          <Grid size={{ xs: 12, md: 12, lg: 2 }}>
+          {/* 3. Tipo Cliente */}
+          <Grid size={{ xs: 12, md: 6, lg: 2 }}>
             <TextField
               fullWidth
               label="Tipo cliente"
@@ -248,25 +258,37 @@ export const DashboardOperaciones = () => {
             </TextField>
           </Grid>
 
-          <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
+          {/* 4. Fecha Inicio */}
+          <Grid size={{ xs: 12, sm: 6, md: 6, lg: 2 }}>
             <LocalizationProvider dateAdapter={AdapterDayjs}>
               <DatePicker
-                label="Mes de Incidencias"
-                value={filters.mes}
-                onChange={handleMesChange}
-                views={['year', 'month']}
-                format="MMMM YYYY"
+                label="Fecha Inicio"
+                value={filters.fechaInicio}
+                onChange={(newValue) => updateFilter({ fechaInicio: newValue })}
+                format="DD/MM/YYYY"
                 slotProps={{
-                  textField: {
-                    size: 'small',
-                    fullWidth: true,
-                    sx: { bgcolor: 'white', borderRadius: 2 }
-                  }
+                  textField: { size: 'small', fullWidth: true, sx: { bgcolor: 'white', borderRadius: 2 } }
                 }}
               />
             </LocalizationProvider>
           </Grid>
 
+          {/* 5. Fecha Fin */}
+          <Grid size={{ xs: 12, sm: 6, md: 6, lg: 2 }}>
+            <LocalizationProvider dateAdapter={AdapterDayjs}>
+              <DatePicker
+                label="Fecha Fin"
+                value={filters.fechaFin}
+                onChange={(newValue) => updateFilter({ fechaFin: newValue })}
+                format="DD/MM/YYYY"
+                slotProps={{
+                  textField: { size: 'small', fullWidth: true, sx: { bgcolor: 'white', borderRadius: 2 } }
+                }}
+              />
+            </LocalizationProvider>
+          </Grid>
+
+          {/* 6. Botón Buscar */}
           <Grid size={{ xs: 12, md: 12, lg: 2 }} sx={{ display: 'flex', justifyContent: 'center' }}>
             <IconButton
               size="large"
@@ -304,8 +326,13 @@ export const DashboardOperaciones = () => {
         <DialogTitle>Exportar Reporte Filtrado</DialogTitle>
         <DialogContent dividers>
           <Typography>
-            Se exportarán los datos del mes <b>{dayjs(filters.mes).format('MMMM YYYY')}</b> 
-            aplicando los filtros seleccionados para el <b>Grupo {filters.grupo}</b>.
+            Se exportarán los datos del período{' '}
+            <b>
+              {filters.fechaInicio && filters.fechaFin
+                ? `${dayjs(filters.fechaInicio).format('DD/MM/YYYY')} al ${dayjs(filters.fechaFin).format('DD/MM/YYYY')}`
+                : 'seleccionado'}
+            </b>{' '}
+            aplicando los filtros para el <b>Grupo {filters.grupo}</b>.
           </Typography>
         </DialogContent>
         <DialogActions>

@@ -19,11 +19,14 @@ const borde = (): Partial<ExcelJS.Borders> => {
   return { top: side, left: side, bottom: side, right: side };
 };
 
+// ✅ INTERFAZ ACTUALIZADA CON CIUDAD Y ESTADO
 interface TicketResumen {
   caseNumber: string;
   tipoIncidencia: string;
   networkCategory: string;
   tipoCliente: string;
+  city: string;          // ✅ NUEVO
+  estado: string;        // ✅ NUEVO
   horaInicioFalla: string;
   horaCierre: string;
   duracion: string;
@@ -56,23 +59,25 @@ export const exportReporteGrupoAExcel = async ({
     views: [{ showGridLines: false }],
   });
 
-  // ✅ 11 COLUMNAS (no 10) con anchos adecuados
+  // ✅ 13 COLUMNAS (A-M) con anchos adecuados
   ws.columns = [
-    { key: 'ticket', width: 18 },
-    { key: 'c2', width: 22 },
-    { key: 'c3', width: 20 },
-    { key: 'c4', width: 22 },
-    { key: 'c5', width: 22 },
-    { key: 'c6', width: 22 },
-    { key: 'c7', width: 18 },
-    { key: 'c8', width: 28 },
-    { key: 'c9', width: 30 },
-    { key: 'c10', width: 35 }, // ✅ OPERADOR RESPONSABLE (más ancho)
-    { key: 'c11', width: 30 }, // ✅ OPERADOR ASIGNADO
+    { key: 'c1', width: 16 },   // N° TICKET
+    { key: 'c2', width: 18 },   // TIPO INCIDENCIA
+    { key: 'c3', width: 18 },   // PLATAFORMA
+    { key: 'c4', width: 20 },   // SERVICIO
+    { key: 'c5', width: 18 },   // CIUDAD
+    { key: 'c6', width: 18 },   // LOCALIDAD
+    { key: 'c7', width: 18 },   // INICIO FALLA
+    { key: 'c8', width: 18 },   // CIERRE
+    { key: 'c9', width: 14 },   // DURACIÓN
+    { key: 'c10', width: 24 },  // CAUSA RAÍZ
+    { key: 'c11', width: 24 },  // SOLUCIÓN
+    { key: 'c12', width: 28 },  // OPERADOR RESPONSABLE
+    { key: 'c13', width: 28 },  // OPERADOR ASIGNADO
   ];
 
   // ============== TÍTULO ==============
-  ws.mergeCells('A1:K1'); // ✅ 11 columnas (A-K)
+  ws.mergeCells('A1:M1'); // ✅ 13 columnas (A-M)
   const titulo = ws.getCell('A1');
   titulo.value = 'REPORTE OPERACIONAL - GRUPO A: GESTIÓN DE FALLAS';
   titulo.font = { bold: true, size: 16, color: { argb: 'FFFFFFFF' } };
@@ -80,7 +85,7 @@ export const exportReporteGrupoAExcel = async ({
   titulo.alignment = { horizontal: 'center', vertical: 'middle' };
   ws.getRow(1).height = 34;
 
-  ws.mergeCells('A2:K2'); // ✅ 11 columnas
+  ws.mergeCells('A2:M2'); // ✅ 13 columnas
   const sub = ws.getCell('A2');
   sub.value = `Mes: ${mes.format('MMMM YYYY').toUpperCase()}   •   Generado: ${dayjs().format('DD/MM/YYYY HH:mm')}`;
   sub.font = { italic: true, size: 10, color: { argb: GRIS } };
@@ -124,7 +129,7 @@ export const exportReporteGrupoAExcel = async ({
 
   // ============== SECCIÓN DISTRIBUCIÓN ==============
   const tituloSeccion = (titulo: string, fila: number) => {
-    ws.mergeCells(fila, 1, fila, 11); // ✅ 11 columnas
+    ws.mergeCells(fila, 1, fila, 13); // ✅ 13 columnas
     const cell = ws.getCell(fila, 1);
     cell.value = titulo;
     cell.font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
@@ -133,8 +138,10 @@ export const exportReporteGrupoAExcel = async ({
     ws.getRow(fila).height = 24;
   };
 
+  // ✅ HEADERS ACTUALIZADOS CON CIUDAD Y LOCALIDAD
   const HEADERS_DETALLE = [
     'N° TICKET', 'TIPO INCIDENCIA', 'PLATAFORMA', 'SERVICIO',
+    'CIUDAD', 'LOCALIDAD',
     'INICIO FALLA', 'CIERRE', 'DURACIÓN',
     'CAUSA RAÍZ', 'SOLUCIÓN', 'OPERADOR RESPONSABLE', 'OPERADOR ASIGNADO'
   ];
@@ -174,6 +181,8 @@ export const exportReporteGrupoAExcel = async ({
         row.tipoIncidencia,
         row.networkCategory,
         row.tipoCliente,
+        row.city || 'N/A',               // ✅ CIUDAD
+        row.estado || 'N/A',             // ✅ LOCALIDAD
         row.horaInicioFalla ? dayjs(row.horaInicioFalla).format('DD/MM/YYYY HH:mm') : 'N/A',
         row.horaCierre ? dayjs(row.horaCierre).format('DD/MM/YYYY HH:mm') : 'N/A',
         row.duracion || 'N/A',
@@ -184,17 +193,17 @@ export const exportReporteGrupoAExcel = async ({
       ];
       r.eachCell((c, colNumber) => {
         c.border = borde();
-        c.alignment = colNumber >= 5 && colNumber <= 7
+        c.alignment = colNumber >= 7 && colNumber <= 9
           ? { horizontal: 'center', vertical: 'middle' }
           : { vertical: 'middle', wrapText: true };
         if (idx % 2 === 1) c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ZEBRA } };
       });
-      r.height = 40; // ✅ Altura fija para que se vean los nombres completos
+      r.height = 40;
     });
 
     const totalRow = ws.getRow(filaInicio + 2 + filtrados.length);
-    ws.mergeCells(totalRow.number, 1, totalRow.number, 10); // ✅ Merge de 1 a 10
-    for (let i = 1; i <= 11; i++) { // ✅ 11 columnas
+    ws.mergeCells(totalRow.number, 1, totalRow.number, 12); // ✅ Merge de la columna 1 a la 12
+    for (let i = 1; i <= 13; i++) { // ✅ 13 columnas
       const cell = totalRow.getCell(i);
       cell.border = borde();
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colorTipo } };
@@ -203,7 +212,7 @@ export const exportReporteGrupoAExcel = async ({
     totalLabel.value = `TOTAL ${tipo}`;
     totalLabel.font = { bold: true, size: 11, color: { argb: 'FFFFFFFF' } };
     totalLabel.alignment = { horizontal: 'right', vertical: 'middle' };
-    const totalValue = totalRow.getCell(11); // ✅ Columna 11
+    const totalValue = totalRow.getCell(13); // ✅ Columna 13 para el total
     totalValue.value = filtrados.length;
     totalValue.font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
     totalValue.alignment = { horizontal: 'center', vertical: 'middle' };
@@ -256,7 +265,7 @@ export const exportReporteGrupoAExcel = async ({
     { label: 'Mantenimiento', valor: mantCount, color: AMARILLO_TORTA },
   ];
 
-  ws.mergeCells(currentRow, 1, currentRow, 11);
+  ws.mergeCells(currentRow, 1, currentRow, 13); // ✅ 13 columnas
   const tituloTorta = ws.getCell(currentRow, 1);
   tituloTorta.value = 'Distribución por Tipo de Incidencia';
   tituloTorta.font = { bold: true, size: 11, color: { argb: AZUL } };
@@ -303,7 +312,7 @@ export const exportReporteGrupoAExcel = async ({
   currentRow += distribucion.length + 2;
 
   // ---- GRÁFICA 2: MTTR PLATAFORMA ----
-  ws.mergeCells(currentRow, 1, currentRow, 11);
+  ws.mergeCells(currentRow, 1, currentRow, 13); // ✅ 13 columnas
   const tituloMttrPlat = ws.getCell(currentRow, 1);
   tituloMttrPlat.value = 'MTTR por Plataforma';
   tituloMttrPlat.font = { bold: true, size: 11, color: { argb: AZUL } };
@@ -319,7 +328,7 @@ export const exportReporteGrupoAExcel = async ({
     c.alignment = { horizontal: 'center', vertical: 'middle' };
     c.border = borde();
   });
-  ws.getColumn(3).width = 50; // ✅ Más ancho para la barra
+  ws.getColumn(3).width = 50;
   currentRow += 1;
 
   const mttrPlataforma = reportPreview.mttrPlataforma || [];
@@ -338,7 +347,7 @@ export const exportReporteGrupoAExcel = async ({
 
     r.getCell(3).border = borde();
     const pct = maxMttrPlat > 0 ? Math.round(((item.value || 0) / maxMttrPlat) * 100) : 0;
-    dibujarBarra(currentRow + idx, 3, pct, 'FF1976D2', 40); // ✅ 40 bloques
+    dibujarBarra(currentRow + idx, 3, pct, 'FF1976D2', 40);
 
     if (idx % 2 === 1) {
       for (let i = 1; i <= 3; i++) {
@@ -349,7 +358,7 @@ export const exportReporteGrupoAExcel = async ({
   currentRow += Math.min(mttrPlataforma.length, 8) + 2;
 
   // ---- GRÁFICA 3: MTTR SERVICIO ----
-  ws.mergeCells(currentRow, 1, currentRow, 11);
+  ws.mergeCells(currentRow, 1, currentRow, 13); // ✅ 13 columnas
   const tituloMttrServ = ws.getCell(currentRow, 1);
   tituloMttrServ.value = 'MTTR por Tipo de Cliente';
   tituloMttrServ.font = { bold: true, size: 11, color: { argb: AZUL } };
