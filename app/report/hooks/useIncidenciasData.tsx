@@ -6,9 +6,6 @@ import { Service } from 'app/utils/types';
 
 dayjs.extend(duration);
 
-/* ============================================================ */
-/*  TIPOS                                                        */
-/* ============================================================ */
 export interface TicketAsociado {
   _id: string;
   caseNumber: string;
@@ -77,7 +74,9 @@ export interface TipoServicioChartData {
 interface IncidenciaFilters {
   tipoServicio: string;
   proveedor: string;
-  mes: Dayjs;
+  mes: Dayjs | null;
+  fechaInicio?: string | null;
+  fechaFin?: string | null;
 }
 
 interface UseIncidenciasDataReturn {
@@ -98,11 +97,6 @@ interface UseIncidenciasDataReturn {
   proveedores: any[];
 }
 
-/* ============================================================ */
-/*  HELPERS PUROS (sin efectos secundarios)                      */
-/* ============================================================ */
-
-/** Extrae datos planos de una respuesta API (maneja varios formatos). */
 const extractData = <T = any>(res: any): T[] => {
   if (!res?.data) return [];
   if (Array.isArray(res.data)) return res.data;
@@ -111,7 +105,6 @@ const extractData = <T = any>(res: any): T[] => {
   return [];
 };
 
-/** Construye un Map id → valor a partir de datos miscellaneous. */
 const buildMap = (data: any[]): Map<string, string> => {
   const map = new Map<string, string>();
   data.forEach((item: any) => {
@@ -120,7 +113,6 @@ const buildMap = (data: any[]): Map<string, string> => {
   return map;
 };
 
-/** Calcula duración legible entre dos fechas. */
 const calcularDuracion = (inicio: any, fin: any): string => {
   if (!inicio || !fin) return 'N/A';
   const i = dayjs(inicio);
@@ -139,22 +131,19 @@ const calcularDuracion = (inicio: any, fin: any): string => {
   return `${diffMins}min`;
 };
 
-/** Resuelve el nombre del servicio desde el objeto o fallback. */
 const getServicioNombre = (servicio: any): string =>
   servicio?.name || servicio?.id_circuito || servicio?.id_netuno || 'Servicio desconocido';
 
-/** Resuelve el tipo de servicio con fallback seguro. */
 const getTipoServicio = (servicio: any): string =>
   servicio?.tipoServicio?.trim() || 'Sin Tipo';
 
-/* ============================================================ */
-/*  HOOK PRINCIPAL                                               */
-/* ============================================================ */
 export const useIncidenciasData = (): UseIncidenciasDataReturn => {
   const [filters, setFilters] = useState<IncidenciaFilters>({
     tipoServicio: '',
     proveedor: '',
     mes: dayjs(),
+    fechaInicio: null,
+    fechaFin: null,
   });
   const [data, setData] = useState<IncidenciaPorServicio[]>([]);
   const [dataPorProveedor, setDataPorProveedor] = useState<IncidenciaPorProveedor[]>([]);
@@ -192,9 +181,29 @@ export const useIncidenciasData = (): UseIncidenciasDataReturn => {
       const causasMap = buildMap(extractData(causasRes));
       const solucionesMap = buildMap(extractData(solucionesRes));
 
-      const tickets = allTickets.filter((t) =>
-        dayjs(t.createdAt).isSame(filters.mes, 'month'),
-      );
+      // Filtrado por Mes O por Rango de Fechas
+      const tickets = allTickets.filter((t) => {
+        // Usamos horaInicioFalla si existe, si no, usamos createdAt
+        const dateToCheck = t.horaInicioFalla || t.createdAt;
+        const ticketDate = dayjs(dateToCheck);
+
+        if (!ticketDate.isValid()) return false;
+
+        // Si hay rango de fechas, priorizamos el rango
+        if (filters.fechaInicio && filters.fechaFin) {
+          const start = dayjs(filters.fechaInicio).startOf('day');
+          const end = dayjs(filters.fechaFin).endOf('day');
+          return !ticketDate.isBefore(start) && !ticketDate.isAfter(end);
+        }
+
+        // 2. Si hay mes seleccionado, filtramos por mes
+        if (filters.mes) {
+          return ticketDate.isSame(filters.mes, 'month');
+        }
+
+        // 3. Si no hay filtro de fecha, devolvemos todos (o ajusta según tu lógica)
+        return true;
+      });
 
       const serviceMap = new Map<string, Service>();
       services.forEach((s) => serviceMap.set(String(s._id), s));
@@ -240,7 +249,6 @@ export const useIncidenciasData = (): UseIncidenciasDataReturn => {
             proveedorDelServicioCompartido: servicio?.proveedorDelServicioCompartido,
           };
 
-          // Vista por proveedor (clave única)
           const keyProv = `${ticket._id}-${id}`;
           if (!incidenciasPorProveedorMap.has(keyProv)) {
             incidenciasPorProveedorMap.set(keyProv, {
@@ -262,7 +270,6 @@ export const useIncidenciasData = (): UseIncidenciasDataReturn => {
             });
           }
 
-          // Agrupación por servicio individual
           if (!servicioMap.has(id)) {
             servicioMap.set(id, {
               id,
@@ -287,7 +294,6 @@ export const useIncidenciasData = (): UseIncidenciasDataReturn => {
           }
           servicioEntry.tickets.push(ticketResumen);
 
-          // Agrupación por tipo de servicio
           if (!tipoMap.has(tipoServicio)) {
             tipoMap.set(tipoServicio, {
               tipoServicio,
@@ -316,7 +322,6 @@ export const useIncidenciasData = (): UseIncidenciasDataReturn => {
         });
       });
 
-      // Construir resultado final
       let result: IncidenciaPorServicio[] = Array.from(tipoMap.values()).map((value) => ({
         tipoServicio: value.tipoServicio,
         servicioId: value.servicioId,
@@ -329,7 +334,6 @@ export const useIncidenciasData = (): UseIncidenciasDataReturn => {
         tickets: value.tickets,
       }));
 
-      // Aplicar filtros
       if (filters.tipoServicio) {
         result = result.filter((item) => item.tipoServicio === filters.tipoServicio);
       }
@@ -343,27 +347,19 @@ export const useIncidenciasData = (): UseIncidenciasDataReturn => {
       }
 
       result.sort((a, b) => b.totalIncidencias - a.totalIncidencias);
-
-      // 🔍 LOG DE DIAGNÓSTICO
-      console.log('📊 [useIncidenciasData] Resultado final:', result);
-      if (result.length > 0) {
-        console.log('📊 [useIncidenciasData] Primer registro:', result[0]);
-        console.log('📊 [useIncidenciasData] tiposServicio únicos:', result.map((r) => r.tipoServicio));
-      }
-
       setData(result);
 
       // Vista por proveedor
       let resultPorProveedor = Array.from(incidenciasPorProveedorMap.values());
       if (filters.proveedor) {
-        const proveedorNombreFiltro =
-          proveedores.find((p) => p._id === filters.proveedor)?.valor?.toLowerCase() || '';
+        const proveedorNombreFiltro = proveedores.find((p) => p._id === filters.proveedor)?.valor?.toLowerCase() || '';
         resultPorProveedor = resultPorProveedor.filter((item) =>
           item.proveedorNombre.toLowerCase().includes(proveedorNombreFiltro),
         );
       }
       resultPorProveedor.sort((a, b) => dayjs(b.createdAt).valueOf() - dayjs(a.createdAt).valueOf());
       setDataPorProveedor(resultPorProveedor);
+      
     } catch (err) {
       console.error('❌ [useIncidenciasData] Error:', err);
       setError('Error al cargar los datos de incidencias');
@@ -372,7 +368,8 @@ export const useIncidenciasData = (): UseIncidenciasDataReturn => {
     } finally {
       setLoading(false);
     }
-  }, [filters.tipoServicio, filters.proveedor, filters.mes, proveedores]);
+    // ✅ AGREGAR fechaInicio y fechaFin a las dependencias
+  }, [filters.tipoServicio, filters.proveedor, filters.mes, filters.fechaInicio, filters.fechaFin, proveedores]);
 
   useEffect(() => {
     loadData();

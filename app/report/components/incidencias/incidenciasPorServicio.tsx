@@ -1,12 +1,9 @@
 'use client';
-import React, { useCallback, useState } from 'react';
-import dayjs from 'dayjs';
+import { useCallback, useState } from 'react';
+import dayjs, { Dayjs } from 'dayjs';
 import { Box, Button, Alert, Typography } from '@mui/material';
 import { Download as DownloadIcon } from '@mui/icons-material';
-import { 
-  useIncidenciasData, 
-  IncidenciaPorServicio as IncidenciaType 
-} from '../../hooks/useIncidenciasData';
+import { useIncidenciasData, IncidenciaPorServicio as IncidenciaType } from '../../hooks/useIncidenciasData';
 import { exportIncidenciasCsv } from '../../../utils/exportIncidenciasCsv';
 import { exportIncidenciasPorProveedorCsv } from '../../../utils/exportIncidenciasPorProveedorCsv';
 import { IncidenciasFilters } from './incidenciasFilters';
@@ -19,19 +16,19 @@ import { generarGraficaBarras, generarGraficaTorta } from '../../../utils/genera
 
 export const IncidenciasPorServicio = () => {
   const {
-    filters, 
-    setFilters, 
-    data, 
+    filters,
+    setFilters,
+    data,
     dataPorProveedor,
-    servicioChartData, 
-    tipoServicioChartData, 
+    servicioChartData,
+    tipoServicioChartData,
     servicioChartDataPorProveedor,
     tipoServicioChartDataPorProveedor,
-    totales, 
+    totales,
     totalesPorProveedor,
-    loading, 
-    error, 
-    loadData, 
+    loading,
+    error,
+    loadData,
     clearError,
     proveedores,
   } = useIncidenciasData();
@@ -39,6 +36,8 @@ export const IncidenciasPorServicio = () => {
   const [selected, setSelected] = useState<IncidenciaType | null>(null);
   const [filtroPrincipal, setFiltroPrincipal] = useState<string>('');
   const [exportando, setExportando] = useState(false);
+  const [fechaInicio, setFechaInicio] = useState<Dayjs | null>(null);
+  const [fechaFin, setFechaFin] = useState<Dayjs | null>(null);
 
   const handleFiltroPrincipalChange = useCallback(
     (value: string) => {
@@ -62,15 +61,42 @@ export const IncidenciasPorServicio = () => {
     [setFilters],
   );
 
-  const handleMesChange = useCallback(
-    (value: any) => setFilters((prev) => ({ ...prev, mes: value })),
+const handleMesChange = useCallback(
+    (value: Dayjs | null) => {
+      setFilters((prev) => ({ ...prev, mes: value ?? prev.mes }));
+      setFechaInicio(null);
+      setFechaFin(null);
+    },
     [setFilters],
   );
 
+  const handleApplyFilters = useCallback(() => {
+    setFilters((prev) => ({
+      ...prev,
+      fechaInicio: fechaInicio ? fechaInicio.format('YYYY-MM-DD') : null,
+      fechaFin: fechaFin ? fechaFin.format('YYYY-MM-DD') : null,
+      // ✅ CRUCIAL: Si hay rango de fechas, anulamos 'mes' para que el backend use el rango
+      mes: (fechaInicio && fechaFin) ? null : prev.mes,
+    }));
+    
+    loadData();
+  }, [fechaInicio, fechaFin, setFilters, loadData]);
+
   const handleClearFilters = useCallback(() => {
     setFiltroPrincipal('');
-    setFilters({ tipoServicio: '', proveedor: '', mes: dayjs() });
-  }, [setFilters]);
+    setFechaInicio(null);
+    setFechaFin(null);
+    setFilters({ 
+      tipoServicio: '', 
+      proveedor: '', 
+      fechaInicio: null, 
+      fechaFin: null,
+      mes: dayjs(),
+    });
+    loadData();
+  }, [setFilters, loadData]);
+
+
 
   const handleExport = useCallback(async () => {
     setExportando(true);
@@ -86,16 +112,20 @@ export const IncidenciasPorServicio = () => {
         torta: torta ? `${torta.length} chars` : 'undefined',
       });
 
+      const periodo = filters.fechaInicio && filters.fechaFin 
+        ? `${filters.fechaInicio}_a_${filters.fechaFin}` 
+        : (filters.mes ? filters.mes.format('YYYY-MM') : 'periodo');
+
       if (filters.proveedor) {
-        await exportIncidenciasPorProveedorCsv(dataPorProveedor, filters.mes, {
-          barras, 
-          torta, 
+        await exportIncidenciasPorProveedorCsv(dataPorProveedor, filters.mes ?? dayjs(), {
+          barras,
+          torta,
           serviciosAfectados: barData.length,
         });
       } else {
-        await exportIncidenciasCsv(data, filters.mes, {
-          barras, 
-          torta, 
+        await exportIncidenciasCsv(data, filters.mes ?? dayjs(), {
+          barras,
+          torta,
           serviciosAfectados: barData.length,
         });
       }
@@ -105,8 +135,8 @@ export const IncidenciasPorServicio = () => {
       setExportando(false);
     }
   }, [data, dataPorProveedor, filters.mes, filters.proveedor,
-      servicioChartData, servicioChartDataPorProveedor,
-      tipoServicioChartData, tipoServicioChartDataPorProveedor]);
+    servicioChartData, servicioChartDataPorProveedor,
+    tipoServicioChartData, tipoServicioChartDataPorProveedor]);
 
   return (
     <Box>
@@ -114,18 +144,18 @@ export const IncidenciasPorServicio = () => {
         <Typography variant="h6" sx={{ fontWeight: 700, color: '#080769' }}>
           {filters.proveedor ? `Incidencias por Proveedor` : 'Incidencias por Servicio'}
         </Typography>
-        
-        <Button
+
+       <Button
           variant="contained"
           startIcon={<DownloadIcon />}
           onClick={handleExport}
           disabled={loading || exportando || (filters.proveedor ? dataPorProveedor.length === 0 : data.length === 0)}
-          sx={{ 
-            bgcolor: '#080769', 
-            borderRadius: '8px', 
-            textTransform: 'none', 
-            fontWeight: 600, 
-            '&:hover': { bgcolor: '#060550' } 
+          sx={{
+            bgcolor: '#080769',
+            borderRadius: '8px',
+            textTransform: 'none',
+            fontWeight: 600,
+            '&:hover': { bgcolor: '#060550' }
           }}
         >
           {exportando ? 'Generando Excel...' : 'Exportar Reporte'}
@@ -143,7 +173,11 @@ export const IncidenciasPorServicio = () => {
         onTipoServicioChange={handleTipoServicioChange}
         onProveedorChange={handleProveedorChange}
         onMesChange={handleMesChange}
-        onRefresh={loadData}
+        fechaInicio={fechaInicio}
+        fechaFin={fechaFin}
+        onFechaInicioChange={setFechaInicio}
+        onFechaFinChange={setFechaFin}
+       onRefresh={handleApplyFilters} 
         onClear={handleClearFilters}
       />
 
@@ -160,11 +194,11 @@ export const IncidenciasPorServicio = () => {
       ) : (
         <ReportTable data={data} loading={loading} onRowClick={setSelected} />
       )}
-   
+
       <Box sx={{ mt: 4 }}>
-        <IncidenciasChart 
-          barData={filters.proveedor ? servicioChartDataPorProveedor : servicioChartData} 
-          pieData={filters.proveedor ? tipoServicioChartDataPorProveedor : tipoServicioChartData} 
+        <IncidenciasChart
+          barData={filters.proveedor ? servicioChartDataPorProveedor : servicioChartData}
+          pieData={filters.proveedor ? tipoServicioChartDataPorProveedor : tipoServicioChartData}
         />
       </Box>
 
