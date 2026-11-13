@@ -27,6 +27,29 @@ interface Props {
   onClear?: () => void;
 }
 
+// ✅ Estilos compartidos para que TODOS los inputs se vean idénticos
+const inputSx = {
+  bgcolor: 'white',
+  borderRadius: 2,
+  border: '1px solid #e2e8f0',
+  '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
+  '& .MuiInputBase-root': { height: 40, fontSize: '0.875rem' },
+  '& .MuiInputBase-input': { padding: '10px 14px' },
+  '& .MuiInputLabel-root': { fontSize: '0.8rem', color: '#64748b' },
+  '& .MuiInputLabel-root.Mui-focused': { color: '#080769' },
+  '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': { border: 'none' },
+  '& .MuiOutlinedInput-root.Mui-focused': { bgcolor: 'white' },
+};
+
+const datePickerSx = {
+  ...inputSx,
+  '& .MuiInputAdornment-root .MuiButtonBase-root': {
+    color: '#64748b',
+    '&:hover': { color: '#080769', bgcolor: 'transparent' },
+  },
+};
+
+
 export const IncidenciasFilters = ({
   filtroPrincipal,
   tipoServicio,
@@ -126,7 +149,7 @@ export const IncidenciasFilters = ({
                 textField: { 
                   size: 'small', 
                   fullWidth: true, 
-                  sx: { bgcolor: 'white', borderRadius: 2 } 
+                  sx: datePickerSx
                 } 
               }}
             />
@@ -145,7 +168,7 @@ export const IncidenciasFilters = ({
                 textField: { 
                   size: 'small', 
                   fullWidth: true, 
-                  sx: { bgcolor: 'white', borderRadius: 2 } 
+                 sx: datePickerSx
                 } 
               }}
             />

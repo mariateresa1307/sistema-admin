@@ -29,6 +29,30 @@ const CARDS_SOLO_GRAFICA = [
   'Ventana de Mantenimiento',
 ];
 
+// ✅ ESTILOS UNIFICADOS PARA TODOS LOS INPUTS (Selects y DatePickers)
+const inputSx = {
+  bgcolor: 'white',
+  borderRadius: 2,
+  border: '1px solid #e2e8f0',
+  '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
+  '& .MuiInputBase-root': { height: 40, fontSize: '0.875rem' },
+  '& .MuiInputBase-input': { padding: '10px 14px' },
+  '& .MuiInputLabel-root': { fontSize: '0.8rem', color: '#64748b', bgcolor: 'white', px: 0.5 },
+  '& .MuiInputLabel-root.Mui-focused': { color: '#080769' },
+  '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': { border: 'none' },
+  '& .MuiOutlinedInput-root.Mui-focused': { bgcolor: 'white' },
+};
+
+// ✅ ESTILOS ESPECÍFICOS PARA DATEPICKER (para alinear el icono del calendario)
+const datePickerSx = {
+  ...inputSx,
+  '& .MuiInputAdornment-root .MuiButtonBase-root': {
+    color: '#64748b',
+    
+    '&:hover': { color: '#080769', bgcolor: 'transparent' },
+  },
+};
+
 export const DashboardOperaciones = () => {
   const [openModal, setOpenModal] = useState(false);
 
@@ -42,9 +66,11 @@ export const DashboardOperaciones = () => {
 
   const [searchedGrupo, setSearchedGrupo] = useState<string | null>(null);
   const [reportPreview, setReportPreview] = useState<ReportePreview>({});
+  
   // ESTADOS PARA DATOS DINÁMICOS
   const [categoriasRed, setCategoriasRed] = useState<{ _id: string; valor: string }[]>([]);
   const [tiposCliente, setTiposCliente] = useState<{ _id: string; valor: string }[]>([]);
+
   // CARGAR CATEGORÍAS Y TIPOS DE CLIENTE DESDE MISCELLANEOUS
   useEffect(() => {
     const fetchData = async () => {
@@ -54,14 +80,12 @@ export const DashboardOperaciones = () => {
           getMiscellaneous({ categoria: 'TIPO_CLIENTE', limit: 9999 }),
         ]);
 
-        // Procesar categorías de red
         const catRaw = categoriasRes?.data;
         const catData = Array.isArray(catRaw?.data) 
           ? catRaw.data 
           : (Array.isArray(catRaw) ? catRaw : []);
         setCategoriasRed(catData.filter((c: any) => c.activo !== false));
 
-        // Procesar tipos de cliente
         const tipoRaw = tiposRes?.data;
         const tipoData = Array.isArray(tipoRaw?.data) 
           ? tipoRaw.data 
@@ -101,7 +125,6 @@ export const DashboardOperaciones = () => {
 
   const handleExportar = async () => {
     try {
-      // ✅ Usamos fechaInicio como 'mes' para cumplir con la interfaz de las funciones de exportación
       const mesParaExport = filters.fechaInicio ?? dayjs();
 
       if (filters.grupo === 'A') {
@@ -176,7 +199,7 @@ export const DashboardOperaciones = () => {
     D: <GrupoD reportPreview={reportPreview ?? {}} />,
   };
 
-   return (
+  return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Box>
@@ -209,9 +232,10 @@ export const DashboardOperaciones = () => {
               fullWidth
               label="Grupo KPI"
               select
-              size="medium"
+              size="small"
               value={filters.grupo}
               onChange={(e) => updateFilter({ grupo: e.target.value })}
+              sx={inputSx}
             >
               <MenuItem value="A">A - Gestión de fallas</MenuItem>
               <MenuItem value="B">B - Por servicio</MenuItem>
@@ -226,9 +250,10 @@ export const DashboardOperaciones = () => {
               fullWidth
               label="Plataforma"
               select
-              size="medium"
+              size="small"
               value={filters.plataforma}
               onChange={(e) => updateFilter({ plataforma: e.target.value })}
+              sx={inputSx}
             >
               <MenuItem value="TODAS">Todas</MenuItem>
               {categoriasRed.map((cat) => (
@@ -245,9 +270,10 @@ export const DashboardOperaciones = () => {
               fullWidth
               label="Tipo cliente"
               select
-              size="medium"
+              size="small"
               value={filters.cliente}
               onChange={(e) => updateFilter({ cliente: e.target.value })}
+              sx={inputSx}
             >
               <MenuItem value="TODOS">Todos</MenuItem>
               {tiposCliente.map((tipo) => (
@@ -267,7 +293,11 @@ export const DashboardOperaciones = () => {
                 onChange={(newValue) => updateFilter({ fechaInicio: newValue })}
                 format="DD/MM/YYYY"
                 slotProps={{
-                  textField: { size: 'small', fullWidth: true, sx: { bgcolor: 'white', borderRadius: 2 } }
+                  textField: { 
+                    size: 'small', 
+                    fullWidth: true, 
+                    sx: datePickerSx 
+                  }
                 }}
               />
             </LocalizationProvider>
@@ -282,7 +312,11 @@ export const DashboardOperaciones = () => {
                 onChange={(newValue) => updateFilter({ fechaFin: newValue })}
                 format="DD/MM/YYYY"
                 slotProps={{
-                  textField: { size: 'small', fullWidth: true, sx: { bgcolor: 'white', borderRadius: 2 } }
+                  textField: { 
+                    size: 'small', 
+                    fullWidth: true, 
+                    sx: datePickerSx 
+                  }
                 }}
               />
             </LocalizationProvider>
@@ -298,8 +332,8 @@ export const DashboardOperaciones = () => {
                 bgcolor: '#080769',
                 color: 'white',
                 '&:hover': { bgcolor: '#060550' },
-                width: 56,
-                height: 56
+                width: 44, // ✅ Ajustado para coincidir mejor con la altura de los inputs (40px + padding)
+                height: 44,
               }}
             >
               <Search />

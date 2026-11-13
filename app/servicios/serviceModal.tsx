@@ -15,9 +15,9 @@ import { ConfiguracionInterface } from "app/utils/types";
 import { createService, updateService, getMiscellaneous } from "@/lib/api";
 import { PRODUCTO, TIPO_SERVICIO } from "app/utils/constants";
 
-// ✅ 1. CONFIGURACIÓN CENTRALIZADA: FTTO ahora requiere AMBOS campos
-const TIPOS_CON_ULTIMA_MILLA = ["METROLAN", "FTTO", "RBS", "DOG"];
-const TIPOS_CON_PROVEEDOR_COMPARTIDO = ["METROLAN", "FTTO"];
+// ✅ 1. CONFIGURACIÓN CENTRALIZADA: ENLACE ahora requiere AMBOS campos también
+const TIPOS_CON_ULTIMA_MILLA = ["METROLAN", "FTTO", "RBS", "DOG", "ENLACE"];
+const TIPOS_CON_PROVEEDOR_COMPARTIDO = ["METROLAN", "FTTO", "ENLACE"];
 
 export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servicio", initialData, onSuccess }: any) => {
   const [tipoServicio, setTipoServicio] = React.useState("RBS");
@@ -166,22 +166,21 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
     const extractId = (raw: any): string => raw ? (typeof raw === 'object' ? String(raw._id || raw.valor || '') : String(raw)) : "";
     const findInList = (idValue: string, list: ConfiguracionInterface[]) => list.some((item: any) => String(item._id) === idValue);
 
-    // ✅ 2. LÓGICA DE INICIALIZACIÓN INDEPENDIENTE PARA CADA CAMPO
+    // ✅ 2. LÓGICA DE INICIALIZACIÓN INDEPENDIENTE Y LIMPIA
     const requiereUM = TIPOS_CON_ULTIMA_MILLA.includes(currentTipo);
     const requierePC = TIPOS_CON_PROVEEDOR_COMPARTIDO.includes(currentTipo);
 
-    // Cargar Última Milla (o Proveedor principal si no requiere UM)
+    // Cargar Última Milla
     if (requiereUM) {
       const umId = extractId(initialData.ultimaMilla || initialData.proveedorUM);
       setProveedorOUMId(umId);
       setProveedorNotFound(umId ? !findInList(umId, ultimaMillaList) : false);
     } else {
-      const provId = extractId(initialData.proveedorDelServicioCompartido);
-      setProveedorOUMId(provId);
-      setProveedorNotFound(provId ? !findInList(provId, proveedoresList) : false);
+      setProveedorOUMId("");
+      setProveedorNotFound(false);
     }
 
-    // Cargar Proveedor Compartido (Independiente)
+    // Cargar Proveedor Compartido
     if (requierePC) {
       const pcId = extractId(initialData.proveedorDelServicioCompartido);
       setProveedorCompartidoId(pcId);
@@ -246,7 +245,6 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
       check(nodoBValue, "nodoB", "Nodo B");
       check(nodoOLTValue, "nodoOLT", "Nodo OLT");
     } else if (tipoServicio === "FTTO") {
-     
       check(nodoOLTValue, "nodoOLT", "Nodo OLT");
       check(vlanValue, "vlan", "VLAN");
       check(productoSeleccionado, "producto", "Producto");
@@ -302,8 +300,8 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
       status: initialData?.status || "Activo"
     };
 
-    // ✅ 3. LÓGICA DE GUARDADO: FTTO y METROLAN guardan AMBOS campos por separado
-    if (tipoServicio === "METROLAN" || tipoServicio === "FTTO") {
+    // ✅ 3. LÓGICA DE GUARDADO: METROLAN, FTTO y ENLACE guardan AMBOS campos por separado
+    if (tipoServicio === "METROLAN" || tipoServicio === "FTTO" || tipoServicio === "ENLACE") {
       payload.ultimaMilla = proveedorOUMId?.trim() || null;
       payload.proveedorDelServicioCompartido = proveedorCompartidoId?.trim() || null;
       payload.proveedorUM = null;
@@ -311,7 +309,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
       payload.ultimaMilla = proveedorOUMId?.trim() || null;
       payload.proveedorDelServicioCompartido = null;
       payload.proveedorUM = null;
-    } else { // ENLACE, etc.
+    } else { // Otros tipos legacy
       payload.proveedorDelServicioCompartido = proveedorOUMId?.trim() || null;
       payload.ultimaMilla = null;
       payload.proveedorUM = null;
@@ -462,7 +460,7 @@ export const FullScreenServiceDialog = ({ isOpen, onClose, title = "Nuevo Servic
                 </TextField>
               </Grid>
 
-              {/* ✅ 4. RENDERIZADO INDEPENDIENTE DE AMBOS CAMPOS */}
+              {/* ✅ 4. RENDERIZADO INDEPENDIENTE DE AMBOS CAMPOS (Ahora incluye ENLACE) */}
               {requiereUltimaMilla && (
                 <Grid size={6}>
                   {renderLabel("Última Milla", true)}
