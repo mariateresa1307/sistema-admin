@@ -148,9 +148,16 @@ export const useTicketForm = ({ sessionOperatorId, causasRaiz = [], solucionesCa
     [isEditMode]
   );
 
-  const handleTipoClienteChange = useCallback(
-    (tipoClienteId: string, tipoClienteOptions: ConfiguracionInterface[]) => {
-      const selected = tipoClienteOptions.find((tc) => tc._id === tipoClienteId);
+const handleTipoClienteChange = useCallback((
+  tipoClienteId: string | string[],
+  listaTiposCliente: any[]
+) => {
+    const ids = Array.isArray(tipoClienteId) ? tipoClienteId : (tipoClienteId ? [tipoClienteId] : []);
+ const upperIncident = (form.tipoIncidencia || '').toUpperCase();
+  const esMultiseleccion = upperIncident.includes('MASIVA') || 
+                           upperIncident.includes('VENTANA') || 
+                           upperIncident.includes('MANTENIMIENTO');
+      const selected = listaTiposCliente.find((tc) => tc._id === tipoClienteId);
       const updates: Partial<TicketFormData> = { tipoCliente: tipoClienteId };
 
       updates.severidad = selected?.nivelSeveridad?.trim() || '';
@@ -163,10 +170,13 @@ export const useTicketForm = ({ sessionOperatorId, causasRaiz = [], solucionesCa
         updates.serviciosAfectados = [];
       }
 
-      setForm((prev) => ({ ...prev, ...updates }));
-    },
-    []
-  );
+     setForm(prev => ({
+    ...prev,
+
+    tipoCliente: esMultiseleccion ? ids : (ids[0] || ''),
+    serviciosAfectados: [], // Limpiar servicios al cambiar tipo de cliente
+  }));
+}, [form.tipoIncidencia]);
 
   const handleCiudadChange = useCallback(
     (ciudadName: string, estado: string) => {

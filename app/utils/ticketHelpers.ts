@@ -17,7 +17,8 @@ export interface TicketRecord {
   networkCategory?: string;
   subcategoria?: string;
   detalle?: string;
-  tipoCliente?: string | { _id: string; valor?: string; name?: string; nombre?: string };
+  // ✅ Ahora soporta array en la BD
+  tipoCliente?: string | string[] | { _id: string; valor?: string; name?: string; nombre?: string } | Array<{ _id: string; valor?: string }>;
   serviciosAfectados?: string[] | ServicioAfectado[];
   ciudad?: string;
   estado?: string;
@@ -64,7 +65,8 @@ export interface TicketFormData {
   categoria: string;
   subcategoria: string;
   detalle: string;
-  tipoCliente: string;
+  // ✅ Acepta string (selección única) o string[] (multiselección)
+  tipoCliente: string | string[];
   tiposervicio: string;
   estado: string;
   municipio: string;
@@ -106,7 +108,7 @@ export const initialFormState: TicketFormData = {
   categoria: '',
   subcategoria: '',
   detalle: '',
-  tipoCliente: '',
+  tipoCliente: '', // ✅ Mantenemos string vacío por defecto para compatibilidad con selects simples
   tiposervicio: '',
   estado: '',
   municipio: '',
@@ -152,11 +154,8 @@ export const formatTTZoho = (value: string | undefined | null): string => {
   return str.startsWith('#') ? str : `#${str}`;
 };
 
-// ✅ Parser para fechas legacy tipo "05/10/2026, 03:25 p. m." / "05/10/2026 10:15 a. m."
 const parseFechaLegacy = (value: string): dayjs.Dayjs | null => {
-  const m = value.match(
-    /(\d{1,2})\/(\d{1,2})\/(\d{4}),?\s+(\d{1,2}):(\d{2})\s*(a\.?\s*m\.?|p\.?\s*m\.?)?/i
-  );
+  const m = value.match(/(\d{1,2})\/(\d{1,2})\/(\d{4}),?\s+(\d{1,2}):(\d{2})\s*(a\.?\s*m\.?|p\.?\s*m\.?)?/i);
   if (!m) return null;
   const [, d, mo, y, h, mi, meridiem] = m;
   let hour = parseInt(h, 10);
@@ -168,21 +167,13 @@ const parseFechaLegacy = (value: string): dayjs.Dayjs | null => {
   return result.isValid() ? result : null;
 };
 
-// ✅ Formato UNIFICADO: DD/MM/YYYY HH:mm (24h, sin coma, sin segundos)
 export const formatToHumanDate = (dateTimeStr: string): string => {
   if (!dateTimeStr) return '';
-
-  // 1. Intentar con dayjs (maneja ISO, T, y muchos formatos estándar)
   let d = dayjs(dateTimeStr);
-
-  // 2. Si no es válido, intentar parsear formato legacy (con a.m./p.m.)
   if (!d.isValid()) {
     d = parseFechaLegacy(dateTimeStr) ?? dayjs(NaN);
   }
-
-  // 3. Si sigue inválido, devolver el string original como fallback
   if (!d.isValid()) return dateTimeStr;
-
   return d.format('DD/MM/YYYY HH:mm');
 };
 
@@ -193,12 +184,9 @@ export const diffMin = (start: string, end: string): number => {
 };
 
 export const generarNumeroTicket = (prefijo: string = 'TCKT', actual?: string): string => {
-  // ✅ VALIDAR FORMATO COMPLETO: 4 letras mayúsculas, guion y 6 dígitos
   if (actual && /^[A-Z]{4}-\d{6}$/.test(actual)) {
     return actual;
   }
-
-  // Si no es válido o está incompleto (ej: "COMP-"), generar uno nuevo con 6 dígitos aleatorios
   const numeroAleatorio = Math.floor(100000 + Math.random() * 900000).toString();
   return `${prefijo}-${numeroAleatorio}`;
 };
@@ -213,9 +201,7 @@ export const calcularTurno = (horaDeteccionNoc: string): 'DIURNO' | 'NOCTURNO' =
   return hora >= 19 || hora < 7 ? 'NOCTURNO' : 'DIURNO';
 };
 
-export const isEditTicket = (
-  ticket?: TicketRecord | null
-): ticket is TicketRecord & { _id: string } => Boolean(ticket?._id);
+export const isEditTicket = (ticket?: TicketRecord | null): ticket is TicketRecord & { _id: string } => Boolean(ticket?._id);
 
 const extractOperatorId = (field: OperatorField): string => {
   if (!field) return '';
@@ -244,14 +230,28 @@ const normalizeIncidentType = (value?: string | string[]): string => {
   return value || '';
 };
 
-const normalizeServiciosAfectados = (
-  value?: string[] | ServicioAfectado[]
-): ServicioAfectado[] => {
+const normalizeServiciosAfectados = (value?: string[] | ServicioAfectado[]): ServicioAfectado[] => {
   if (!value?.length) return [];
   if (typeof value[0] === 'string') {
     return (value as string[]).map((id) => ({ _id: id as string, name: id as string }));
   }
   return value as ServicioAfectado[];
+};
+
+// ✅ NUEVA FUNCIÓN: Normaliza tipoCliente a string[] limpio
+const normalizeTipoCliente = (raw: any): string[] => {
+  if (!raw) return [];
+  if (Array.isArray(raw)) {
+    return raw
+      .map((item: any) => {
+        if (typeof item === 'string') return item;
+        if (typeof item === 'object' && item !== null) return String(item._id || item.id || '');
+        return String(item);
+      })
+      .filter((id: string) => id && id !== 'undefined' && id !== 'null');
+  }
+  if (typeof raw === 'object' && raw !== null) return [String((raw as any)._id || (raw as any).id || '')].filter(Boolean);
+  return [String(raw)].filter(Boolean);
 };
 
 export const mapTicketToFormData = (
@@ -277,10 +277,6 @@ export const mapTicketToFormData = (
     }
   }
 
-  const tipoClienteId = typeof ticket.tipoCliente === 'object' && ticket.tipoCliente !== null
-    ? (ticket.tipoCliente as any)._id
-    : (ticket.tipoCliente || '');
-
   return {
     ...initialFormState,
     numeroTicket: ticket.caseNumber || '',
@@ -289,7 +285,8 @@ export const mapTicketToFormData = (
     categoria: ticket.networkCategory || '',
     subcategoria: ticket.subcategoria || '',
     detalle: ticket.detalle || '',
-    tipoCliente: tipoClienteId,
+    // ✅ Usa la nueva función de normalización
+    tipoCliente: normalizeTipoCliente(ticket.tipoCliente),
     ciudad: ticket.ciudad || '',
     estado: ticket.estado || '',
     localidad: ticket.localidad || '',
@@ -331,7 +328,8 @@ export const mapFormToUpdatePayload = (form: TicketFormData & Record<string, unk
   description: form.descripcion,
   subcategoria: form.subcategoria,
   detalle: form.detalle,
-  tipoCliente: form.tipoCliente,
+  // ✅ Envía el array tal cual (o string si es selección única)
+  tipoCliente: form.tipoCliente, 
   serviciosAfectados: (form.serviciosAfectados || []).map((sa) => sa._id),
   ciudad: form.ciudad,
   estado: form.estado,
@@ -364,7 +362,7 @@ export const mapFormToUpdatePayload = (form: TicketFormData & Record<string, unk
   tAtencion: form.tAtencion as number | undefined,
   tEscalado: form.tEscalado as number | undefined,
   cCierreSoporte: form.cCierreSoporte as number | undefined,
-  mttrTotal: form.mttrTotal as number | undefined, // MTTR (Mean Time To Repair) del ticket: el tiempo total de resolución, expresado en minutos. = horaInicioFalla  - horaCierreFalla
+  mttrTotal: form.mttrTotal as number | undefined,
   status: form.estatus,
 });
 
@@ -377,13 +375,11 @@ export const calcularTiempos = (form: TicketFormData) => {
     tAtencion: diffMin(form.horaDeteccionNoc, form.horaInicioAtencion),
     tEscalado: form.requiereEscalamiento === 'SI' ? diffMin(form.horaInicioFalla, form.horaEscalamiento) : 0,
     cCierreSoporte: diffMin(form.horaInicioAtencion, cierreFalla),
-    mttrTotal: diffMin(form.horaInicioFalla, cierreFalla), // MTTR (Mean Time To Repair) del ticket: el tiempo total de resolución, expresado en minutos. = horaInicioFalla  - horaCierreFalla
+    mttrTotal: diffMin(form.horaInicioFalla, cierreFalla),
     turnoAsignado: calcularTurno(form.horaDeteccionNoc),
   };
 };
 
-// ✅ Normaliza TODAS las líneas de fecha de la descripción al formato DD/MM/YYYY HH:mm
-// Útil para mostrar `description` en modales de detalle sin tocar la BD
 export const normalizeDescripcionFechas = (descripcion: string): string => {
   if (!descripcion) return descripcion;
 
@@ -392,9 +388,7 @@ export const normalizeDescripcionFechas = (descripcion: string): string => {
     (_match, prefix: string, value: string) => {
       const clean = (value || '').trim();
       if (!clean) return prefix + clean;
-      // Si ya tiene el formato correcto (DD/MM/YYYY HH:mm 24h), no lo toca
       if (/^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}$/.test(clean)) return prefix + clean;
-      // Cualquier otro formato (con "p. m.", coma, segundos, ISO...) se unifica
       return prefix + formatToHumanDate(clean);
     }
   );

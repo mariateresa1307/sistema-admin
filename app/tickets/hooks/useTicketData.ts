@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react'; 
 import { getMiscellaneous, getUsers, getService } from '@/lib/api';
 import { CATEGORIA } from 'app/utils/constants';
 import { ConfiguracionInterface } from '../../utils/types';
@@ -33,7 +33,7 @@ export interface UseTicketDataReturn {
   loadTipoCliente: () => Promise<void>;
   loadLocalidades: (ciudadIdOrName: string) => void;
   loadSolucionesCaso: (causaRaizId: string) => Promise<void>;
-  loadServiciosAfectados: (tipoClienteInput: string | ConfiguracionInterface) => Promise<void>;
+  loadServiciosAfectados: ( tipoClienteInput: string | string[] | ConfiguracionInterface | ConfiguracionInterface[]) => Promise<void>;
   loadAllServicios: () => Promise<void>;
   loadCausasRaiz: () => Promise<void>;
   loadGrupoDestino: () => Promise<void>;
@@ -177,18 +177,55 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
     } catch (error) { console.error('Error cargando soluciones:', error); setSolucionesCaso([]); }
   }, []);
 
-  const loadServiciosAfectados = useCallback(async (tipoClienteInput: string | ConfiguracionInterface) => {
-    if (!tipoClienteInput) { setServiciosAfectados([]); return; }
-    setLoading(true);
-    try {
-      let idAEnviar = typeof tipoClienteInput === 'object' && tipoClienteInput !== null ? tipoClienteInput._id : String(tipoClienteInput);
-      if (!idAEnviar) { setServiciosAfectados([]); return; }
-      const res = await getService({ tipoCliente: idAEnviar, limit: 9999 });
+const loadServiciosAfectados = useCallback(async (
+  tipoClienteInput: string | string[] | ConfiguracionInterface | ConfiguracionInterface[]
+) => {
+  if (!tipoClienteInput) { setServiciosAfectados([]); return; }
+
+  // ✅ Normalizar a array de IDs
+  const rawItems = Array.isArray(tipoClienteInput) ? tipoClienteInput : [tipoClienteInput];
+  const ids = rawItems
+    .map(item => {
+      if (typeof item === 'object' && item !== null) return String((item as any)._id || '');
+      return String(item);
+    })
+    .filter(id => id && /^[0-9a-fA-F]{24}$/.test(id));
+
+  if (ids.length === 0) { setServiciosAfectados([]); return; }
+
+  setLoading(true);
+  try {
+    // ✅ Si es un solo ID, hacer una petición directa (más rápido)
+    if (ids.length === 1) {
+      const res = await getService({ tipoCliente: ids[0], limit: 9999 });
       const dataServicios: any[] = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : Array.isArray(res?.data?.data) ? res.data.data : [];
       setServiciosAfectados(dataServicios);
-    } catch (error) { console.error('❌ [useTicketData] Error al obtener servicios:', error); setServiciosAfectados([]); }
-    finally { setLoading(false); }
-  }, []);
+    } else {
+      // ✅ Si son múltiples IDs, hacer peticiones en paralelo y combinar/deduplicar
+      const resultados = await Promise.all(
+        ids.map(id => getService({ tipoCliente: id, limit: 9999 }))
+      );
+
+      const mapaServicios = new Map<string, any>();
+      resultados.forEach(res => {
+        const dataServicios: any[] = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : Array.isArray(res?.data?.data) ? res.data.data : [];
+        dataServicios.forEach(servicio => {
+          const id = String(servicio._id || servicio.id || '');
+          if (id && !mapaServicios.has(id)) {
+            mapaServicios.set(id, servicio);
+          }
+        });
+      });
+
+      setServiciosAfectados(Array.from(mapaServicios.values()));
+    }
+  } catch (error) {
+    console.error('❌ [useTicketData] Error al obtener servicios:', error);
+    setServiciosAfectados([]);
+  } finally {
+    setLoading(false);
+  }
+}, []);
 
   const loadAllServicios = useCallback(async () => {
     setLoading(true);
@@ -232,13 +269,23 @@ export const useTicketData = (open: boolean): UseTicketDataReturn => {
   const clearServiciosAfectados = useCallback(() => setServiciosAfectados([]), []);
   const clearCategoriaRed = useCallback(() => setCategoriaRed([]), []);
 
-  return {
-    operadores, categoriaRed, subcategorias, detalle, tipoCliente, causasRaiz, solucionesCaso,
-    ciudadesOptions, localidadesOptions, todasLasLocalidades, serviciosAfectados, grupoDestino,
-    loading, error,
-    loadInitialData, loadCategoriasRed, loadSubcategorias, loadDetalle, loadTipoCliente,
-    loadLocalidades, loadSolucionesCaso, loadServiciosAfectados, loadAllServicios, loadCausasRaiz, loadGrupoDestino,
-    getCausasRaizPorCategoria,
-    clearSubcategorias, clearDetalle, clearTipoCliente, clearLocalidades, clearServiciosAfectados, clearCategoriaRed,
-  };
+  
+return useMemo(() => ({
+  operadores, categoriaRed, subcategorias, detalle, tipoCliente, causasRaiz, solucionesCaso,
+  ciudadesOptions, localidadesOptions, todasLasLocalidades, serviciosAfectados, grupoDestino,
+  loading, error,
+  loadInitialData, loadCategoriasRed, loadSubcategorias, loadDetalle, loadTipoCliente,
+  loadLocalidades, loadSolucionesCaso, loadServiciosAfectados, loadAllServicios, loadCausasRaiz, loadGrupoDestino,
+  getCausasRaizPorCategoria,
+  clearSubcategorias, clearDetalle, clearTipoCliente, clearLocalidades, clearServiciosAfectados, clearCategoriaRed,
+}), [
+  operadores, categoriaRed, subcategorias, detalle, tipoCliente, causasRaiz, solucionesCaso,
+  ciudadesOptions, localidadesOptions, todasLasLocalidades, serviciosAfectados, grupoDestino,
+  loading, error,
+  loadInitialData, loadCategoriasRed, loadSubcategorias, loadDetalle, loadTipoCliente,
+  loadLocalidades, loadSolucionesCaso, loadServiciosAfectados, loadAllServicios, loadCausasRaiz, loadGrupoDestino,
+  getCausasRaizPorCategoria,
+  clearSubcategorias, clearDetalle, clearTipoCliente, clearLocalidades, clearServiciosAfectados, clearCategoriaRed,
+]);
+
 };

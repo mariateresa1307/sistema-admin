@@ -62,32 +62,48 @@ export default function TicketModal({ open, onClose, onSave, ticketToEdit }: Tic
     solucionesCaso: ticketData.solucionesCaso || []
   });
 
-  useEffect(() => {
-    if (!open) return;
-    const tipoCliente = ticketForm.form.tipoCliente;
+ useEffect(() => {
+  if (!open) return;
+  const tipoCliente = ticketForm.form.tipoCliente;
 
-    if (!tipoCliente) {
-      ticketData.clearServiciosAfectados();
-      return;
-    }
+  if (!tipoCliente || (Array.isArray(tipoCliente) && tipoCliente.length === 0)) {
+    ticketData.clearServiciosAfectados();
+    return;
+  }
 
-    if (ticketData.tipoCliente.length === 0) return;
+  if (ticketData.tipoCliente.length === 0) return;
 
-    const selectedTipoCliente = ticketData.tipoCliente.find(tc => tc._id === tipoCliente);
-    const valorTipoCliente = selectedTipoCliente?.valor?.toUpperCase() || '';
+  const tipoClienteIds = Array.isArray(tipoCliente) ? tipoCliente : [tipoCliente];
 
-    if (valorTipoCliente === 'RESIDENCIAL') {
-      ticketData.clearServiciosAfectados();
-      return;
-    }
+  // ✅ Verificar si ALGUNO es RESIDENCIAL (en ese caso no cargar servicios)
+  const isResidencial = tipoClienteIds.some(id => {
+    const tc = ticketData.tipoCliente.find(t => t._id === id);
+    return tc?.valor?.toUpperCase() === 'RESIDENCIAL';
+  });
 
-    if (tipoCliente) {
-      ticketData.loadServiciosAfectados(tipoCliente);
-    } else {
-      ticketData.clearServiciosAfectados();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, ticketForm.form.tipoCliente, ticketData.tipoCliente.length]);
+  if (isResidencial) {
+    ticketData.clearServiciosAfectados();
+    return;
+  }
+
+  // ✅ Filtrar IDs no residenciales y cargar servicios de TODOS juntos
+  const idsValidos = tipoClienteIds.filter(id => {
+    const tc = ticketData.tipoCliente.find(t => t._id === id);
+    return tc?.valor?.toUpperCase() !== 'RESIDENCIAL';
+  });
+
+  if (idsValidos.length > 0) {
+    ticketData.loadServiciosAfectados(idsValidos); // ✅ Pasa el array completo
+  } else {
+    ticketData.clearServiciosAfectados();
+  }
+}, [
+  open,
+  JSON.stringify(ticketForm.form.tipoCliente),
+  ticketData.tipoCliente.length,
+  ticketData.clearServiciosAfectados,
+  ticketData.loadServiciosAfectados
+]);
 
   useEffect(() => {
     if (open && !isEditTicket(ticketToEdit)) {
@@ -120,9 +136,8 @@ export default function TicketModal({ open, onClose, onSave, ticketToEdit }: Tic
 
         if (tipoIncidencia) {
           await ticketData.loadCategoriasRed(tipoIncidencia);
-          if (tipoIncidencia !== TIPO_INCIDENCIA.FALLA_MASIVA) {
-            await ticketData.loadTipoCliente();
-          }
+          await ticketData.loadTipoCliente(); 
+
         }
         if (categoria) await ticketData.loadSubcategorias(categoria);
         if (subcategoria) await ticketData.loadDetalle(subcategoria);
@@ -172,7 +187,7 @@ export default function TicketModal({ open, onClose, onSave, ticketToEdit }: Tic
 
     localidadCargadaRef.current = cacheKey;
     ticketData.loadLocalidades(ciudad);
-  }, [open, ticketForm.isEditMode, ticketForm.form.ciudad, ticketData.ciudadesOptions.length, ticketData]);
+  }, [open, ticketForm.isEditMode, ticketForm.form.ciudad,ticketData.ciudadesOptions.length,ticketData.loadLocalidades]);
 
     useEffect(() => {
     if (ticketForm.isEditMode) return;
@@ -242,24 +257,30 @@ export default function TicketModal({ open, onClose, onSave, ticketToEdit }: Tic
     ticketForm.form.asunto
   ]);
 
-  const handleTipoIncidenciaChange = useCallback(async (tipoIncidencia: string) => {
-    ticketForm.handleTipoIncidenciaChange(tipoIncidencia);
-    ticketData.clearCategoriaRed();
-    ticketData.clearSubcategorias();
-    ticketData.clearDetalle();
-    ticketData.clearLocalidades();
-    ticketData.clearServiciosAfectados();
+const handleTipoIncidenciaChange = useCallback(async (tipoIncidencia: string) => {
+  // ✅ 1. Limpiar campos dependientes en el formulario PRIMERO
+  ticketForm.updateField('categoria', '');
+  ticketForm.updateField('subcategoria', '');
+  ticketForm.updateField('detalle', '');
+  ticketForm.updateField('tipoCliente', []); // ✅ Limpiar a array vacío
+  ticketForm.updateField('serviciosAfectados', []);
 
-    if (tipoIncidencia !== TIPO_INCIDENCIA.FALLA_MASIVA) {
-      await ticketData.loadTipoCliente();
-    } else {
-      ticketData.clearTipoCliente();
-    }
+  ticketForm.handleTipoIncidenciaChange(tipoIncidencia);
+  
+  // ✅ 2. Limpiar datos del hook
+  ticketData.clearCategoriaRed();
+  ticketData.clearSubcategorias();
+  ticketData.clearDetalle();
+  ticketData.clearLocalidades();
+  ticketData.clearServiciosAfectados();
+  ticketData.clearTipoCliente(); // ✅ Asegurar que se limpie
 
-    if (tipoIncidencia) {
-      await ticketData.loadCategoriasRed(tipoIncidencia);
-    }
-  }, [ticketForm, ticketData]);
+  await ticketData.loadTipoCliente();
+
+  if (tipoIncidencia) {
+    await ticketData.loadCategoriasRed(tipoIncidencia);
+  }
+}, [ticketForm, ticketData]);
 
   const handleCategoriaChange = useCallback(async (categoriaId: string) => {
     const categoria = ticketData.categoriaRed.find((c) => c._id === categoriaId);
@@ -282,9 +303,10 @@ export default function TicketModal({ open, onClose, onSave, ticketToEdit }: Tic
     }
   }, [ticketForm, ticketData]);
 
-  const handleTipoClienteChange = useCallback(async (tipoClienteId: string) => {
-    ticketForm.handleTipoClienteChange(tipoClienteId, ticketData.tipoCliente);
-  }, [ticketForm, ticketData.tipoCliente]);
+const handleTipoClienteChange = useCallback((tipoClienteId: string | string[]) => {
+  ticketForm.handleTipoClienteChange(tipoClienteId, ticketData.tipoCliente);
+}, [ticketForm.handleTipoClienteChange, ticketData.tipoCliente]);
+  
 
   const handleCiudadChange = useCallback(async (ciudadValue: string) => {
     ticketData.clearLocalidades();

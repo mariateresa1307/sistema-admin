@@ -91,7 +91,6 @@ const AnimatedCounter = ({ value, duration = 1.5 }: { value: number; duration?: 
     const start = prevValue.current;
     const diff = value - start;
     const startTime = performance.now();
-
     const animate = (currentTime: number) => {
       const elapsed = (currentTime - startTime) / 1000;
       const progress = Math.min(elapsed / duration, 1);
@@ -168,33 +167,33 @@ const RankingRow = ({ op, rank, delay }: { op: OperadorStats; rank: number; dela
   const tendenciaColor = tendenciaDiff > 0 ? COLORS.success : tendenciaDiff < 0 ? COLORS.error : COLORS.textMuted;
 
   const getRowStyle = () => {
-    if (rank === 1) return { 
-      bg: COLORS.goldLight, 
-      border: COLORS.gold, 
+    if (rank === 1) return {
+      bg: COLORS.goldLight,
+      border: COLORS.gold,
       glow: COLORS.goldGlow,
       badgeBg: COLORS.gold,
       avatarSize: 56,
       badgeSize: 44
     };
-    if (rank === 2) return { 
-      bg: "#e7e7ff", 
-      border: "#93c5fd", 
+    if (rank === 2) return {
+      bg: "#e7e7ff",
+      border: "#93c5fd",
       glow: "rgba(147, 197, 253, 0.3)",
       badgeBg: "#60a5fa",
       avatarSize: 52,
       badgeSize: 40
     };
-    if (rank === 3) return { 
-      bg: COLORS.bronzeLight, 
-      border: COLORS.bronze, 
+    if (rank === 3) return {
+      bg: COLORS.bronzeLight,
+      border: COLORS.bronze,
       glow: "rgba(217, 119, 6, 0.3)",
       badgeBg: COLORS.bronze,
       avatarSize: 52,
       badgeSize: 40
     };
-    return { 
-      bg: "white", 
-      border: COLORS.border, 
+    return {
+      bg: "white",
+      border: COLORS.border,
       glow: "transparent",
       badgeBg: "#f1f5f9",
       avatarSize: 44,
@@ -291,75 +290,75 @@ const RankingRow = ({ op, rank, delay }: { op: OperadorStats; rank: number; dela
                 filter: "drop-shadow(0 2px 6px rgba(217, 119, 6, 0.5))",
               }}
             >
-              
+
             </Box>
           )}
         </Box>
 
         {/* Operador */}
         <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-          <Avatar 
-            sx={{ 
-              bgcolor: COLORS.primary, 
-              width: rowStyle.avatarSize, 
-              height: rowStyle.avatarSize, 
-              fontSize: isTop3 ? "1.1rem" : "0.9rem", 
-              fontWeight: 800, 
-              color: "white", 
-              boxShadow: isTop3 ? `0 4px 16px ${rowStyle.glow}` : "0 4px 12px rgba(8, 7, 105, 0.2)" 
+          <Avatar
+            sx={{
+              bgcolor: COLORS.primary,
+              width: rowStyle.avatarSize,
+              height: rowStyle.avatarSize,
+              fontSize: isTop3 ? "1.1rem" : "0.9rem",
+              fontWeight: 800,
+              color: "white",
+              boxShadow: isTop3 ? `0 4px 16px ${rowStyle.glow}` : "0 4px 12px rgba(8, 7, 105, 0.2)"
             }}
           >
             {op.avatar}
           </Avatar>
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography 
-              variant="body1" 
-              sx={{ 
-                fontWeight: isTop3 ? 900 : 800, 
-                color: COLORS.text, 
-                whiteSpace: "nowrap", 
-                overflow: "hidden", 
-                textOverflow: "ellipsis", 
-                fontSize: isTop3 ? "1.05rem" : "0.95rem" 
+            <Typography
+              variant="body1"
+              sx={{
+                fontWeight: isTop3 ? 900 : 800,
+                color: COLORS.text,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                fontSize: isTop3 ? "1.05rem" : "0.95rem"
               }}
             >
               {op.nombre}
             </Typography>
             <Box sx={{ display: "flex", gap: 0.5, mt: 0.5, flexWrap: "wrap" }}>
-              <Chip 
-                icon={<TurnoIcon sx={{ fontSize: isTop3 ? 14 : 12 }} />} 
-                label={turnoCfg.label} 
-                size="small" 
-                sx={{ 
-                  height: isTop3 ? 22 : 18, 
-                  fontSize: "0.65rem", 
-                  bgcolor: turnoCfg.bg, 
-                  color: turnoCfg.color, 
-                  fontWeight: 700 
-                }} 
+              <Chip
+                icon={<TurnoIcon sx={{ fontSize: isTop3 ? 14 : 12 }} />}
+                label={turnoCfg.label}
+                size="small"
+                sx={{
+                  height: isTop3 ? 22 : 18,
+                  fontSize: "0.65rem",
+                  bgcolor: turnoCfg.bg,
+                  color: turnoCfg.color,
+                  fontWeight: 700
+                }}
               />
-              <Box 
-                sx={{ 
-                  display: "flex", 
-                  alignItems: "center", 
-                  gap: 0.3, 
-                  px: 0.75, 
-                  height: isTop3 ? 22 : 18, 
-                  borderRadius: "9px", 
-                  bgcolor: estadoCfg.color + "15", 
-                  fontSize: "0.65rem", 
-                  fontWeight: 700, 
-                  color: estadoCfg.color 
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 0.3,
+                  px: 0.75,
+                  height: isTop3 ? 22 : 18,
+                  borderRadius: "9px",
+                  bgcolor: estadoCfg.color + "15",
+                  fontSize: "0.65rem",
+                  fontWeight: 700,
+                  color: estadoCfg.color
                 }}
               >
-                <Box 
-                  sx={{ 
-                    width: isTop3 ? 7 : 5, 
-                    height: isTop3 ? 7 : 5, 
-                    borderRadius: "50%", 
-                    bgcolor: estadoCfg.dot, 
-                    animation: estadoCfg.label === "Online" ? "pulse 2s infinite" : "none" 
-                  }} 
+                <Box
+                  sx={{
+                    width: isTop3 ? 7 : 5,
+                    height: isTop3 ? 7 : 5,
+                    borderRadius: "50%",
+                    bgcolor: estadoCfg.dot,
+                    animation: estadoCfg.label === "Online" ? "pulse 2s infinite" : "none"
+                  }}
                 />
                 {estadoCfg.label}
               </Box>
@@ -369,26 +368,26 @@ const RankingRow = ({ op, rank, delay }: { op: OperadorStats; rank: number; dela
 
         {/* Tickets Asignados */}
         <Box sx={{ textAlign: "center" }}>
-          <Typography 
-            variant="h4" 
-            sx={{ 
-              fontWeight: 900, 
-              color: COLORS.primary, 
-              lineHeight: 1, 
-              mb: 0.25, 
-              fontSize: isTop3 ? "1.8rem" : "1.6rem" 
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 900,
+              color: COLORS.primary,
+              lineHeight: 1,
+              mb: 0.25,
+              fontSize: isTop3 ? "1.8rem" : "1.6rem"
             }}
           >
             <AnimatedCounter value={op.ticketsAsignados} />
           </Typography>
-          <Typography 
-            variant="caption" 
-            sx={{ 
-              color: COLORS.textMuted, 
-              fontSize: "0.6rem", 
-              fontWeight: 700, 
-              textTransform: "uppercase", 
-              letterSpacing: "0.05em" 
+          <Typography
+            variant="caption"
+            sx={{
+              color: COLORS.textMuted,
+              fontSize: "0.6rem",
+              fontWeight: 700,
+              textTransform: "uppercase",
+              letterSpacing: "0.05em"
             }}
           >
             Asignados
@@ -397,26 +396,26 @@ const RankingRow = ({ op, rank, delay }: { op: OperadorStats; rank: number; dela
 
         {/* Tickets Responsable */}
         <Box sx={{ textAlign: "center" }}>
-          <Typography 
-            variant="h4" 
-            sx={{ 
-              fontWeight: 900, 
-              color: COLORS.goldDark, 
-              lineHeight: 1, 
-              mb: 0.25, 
-              fontSize: isTop3 ? "1.8rem" : "1.6rem" 
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 900,
+              color: COLORS.goldDark,
+              lineHeight: 1,
+              mb: 0.25,
+              fontSize: isTop3 ? "1.8rem" : "1.6rem"
             }}
           >
             <AnimatedCounter value={op.ticketsResponsable} />
           </Typography>
-          <Typography 
-            variant="caption" 
-            sx={{ 
-              color: COLORS.textMuted, 
-              fontSize: "0.6rem", 
-              fontWeight: 700, 
-              textTransform: "uppercase", 
-              letterSpacing: "0.05em" 
+          <Typography
+            variant="caption"
+            sx={{
+              color: COLORS.textMuted,
+              fontSize: "0.6rem",
+              fontWeight: 700,
+              textTransform: "uppercase",
+              letterSpacing: "0.05em"
             }}
           >
             Responsable
@@ -425,26 +424,26 @@ const RankingRow = ({ op, rank, delay }: { op: OperadorStats; rank: number; dela
 
         {/* En Gestión */}
         <Box sx={{ textAlign: "center" }}>
-          <Typography 
-            variant="h5" 
-            sx={{ 
-              fontWeight: 800, 
-              color: COLORS.warning, 
-              lineHeight: 1, 
-              mb: 0.25, 
-              fontSize: isTop3 ? "1.5rem" : "1.3rem" 
+          <Typography
+            variant="h5"
+            sx={{
+              fontWeight: 800,
+              color: COLORS.warning,
+              lineHeight: 1,
+              mb: 0.25,
+              fontSize: isTop3 ? "1.5rem" : "1.3rem"
             }}
           >
             <AnimatedCounter value={op.ticketsEnGestion} />
           </Typography>
-          <Typography 
-            variant="caption" 
-            sx={{ 
-              color: COLORS.textMuted, 
-              fontSize: "0.6rem", 
-              fontWeight: 700, 
-              textTransform: "uppercase", 
-              letterSpacing: "0.05em" 
+          <Typography
+            variant="caption"
+            sx={{
+              color: COLORS.textMuted,
+              fontSize: "0.6rem",
+              fontWeight: 700,
+              textTransform: "uppercase",
+              letterSpacing: "0.05em"
             }}
           >
             En gestión
@@ -458,12 +457,12 @@ const RankingRow = ({ op, rank, delay }: { op: OperadorStats; rank: number; dela
             {tendenciaDiff > 0 && <ArrowUpward sx={{ fontSize: isTop3 ? 20 : 16, color: COLORS.success }} />}
             {tendenciaDiff < 0 && <ArrowDownward sx={{ fontSize: isTop3 ? 20 : 16, color: COLORS.error }} />}
             {tendenciaDiff === 0 && <Remove sx={{ fontSize: isTop3 ? 20 : 16, color: COLORS.textMuted }} />}
-            <Typography 
-              variant="caption" 
-              sx={{ 
-                fontWeight: 800, 
-                color: tendenciaColor, 
-                fontSize: isTop3 ? "0.85rem" : "0.75rem" 
+            <Typography
+              variant="caption"
+              sx={{
+                fontWeight: 800,
+                color: tendenciaColor,
+                fontSize: isTop3 ? "0.85rem" : "0.75rem"
               }}
             >
               {Math.abs(tendenciaDiff)}
@@ -479,6 +478,7 @@ export default function OperationsDashboard() {
   const [filtroTurno, setFiltroTurno] = useState<Turno | "todos">("todos");
   const [operadores] = useState<OperadorStats[]>(MOCK_OPERADORES);
   const [lastUpdate, setLastUpdate] = useState(new Date());
+  const formattedTime = lastUpdate.toLocaleTimeString("es-VE");
 
   const ranking = useMemo(() => {
     let lista = [...operadores];
@@ -508,7 +508,7 @@ export default function OperationsDashboard() {
   }, []);
 
   return (
-    <Box sx={{ p: { xs: 2, md: 4 }, bgcolor: COLORS.bg,  fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <Box sx={{ p: { xs: 2, md: 4 }, bgcolor: COLORS.bg, fontFamily: "'Inter', system-ui, sans-serif" }}>
       {/* 🎯 HEADER */}
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
         <Box sx={{ mb: 4 }}>
@@ -525,7 +525,7 @@ export default function OperationsDashboard() {
             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, bgcolor: "white", px: 2, py: 0.75, borderRadius: "10px", border: `1px solid ${COLORS.border}`, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
               <Box sx={{ width: 6, height: 6, borderRadius: "50%", bgcolor: COLORS.success, animation: "pulse 2s infinite" }} />
               <Typography variant="caption" sx={{ color: COLORS.textSecondary, fontWeight: 600, fontSize: "0.7rem" }}>
-                Auto-refresh (30s) · {lastUpdate.toLocaleTimeString("es-VE")}
+                Auto-refresh (30s) · {formattedTime}
               </Typography>
               <IconButton onClick={handleRefresh} size="small" sx={{ p: 0.5 }}>
                 <Refresh fontSize="small" sx={{ color: COLORS.primary, fontSize: 16 }} />
@@ -569,26 +569,26 @@ export default function OperationsDashboard() {
 
       {/* 📊 SECCIÓN PRINCIPAL: RANKING DE OPERADORES */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.2 }}>
-        <Paper 
-          elevation={0} 
-          sx={{ 
-            borderRadius: "16px", 
+        <Paper
+          elevation={0}
+          sx={{
+            borderRadius: "16px",
             border: `1px solid ${COLORS.border}`,
             overflow: "hidden",
-            mb: 4 
+            mb: 4
           }}
         >
           {/* Header Azul Oscuro */}
           <Box sx={{ bgcolor: COLORS.primary, color: "white", p: 2.5 }}>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-              <Box sx={{ 
-                width: 44, 
-                height: 44, 
-                borderRadius: "12px", 
-                bgcolor: "rgba(255,255,255,0.15)", 
-                display: "flex", 
-                alignItems: "center", 
-                justifyContent: "center" 
+              <Box sx={{
+                width: 44,
+                height: 44,
+                borderRadius: "12px",
+                bgcolor: "rgba(255,255,255,0.15)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center"
               }}>
                 <Leaderboard sx={{ fontSize: 28 }} />
               </Box>

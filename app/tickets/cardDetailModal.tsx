@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from 'react';
 import { Modal, Paper, Box, Typography, IconButton, Divider, Chip, Tooltip } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -85,6 +85,84 @@ const getColorByTipoIncidencia = (tipoIncidencia: string): string => {
   if (tipoUpper.includes('MANTENIMIENTO')) return '#1565c0';
   return '#1976d2';
 };
+// ✅ Mapa de colores por nivelSeveridad (coherente con el formulario)
+const SEVERIDAD_CHIP_COLORS: Record<string, { bg: string; text: string; dot: string }> = {
+  ALTO:     { bg: '#FFEBEE', text: '#C62828', dot: '#E53935' },
+  MEDIO:    { bg: '#FFF3E0', text: '#E65100', dot: '#FB8C00' },
+  MODERADO: { bg: '#FFF3E0', text: '#E65100', dot: '#FB8C00' },
+  BAJO:     { bg: '#E8F5E9', text: '#2E7D32', dot: '#43A047' },
+  DEFAULT:  { bg: '#EEF0F7', text: '#475569', dot: '#94A3B8' },
+};
+
+const getSeveridadChipColor = (nivelSeveridad?: string) => {
+  const key = (nivelSeveridad || '').toString().toUpperCase().trim();
+  return SEVERIDAD_CHIP_COLORS[key] || SEVERIDAD_CHIP_COLORS.DEFAULT;
+};
+
+//  HELPER ROBUSTO: Extrae el string del ID sin importar si es String, ObjectId o Objeto
+const extractIdString = (val: any): string => {
+  if (!val) return '';
+  if (typeof val === 'string') return val.trim();
+  if (typeof val === 'object' && val !== null) {
+    if (val._id) return String(val._id).trim();
+    if (val.id) return String(val.id).trim();
+    // ObjectId nativo de MongoDB: su toString() a veces devuelve "ObjectId('...')"
+    if (typeof val.toString === 'function') {
+      const str = val.toString();
+      const match = str.match(/ObjectId\(['"]?([0-9a-fA-F]{24})['"]?\)/);
+      return match ? match[1] : str;
+    }
+  }
+  return String(val).trim();
+};
+// ✅ Normaliza tipoCliente a array de objetos { valor, nivelSeveridad }
+const normalizeTipoClienteToChips = (
+  raw: any,
+  tipoClienteCatalog: any[] = []
+): Array<{ _id: string; valor: string; nivelSeveridad: string }> => {
+  if (!raw) return [];
+
+  const items = Array.isArray(raw) ? raw : [raw];
+
+  // Pre-construir un mapa del catálogo para búsqueda instantánea
+  const catalogMap = new Map<string, any>();
+  (tipoClienteCatalog || []).forEach((tc: any) => {
+    const idKey = extractIdString(tc._id);
+    if (idKey) catalogMap.set(idKey, tc);
+  });
+
+   return items
+    .map((item: any) => {
+      // Caso 1: Ya viene poblado como objeto con valor
+      if (typeof item === 'object' && item !== null && (item.valor || item.name || item.nombre)) {
+        return {
+          _id: extractIdString(item._id || item.id),
+          valor: item.valor || item.name || item.nombre || 'Sin nombre',
+          nivelSeveridad: item.nivelSeveridad || item.severidad || '',
+        };
+      }
+
+      // Caso 2: Es un string (ObjectId) → buscar en catálogo
+      const idStr = String(item);
+      const found = tipoClienteCatalog.find((tc: any) => String(tc._id) === idStr);
+      if (found) {
+        return {
+          _id: idStr,
+          valor: found.valor || 'Sin nombre',
+          nivelSeveridad: found.nivelSeveridad || '',
+        };
+      }
+
+      // Caso 3: No se encontró → mostrar el ID truncado
+      return {
+        _id: idStr,
+        valor: idStr.length > 8 ? `${idStr.substring(0, 8)}...` : idStr,
+        nivelSeveridad: '',
+      };
+    })
+    .filter((c) => c.valor && c.valor !== 'undefined' && c.valor !== 'null');
+};
+
 
 const getSeveridadValue = (ticket: NonNullable<TicketDetailModalProps['ticket']>): string => {
   return ticket?.nivelSeveridad || ticket?.severidad || '';
@@ -131,6 +209,7 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
   const [causasRaizList, setCausasRaizList] = useState<any[]>([]);
   const [solucionesCasoList, setSolucionesCasoList] = useState<any[]>([]);
   const [grupoDestinoList, setGrupoDestinoList] = useState<any[]>([]);
+  const [tipoClienteCatalog, setTipoClienteCatalog] = useState<any[]>([]);
 
   useEffect(() => {
     if (!open) return;
@@ -138,8 +217,9 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
       getUsers(),
       getMiscellaneous({ categoria: 'CAUSA_RAIZ', limit: 999 }),
       getMiscellaneous({ categoria: 'SOLUCION_CASO', limit: 999 }),
-      getMiscellaneous({ categoria: 'GRUPO_DESTINO', limit: 999 })
-    ]).then(([usersRes, causasRes, solucionesRes, grupoDestinoRes]) => {
+      getMiscellaneous({ categoria: 'GRUPO_DESTINO', limit: 999 }),
+      getMiscellaneous({ categoria: 'TIPO_CLIENTE', limit: 999 }),
+    ]).then(([usersRes, causasRes, solucionesRes, grupoDestinoRes, tipoClienteRes]) => {
       const data = Array.isArray(usersRes.data) ? usersRes.data : [];
       setOperadores(data.filter((u: any) => u.isActive !== false).map((u: any) => ({
         _id: u._id, primerNombre: u.primerNombre, primerApellido: u.primerApellido, username: u.username, email: u.email,
@@ -148,6 +228,7 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
       setCausasRaizList(extractData(causasRes));
       setSolucionesCasoList(extractData(solucionesRes));
       setGrupoDestinoList(extractData(grupoDestinoRes));
+      setTipoClienteCatalog(extractData(tipoClienteRes));
     }).catch((err) => console.error("❌ Error al obtener datos para el modal:", err));
   }, [open]);
 
@@ -505,6 +586,60 @@ export function TicketDetailModal({ open, onClose, ticket, onEditClick }: Ticket
                               {incidentTypes.length > 0 ? incidentTypes.map((tipo) => (<Chip key={tipo} label={tipo} size="small" sx={{ bgcolor: getColorByTipoIncidencia(tipo), color: 'white', fontWeight: 600, borderRadius: '6px', fontSize: '0.68rem', height: '22px' }} />)) : <Typography sx={{ fontWeight: 500, color: '#94a3b8', fontSize: '0.8rem' }}>-</Typography>}
                             </Box>
                           } />
+                        </Grid>
+                        <Grid size={12}>
+                                                  {/* ✅ NUEVA SECCIÓN: TIPO DE CLIENTE (solo MASIVA / VENTANA) */}
+                        {(() => {
+                          const rawIncidentType = ticket.incidentType;
+                          const firstIncidentType = Array.isArray(rawIncidentType) 
+                            ? (rawIncidentType[0] || '') 
+                            : (rawIncidentType || '');
+                          
+                          const tipoUpper = firstIncidentType.toString().toUpperCase();
+                          const esMultiseleccion = tipoUpper.includes('MASIVA') || tipoUpper.includes('VENTANA') || tipoUpper.includes('MANTENIMIENTO');
+
+                          if (!esMultiseleccion) return null;
+
+                          const chips = normalizeTipoClienteToChips(ticket.tipoCliente, tipoClienteCatalog);
+                          if (chips.length === 0) return null;
+
+                          return (
+                            <Grid size={12}>
+                              <InfoItem
+                                label="Tipo de Cliente"
+                                value={
+                                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.3 }}>
+                                    {chips.map((chip) => {
+                                      const color = getSeveridadChipColor(chip.nivelSeveridad);
+                                      return (
+                                        <Chip
+                                          key={chip._id}
+                                          label={
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6 }}>
+                                              <Box component="span" sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: color.dot, flexShrink: 0, boxShadow: `0 0 0 2px ${color.dot}22` }} />
+                                              <span>{chip.valor}</span>
+                                              {chip.nivelSeveridad && (
+                                                <Box component="span" sx={{ ml: 0.5, px: 0.6, py: 0.1, borderRadius: '3px', bgcolor: `${color.dot}15`, color: color.text, fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                                                  {chip.nivelSeveridad}
+                                                </Box>
+                                              )}
+                                            </Box>
+                                          }
+                                          size="small"
+                                          sx={{
+                                            height: '24px', bgcolor: color.bg, color: color.text, fontWeight: 600, fontSize: '0.72rem',
+                                            borderRadius: '6px', border: `1px solid ${color.dot}55`, '& .MuiChip-label': { px: 1 },
+                                          }}
+                                        />
+                                      );
+                                    })}
+                                  </Box>
+                                }
+                              />
+                            </Grid>
+                          );
+                        })()}
+
                         </Grid>
 
                         {/* ✅ NODOS AFECTADOS: Renderizado independiente por tipo de nodo */}
