@@ -4,13 +4,12 @@ import CustomDataGrid, { SearchParams } from "../../components/customDataGrid";
 import { GridColDef, GridCellParams } from "@mui/x-data-grid";
 import { Chip, Box, Typography } from "@mui/material";
 import PersonIcon from "@mui/icons-material/Person";
-import { getTickets, getUsers } from "@/lib/api";
+import { getTickets, getUsers, getMiscellaneous } from "@/lib/api"; // ✅ IMPORT CORREGIDO
 import { Pagination, Tickets } from "app/utils/types";
 import { TICKET_STATUS } from "app/utils/constants";
 
 const corporateFont = 'Calibri, Arial, sans-serif';
 
-// ✅ Helper: formatear fecha dd/mm/aaaa hh:mm
 const formatDateTime = (value?: string): string => {
   if (!value) return '—';
   const d = new Date(value);
@@ -23,55 +22,35 @@ const formatDateTime = (value?: string): string => {
 
 const getColorByTipoIncidencia = (tipoIncidencia: string): { bgcolor: string; color: string } => {
   const tipoUpper = (tipoIncidencia || '').toUpperCase();
-  
-  if (tipoUpper.includes('MASIVA')) {
-    return { bgcolor: '#fee2e2', color: '#991b1b' };
-  }
-  if (tipoUpper.includes('MANTENIMIENTO') || tipoUpper.includes('VENTANA')) {
-    return { bgcolor: '#dbeafe', color: '#1e40af' };
-  }
-  if (tipoUpper.includes('PUNTUAL')) {
-    return { bgcolor: '#f1f5f9', color: '#475569' };
-  }
+  if (tipoUpper.includes('MASIVA')) return { bgcolor: '#fee2e2', color: '#991b1b' };
+  if (tipoUpper.includes('MANTENIMIENTO') || tipoUpper.includes('VENTANA')) return { bgcolor: '#dbeafe', color: '#1e40af' };
+  if (tipoUpper.includes('PUNTUAL')) return { bgcolor: '#f1f5f9', color: '#475569' };
   return { bgcolor: '#f8fafc', color: '#64748b' };
 };
 
 const getColorByTipoCliente = (tipoCliente: string): { bgcolor: string; color: string } => {
   const tipoUpper = (tipoCliente || '').toUpperCase();
-  
-  if (tipoUpper.includes('RESIDENCIAL')) {
-    return { bgcolor: '#dcfce7', color: '#166534' };
-  }
-  if (tipoUpper.includes('CARRIER')) {
-    return { bgcolor: '#ffedd5', color: '#9a3412' };
-  }
-  if (tipoUpper.includes('BANCA')) {
-    return { bgcolor: '#f3e8ff', color: '#6b21a8' };
-  }
-  if (tipoUpper.includes('CORPORATIVO')) {
-    return { bgcolor: '#e0f2fe', color: '#075985' };
-  }
+  if (tipoUpper.includes('RESIDENCIAL')) return { bgcolor: '#dcfce7', color: '#166534' };
+  if (tipoUpper.includes('CARRIER')) return { bgcolor: '#ffedd5', color: '#9a3412' };
+  if (tipoUpper.includes('BANCA')) return { bgcolor: '#f3e8ff', color: '#6b21a8' };
+  if (tipoUpper.includes('CORPORATIVO')) return { bgcolor: '#e0f2fe', color: '#075985' };
   return { bgcolor: '#f1f5f9', color: '#64748b' };
 };
 
 const getTipoClienteValor = (value: any): string => {
   if (!value) return 'Sin especificar';
-  if (typeof value === 'object' && value !== null) {
-    return value.valor || value.name || value.nombre || 'Sin especificar';
+  if (Array.isArray(value)) {
+    const nombres = value.map((v: any) => (typeof v === 'object' ? (v.valor || v.name || '') : '')).filter(Boolean);
+    return nombres.length > 0 ? nombres.join(', ') : 'Sin especificar';
   }
-  if (typeof value === 'string') {
-    if (value.length === 24 && /^[a-f0-9]+$/i.test(value)) {
-      return 'Sin especificar';
-    }
-    return value;
-  }
+  if (typeof value === 'object' && value !== null) return value.valor || value.name || value.nombre || 'Sin especificar';
+  if (typeof value === 'string') return (value.length === 24 && /^[a-f0-9]+$/i.test(value)) ? 'Sin especificar' : value;
   return 'Sin especificar';
 };
 
 const getTicketPriority = (ticket: any): number => {
   const incidentType = (ticket.incidentType || '').toUpperCase();
   const tipoClienteValor = getTipoClienteValor(ticket.tipoCliente).toUpperCase();
-
   if (incidentType.includes('MASIVA')) return 1;
   if (tipoClienteValor.includes('CARRIER')) return 2;
   if (tipoClienteValor.includes('BANCA')) return 3;
@@ -79,16 +58,12 @@ const getTicketPriority = (ticket: any): number => {
   return 5;
 };
 
-// ✅ Helper: resolver responsable (objeto, ID o fallback)
 const resolveResponsable = (ticket: any, usersMap: Record<string, string>): string => {
   const raw = ticket?.operatorResponsable || ticket?.operatorAsignado || ticket?.operador;
   if (!raw) return 'Sin asignar';
-  if (typeof raw === 'object') {
-    return `${raw.primerNombre || ''} ${raw.primerApellido || ''}`.trim() || raw.username || 'Sin asignar';
-  }
+  if (typeof raw === 'object') return `${raw.primerNombre || ''} ${raw.primerApellido || ''}`.trim() || raw.username || 'Sin asignar';
   return usersMap[String(raw)] || 'Sin asignar';
 };
-
 
 export default function ClosedTicketsTab({ 
   onCellClick, onCountChange 
@@ -101,25 +76,37 @@ export default function ClosedTicketsTab({
   const [page, setPage] = useState({ page: 0, pageSize: 10 });
   const [searchParams, setSearchParams] = useState<SearchParams>({ field: "caseNumber", value: "" });
   
-  // ✅ Mapa de usuarios para resolver ID → nombre
   const [usersMap, setUsersMap] = useState<Record<string, string>>({});
+  const [operatorOptions, setOperatorOptions] = useState<{ value: string; label: string }[]>([]);
+  const [tipoClienteOptions, setTipoClienteOptions] = useState<{ value: string; label: string }[]>([]);
 
-  // ✅ Cargar usuarios una sola vez
   useEffect(() => {
-    const loadUsers = async () => {
+    const loadData = async () => {
       try {
-        const res = await getUsers({ isActive: true });
-        const list = Array.isArray(res.data?.data) ? res.data.data : Array.isArray(res.data) ? res.data : [];
+        const [usersRes, tcRes] = await Promise.all([
+          getUsers({ isActive: true }),
+          getMiscellaneous({ categoria: 'TIPO_CLIENTE', limit: 999 })
+        ]);
+
+        const userList = Array.isArray(usersRes.data?.data) ? usersRes.data.data : Array.isArray(usersRes.data) ? usersRes.data : [];
         const map: Record<string, string> = {};
-        list.forEach((u: any) => {
-          map[u._id] = `${u.primerNombre || ''} ${u.primerApellido || ''}`.trim() || u.username || u._id;
+        const ops: { value: string; label: string }[] = [];
+        userList.forEach((u: any) => {
+          const name = `${u.primerNombre || ''} ${u.primerApellido || ''}`.trim() || u.username || u._id;
+          map[u._id] = name;
+          ops.push({ value: u._id, label: name });
         });
         setUsersMap(map);
+        setOperatorOptions(ops);
+
+        const tcRaw = tcRes?.data;
+        const tcList = Array.isArray(tcRaw?.data) ? tcRaw.data : Array.isArray(tcRaw) ? tcRaw : [];
+        setTipoClienteOptions(tcList.filter((t: any) => t.activo !== false).map((t: any) => ({ value: t._id, label: t.valor })));
       } catch (error) {
-        console.error('❌ Error cargando operadores:', error);
+        console.error('❌ Error cargando datos de filtro:', error);
       }
     };
-    loadUsers();
+    loadData();
   }, []);
 
   const fetchTickets = useCallback(async () => {
@@ -132,20 +119,58 @@ export default function ClosedTicketsTab({
         sortBy: 'createdAt',
         sortOrder: 'DESC',
       };
-      if (searchParams.value) params[searchParams.field] = searchParams.value;
+
+      // ✅ MAPEO CORRECTO: horaInicioFalla → fechaInicioFalla con formato ISO
+      if (searchParams.value) {
+        switch (searchParams.field) {
+          case 'caseNumber':
+            params.caseNumber = searchParams.value;
+            break;
+          case 'subject':
+            params.subject = searchParams.value;
+            break;
+          case 'horaInicioFalla':
+            // ✅ Convertir DD-MM-YYYY o DD/MM/YYYY a YYYY-MM-DD
+            const fecha = searchParams.value;
+            if (fecha) {
+              // Si viene como "12-11-2026" (DD-MM-YYYY) o "12/11/2026" (DD/MM/YYYY)
+              const partes = fecha.split(/[-\/]/);
+              if (partes.length === 3) {
+                if (partes[0].length === 4) {
+                  // Ya es YYYY-MM-DD
+                  params.fechaInicioFalla = fecha;
+                } else {
+                  // Es DD-MM-YYYY → convertir a YYYY-MM-DD
+                  params.fechaInicioFalla = `${partes[2]}-${partes[1].padStart(2, '0')}-${partes[0].padStart(2, '0')}`;
+                }
+              } else {
+                params.fechaInicioFalla = fecha;
+              }
+            }
+            break;
+          case 'tipoCliente':
+            params.tipoCliente = searchParams.value;
+            break;
+          case 'operatorResponsable':
+            params.operatorId = searchParams.value;
+            break;
+          case 'incidentType':
+            params.incidentType = searchParams.value;
+            break;
+          default:
+            params[searchParams.field] = searchParams.value;
+        }
+      }
 
       const response = await getTickets(params);
       let filteredData = response.data?.data || [];
       const currentTotal = response.data?.total || 0;
 
-      // ✅ Ordenar: primero por fecha de creación descendente (más reciente primero), luego por prioridad
       filteredData.sort((a: any, b: any) => {
         const dateA = new Date(a.createdAt || a.horaInicioFalla || 0).getTime();
         const dateB = new Date(b.createdAt || b.horaInicioFalla || 0).getTime();
-        if (dateB !== dateA) return dateB - dateA; // más reciente primero
-        const priorityA = getTicketPriority(a);
-        const priorityB = getTicketPriority(b);
-        return priorityA - priorityB;
+        if (dateB !== dateA) return dateB - dateA;
+        return getTicketPriority(a) - getTicketPriority(b);
       });
       
       setTickets(response.data);
@@ -162,7 +187,7 @@ export default function ClosedTicketsTab({
   const handleSearch = useCallback((params: SearchParams) => {
     setSearchParams((prev) => {
       if (prev.field === params.field && prev.value === params.value) return prev;
-      setPage({ page: 0, pageSize: 5 });
+      setPage({ page: 0, pageSize: 10 });
       return params;
     });
   }, []);
@@ -172,13 +197,10 @@ export default function ClosedTicketsTab({
   const columns: GridColDef[] = [
     { field: "caseNumber", headerName: "Tickets", flex: 1, minWidth: 120 },
     { field: "subject", headerName: "Asunto de Caso", flex: 2, minWidth: 250 },
-
-    // ✅ NUEVA COLUMNA: Fecha de Inicio de Incidencia (t0 con fallback a createdAt)
     {
       field: "horaInicioFalla",
       headerName: "Fecha Inicio Incidencia",
-      flex: 1.2,
-      minWidth: 170,
+      flex: 1.2, minWidth: 170,
       valueGetter: (_value, row: any) => row?.horaInicioFalla || row?.createdAt || '',
       renderCell: (params) => (
         <Typography variant="body2" sx={{ fontFamily: corporateFont, fontWeight: 500, color: params.value ? '#0f172a' : '#94a3b8' }}>
@@ -186,131 +208,60 @@ export default function ClosedTicketsTab({
         </Typography>
       ),
     },
-
     {
-      field: 'tipoCliente',
-      headerName: 'Tipo de Cliente',
-      width: 160,
+      field: 'tipoCliente', headerName: 'Tipo de Cliente', width: 160,
       renderCell: (params: any) => {
         const tipoClienteValor = getTipoClienteValor(params.value);
         const incidentType = params.row.incidentType || '';
-
         if (tipoClienteValor !== 'Sin especificar') {
           const colors = getColorByTipoCliente(tipoClienteValor);
-          return (
-            <Chip
-              label={tipoClienteValor}
-              size="small"
-              sx={{
-                bgcolor: colors.bgcolor,
-                color: colors.color,
-                fontWeight: 600,
-                borderRadius: '6px',
-                fontSize: '0.72rem',
-                height: '26px',
-                border: `1px solid ${colors.bgcolor}`,
-                boxShadow: 'none',
-              }}
-            />
-          );
+          return <Chip label={tipoClienteValor} size="small" sx={{ bgcolor: colors.bgcolor, color: colors.color, fontWeight: 600, borderRadius: '6px', fontSize: '0.72rem', height: '26px', border: `1px solid ${colors.bgcolor}`, boxShadow: 'none' }} />;
         }
-
         if (!incidentType.toUpperCase().includes('PUNTUAL')) {
           const colors = getColorByTipoIncidencia(incidentType);
-          return (
-            <Chip
-              label={incidentType}
-              size="small"
-              sx={{
-                bgcolor: colors.bgcolor,
-                color: colors.color,
-                fontWeight: 600,
-                borderRadius: '6px',
-                fontSize: '0.72rem',
-                height: '26px',
-                border: `1px solid ${colors.bgcolor}`,
-                boxShadow: 'none',
-              }}
-            />
-          );
+          return <Chip label={incidentType} size="small" sx={{ bgcolor: colors.bgcolor, color: colors.color, fontWeight: 600, borderRadius: '6px', fontSize: '0.72rem', height: '26px', border: `1px solid ${colors.bgcolor}`, boxShadow: 'none' }} />;
         }
-
-        return (
-          <Chip
-            label="Sin especificar"
-            size="small"
-            sx={{
-              bgcolor: '#f1f5f9',
-              color: '#94a3b8',
-              fontWeight: 500,
-              borderRadius: '6px',
-              fontSize: '0.72rem',
-              height: '26px',
-              border: '1px solid #e2e8f0',
-              boxShadow: 'none',
-            }}
-          />
-        );
+        return <Chip label="Sin especificar" size="small" sx={{ bgcolor: '#f1f5f9', color: '#94a3b8', fontWeight: 500, borderRadius: '6px', fontSize: '0.72rem', height: '26px', border: '1px solid #e2e8f0', boxShadow: 'none' }} />;
       },
     },
-
-    // ✅ CORREGIDA: Responsable (resuelve objeto, ID o fallback)
     {
-      field: "operatorResponsable",
-      headerName: "Responsable",
-      flex: 1.5,
-      minWidth: 200,
+      field: "operatorResponsable", headerName: "Responsable", flex: 1.5, minWidth: 200,
       valueGetter: (_value, row: any) => resolveResponsable(row, usersMap),
       renderCell: (params) => (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
           <PersonIcon sx={{ fontSize: '1rem', color: '#64748b' }} />
-          <Typography variant="body2" sx={{ fontFamily: corporateFont, fontWeight: 600, color: '#0f172a' }}>
-            {params.value}
-          </Typography>
+          <Typography variant="body2" sx={{ fontFamily: corporateFont, fontWeight: 600, color: '#0f172a' }}>{params.value}</Typography>
         </Box>
       ),
     },
-
     {
-      field: "status", 
-      headerName: "Estado", 
-      flex: 1, 
-      minWidth: 140, 
-      align: "center", 
-      headerAlign: "center",
-      renderCell: (params) => {
-        const valor = params.value;
-        const Translations: Record<string, any> = {
-          [TICKET_STATUS.CERRADO]: { labelText: "CERRADO", bgcolor: "#fef2f2", color: "#991b1b", border: "#fecaca" },
-          ["default"]: { labelText: valor, bgcolor: "#f8fafc", color: "#64748b", border: "#e2e8f0" },
-        };
-        const config = Translations[valor] || Translations["default"];
-        return (
-          <Chip 
-            label={config.labelText} 
-            size="small" 
-            sx={{ 
-              bgcolor: config.bgcolor, 
-              color: config.color, 
-              border: `1px solid ${config.border}`,
-              fontWeight: "bold", 
-              borderRadius: "6px", 
-              px: 0.5, 
-              fontFamily: corporateFont,
-              boxShadow: 'none',
-            }} 
-          />
-        );
-      },
+      field: "status", headerName: "Estado", flex: 1, minWidth: 140, align: "center", headerAlign: "center",
+      renderCell: () => (
+        <Chip label="CERRADO" size="small" sx={{ bgcolor: "#fef2f2", color: "#991b1b", border: "1px solid #fecaca", fontWeight: "bold", borderRadius: "6px", px: 0.5, fontFamily: corporateFont, boxShadow: 'none' }} />
+      ),
     },
   ];
 
   return (
     <Box sx={{ "& .MuiDataGrid-row": { cursor: "pointer", transition: "background-color 0.15s ease" }, "& .MuiDataGrid-row:hover": { bgcolor: "#f8fafc" } }}>
       <CustomDataGrid
-        rows={tickets?.data || []} columns={columns} loading={loading} onCellClick={onCellClick}
-        paginationModel={page} onPaginationModelChange={handlePagination} pageSizeOptions={[10, 50, 100]}
-        paginationMode="server" rowCount={tickets?.total || 0} onSearch={handleSearch} debounceMs={400}
+        rows={tickets?.data || []} 
+        columns={columns} 
+        loading={loading} 
+        onCellClick={onCellClick}
+        paginationModel={page} 
+        onPaginationModelChange={handlePagination} 
+        pageSizeOptions={[10, 50, 100]}
+        paginationMode="server" 
+        rowCount={tickets?.total || 0} 
+        onSearch={handleSearch} 
+        debounceMs={400}
+        excludeSearchFields={['status']}
+        dateSearchFields={['horaInicioFalla']}
+        filterOptions={{
+          tipoCliente: tipoClienteOptions,
+          operatorResponsable: operatorOptions,
+        }}
       />
     </Box>
   );

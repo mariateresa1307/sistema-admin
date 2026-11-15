@@ -2,8 +2,9 @@
 import React, { useState, useEffect, useCallback } from "react";
 import CustomDataGrid, { SearchParams } from "../../components/customDataGrid";
 import { GridColDef, GridCellParams } from "@mui/x-data-grid";
-import { Chip, Box } from "@mui/material";
-import { getTickets } from "@/lib/api";
+import { Chip, Box, Typography } from "@mui/material";
+import PersonIcon from "@mui/icons-material/Person";
+import { getTickets, getMiscellaneous } from "@/lib/api";
 import { Pagination, Tickets } from "app/utils/types";
 import { TICKET_STATUS } from "app/utils/constants";
 
@@ -37,6 +38,19 @@ const getTipoClienteValor = (value: any): string => {
   }
   return 'Sin especificar';
 };
+
+const extractTipoClienteIds = (value: any): string[] => {
+  if (!value) return [];
+  const arr = Array.isArray(value) ? value : [value];
+  return arr
+    .map((v: any) => {
+      if (typeof v === 'object' && v !== null) return String(v._id ?? v.id ?? '');
+      return String(v);
+    })
+    .filter((id: string) => id && id !== 'undefined' && id !== 'null')
+    .map((id: string) => id.toLowerCase());
+};
+ 
 const getTicketPriority = (ticket: any): number => {
   const status = ticket.status;
   const incidentType = (ticket.incidentType || '').toUpperCase();
@@ -55,6 +69,20 @@ const extractUserId = (field: any): string => {
   return String(field);
 };
 
+
+const resolveResponsable = (row: any): string => {
+  const raw = row?.operatorResponsable || row?.operatorAsignado || row?.operador;
+  if (!raw) return 'Sin asignar';
+  if (typeof raw === 'string') return /^[a-f\d]{24}$/i.test(raw) ? 'Sin asignar' : raw;
+  if (typeof raw === 'object') {
+    const name = [raw.primerNombre, raw.primerApellido].filter(Boolean).join(' ').trim();
+    if (name) return name;
+    return raw.nombreCompleto || raw.fullName || raw.name || raw.nombre || raw.username || raw.email || 'Sin asignar';
+  }
+  return 'Sin asignar';
+};
+
+
 export default function AssignedTicketsTab({ 
   currentUserId, onCellClick, onCountChange 
 }: { 
@@ -66,6 +94,25 @@ export default function AssignedTicketsTab({
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState({ page: 0, pageSize: 10 });
   const [searchParams, setSearchParams] = useState<SearchParams>({ field: "caseNumber", value: "" });
+  const [tipoClienteOptions, setTipoClienteOptions] = useState<{ value: string; label: string }[]>([]);
+
+  useEffect(() => {
+    const loadTipoCliente = async () => {
+      try {
+        const res = await getMiscellaneous({ categoria: 'TIPO_CLIENTE', limit: 999 });
+        const raw = res?.data;
+        const arr = Array.isArray(raw?.data) ? raw.data : Array.isArray(raw) ? raw : [];
+        setTipoClienteOptions(
+          arr
+            .filter((t: any) => t.activo !== false)
+            .map((t: any) => ({ value: t._id, label: t.valor }))
+        );
+      } catch (error) {
+        console.error('❌ Error cargando TIPO_CLIENTE:', error);
+      }
+    };
+    loadTipoCliente();
+  }, []);
 
   const fetchTickets = useCallback(async () => {
     if (!currentUserId) return;
@@ -80,8 +127,7 @@ export default function AssignedTicketsTab({
 
       const all: any[] = response.data?.data || [];
 
-      // ✅ 1) FILTRO GARANTIZADO: solo MIS casos (asignado o responsable),
-      //    inmune a ObjectId vs string porque normaliza con extractUserId
+      
       const mine = all.filter((t) => {
         const asignado = extractUserId(t.operatorAsignado);
         const responsable = extractUserId(t.operatorResponsable);
@@ -89,8 +135,9 @@ export default function AssignedTicketsTab({
       });
 
       // ✅ 2) Búsqueda en cliente según el campo elegido
-      let searched = mine;
+    let searched = mine;
       const term = searchParams.value?.trim().toLowerCase();
+
       if (term) {
         searched = mine.filter((t) => {
           if (searchParams.field === 'caseNumber') {
@@ -99,11 +146,25 @@ export default function AssignedTicketsTab({
           if (searchParams.field === 'subject') {
             return String(t.subject ?? '').toLowerCase().includes(term);
           }
-          return [t.caseNumber, t.subject].some((f) =>
+          // ✅ CORREGIDO: compara el ID del catálogo contra los IDs del ticket
+         if (searchParams.field === 'tipoCliente') {
+            const incidentType = (t.incidentType || '').toUpperCase();
+            const termUpper = term.toUpperCase();
+            if (termUpper.includes('MASIVA')) return incidentType.includes('MASIVA');
+            if (termUpper.includes('VENTANA') || termUpper.includes('MANTENIMIENTO')) {
+              return incidentType.includes('VENTANA') || incidentType.includes('MANTENIMIENTO');
+            }
+            const ids = extractTipoClienteIds(t.tipoCliente);
+            if (/^[0-9a-f]{24}$/.test(term)) return ids.includes(term);
+            const tcVal = getTipoClienteValor(t.tipoCliente).toLowerCase();
+            return tcVal.includes(term);
+          }
+          return [t.caseNumber, t.subject, getTipoClienteValor(t.tipoCliente), t.status].some((f) =>
             String(f ?? '').toLowerCase().includes(term)
           );
         });
       }
+      
 
       // ✅ 3) Orden por prioridad (masiva > carrier > banca > corporativo)
       searched.sort((a, b) => getTicketPriority(a) - getTicketPriority(b));
@@ -121,7 +182,7 @@ export default function AssignedTicketsTab({
       } as any);
 
       // ✅ El badge del tab muestra el total real de MIS casos
-      onCountChange(searched.length);
+    onCountChange(searched.length);
     } catch (error) {
       console.error('❌ Error fetching tickets:', error);
     } finally {
@@ -140,6 +201,10 @@ export default function AssignedTicketsTab({
   }, []);
 
   const handlePagination = (model: { page: number; pageSize: number }) => setPage(model);
+
+  const responsableOptions = Array.from(
+    new Set((tickets?.data || []).map((ticket: any) => resolveResponsable(ticket)))
+  ).map((name) => ({ value: name, label: name }));
 
   const columns: GridColDef[] = [
     {
@@ -195,14 +260,18 @@ export default function AssignedTicketsTab({
     },
     { field: "caseNumber", headerName: "Tickets", flex: 1, minWidth: 120 },
     { field: "subject", headerName: "Asunto de Caso", flex: 2, minWidth: 250 },
-    
-    {
-      field: "status", 
-      headerName: "Estado", 
-      flex: 1, 
-      minWidth: 140, 
-      align: "center", 
-      headerAlign: "center",
+     {
+      field: "operatorResponsable", headerName: "Responsable", flex: 1.5, minWidth: 200,
+      valueGetter: (_value, row: any) => resolveResponsable(row),
+      renderCell: (params) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+          <PersonIcon sx={{ fontSize: '1rem', color: '#64748b' }} />
+          <Typography variant="body2" sx={{ fontFamily: corporateFont, fontWeight: 600, color: '#0f172a' }}>{params.value}</Typography>
+        </Box>
+      ),
+    },
+ {
+      field: "status", headerName: "Estado", flex: 1, minWidth: 140, align: "center", headerAlign: "center",
       renderCell: (params) => {
         const valor = params.value;
         const Translations: Record<string, any> = {
@@ -211,22 +280,7 @@ export default function AssignedTicketsTab({
           ["default"]: { labelText: valor, bgcolor: "#f8fafc", color: "#64748b", border: "#e2e8f0" },
         };
         const config = Translations[valor] || Translations["default"];
-        return (
-          <Chip 
-            label={config.labelText} 
-            size="small" 
-            sx={{ 
-              bgcolor: config.bgcolor, 
-              color: config.color, 
-              border: `1px solid ${config.border}`,
-              fontWeight: "bold", 
-              borderRadius: "6px", 
-              px: 0.5, 
-              fontFamily: corporateFont,
-              boxShadow: 'none',
-            }} 
-          />
-        );
+        return <Chip label={config.labelText} size="small" sx={{ bgcolor: config.bgcolor, color: config.color, border: `1px solid ${config.border}`, fontWeight: "bold", borderRadius: "6px", px: 0.5, fontFamily: corporateFont, boxShadow: 'none' }} />;
       },
     },
   ];
@@ -236,10 +290,29 @@ export default function AssignedTicketsTab({
   return (
     <Box sx={{ "& .MuiDataGrid-row": { cursor: "pointer", transition: "background-color 0.15s ease" }, "& .MuiDataGrid-row:hover": { bgcolor: "#f8fafc" } }}>
       <CustomDataGrid
-        rows={tickets?.data || []} columns={columns} loading={loading} onCellClick={onCellClick}
-        paginationModel={page} onPaginationModelChange={handlePagination} pageSizeOptions={[10, 50, 100]}
-        paginationMode="server" rowCount={tickets?.total || 0} onSearch={handleSearch} debounceMs={400}
+         rows={tickets?.data || []} 
+        columns={columns} 
+        loading={loading} 
+        onCellClick={onCellClick}
+        paginationModel={page} 
+        onPaginationModelChange={handlePagination} 
+        pageSizeOptions={[10, 50, 100]}
+        paginationMode="server" 
+        rowCount={tickets?.total || 0} 
+        onSearch={handleSearch} 
+        debounceMs={400}
+        excludeSearchFields={['status','operatorResponsable']} // ✅ Elimina "Estado" del dropdown
+         filterOptions={{
+          // ✅ Agrega las dos categorías especiales al final del catálogo
+          tipoCliente: [
+            ...tipoClienteOptions,
+            { value: 'FALLA MASIVA', label: 'FALLA MASIVA' },
+            { value: 'VENTANA DE MANTENIMIENTO', label: 'VENTANA DE MANTENIMIENTO' },
+          ],
+        }}
       />
     </Box>
   );
 }
+
+

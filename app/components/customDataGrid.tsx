@@ -7,7 +7,9 @@ import { TextField, Box, InputAdornment, MenuItem, Typography } from "@mui/mater
 import SearchIcon from "@mui/icons-material/Search";
 import { TICKET_STATUS } from "app/utils/constants";
 import { TableSkeleton } from './skeletons';
-
+import { LocalizationProvider, DatePicker } from "@mui/x-date-pickers";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import dayjs, { Dayjs } from "dayjs";
 export type SearchParams = { field: string; value: string };
 
 export interface CustomDataGridProps extends Omit<DataGridProps, 'rows' | 'sx'> {
@@ -24,6 +26,7 @@ export interface CustomDataGridProps extends Omit<DataGridProps, 'rows' | 'sx'> 
   sx?: SxProps<Theme>;
   excludeSearchFields?: string[];
   filterOptions?: Record<string, { value: string; label: string }[]>;
+   dateSearchFields?: string[];
 }
 
 export default function CustomDataGrid({
@@ -40,6 +43,7 @@ export default function CustomDataGrid({
   sx: externalSx = {},
   excludeSearchFields = [],
   filterOptions,
+  dateSearchFields = [],
   ...restProps
 }: CustomDataGridProps) {
 
@@ -89,7 +93,8 @@ export default function CustomDataGrid({
     [searchField]
   );
   const isTipoClienteField = useMemo(() => searchField === 'tipoCliente', [searchField]);
-  const isSelectSearchField = isUserStatusField || isStatusField || isTipoServicioField || isOperatorField || isTipoClienteField;
+  const isDateField = useMemo(() => dateSearchFields.includes(searchField), [searchField, dateSearchFields]);
+  const isSelectSearchField = isUserStatusField || isStatusField || isTipoServicioField || isOperatorField || isTipoClienteField || isDateField;
 
   useEffect(() => { setIsMounted(true); }, []);
 
@@ -329,6 +334,33 @@ export default function CustomDataGrid({
   };
 
   const renderSearchInput = () => {
+   if (isDateField) {
+      const dateLabel = columns.find(c => c.field === searchField)?.headerName || searchField;
+      
+      // Convertir el searchTerm (YYYY-MM-DD) a Dayjs para el DatePicker
+      const parsed = searchTerm ? dayjs(searchTerm, 'YYYY-MM-DD') : null;
+      
+      return (
+        <LocalizationProvider dateAdapter={AdapterDayjs}>
+          <DatePicker
+            label={`Filtrar por ${dateLabel}`}
+            value={parsed && parsed.isValid() ? parsed : null}
+            format="DD/MM/YYYY"
+            onChange={(newValue: Dayjs | null) => {
+              // ✅ SIEMPRE enviar en formato YYYY-MM-DD al backend
+              setSearchTerm(newValue ? newValue.format('YYYY-MM-DD') : "");
+            }}
+            slotProps={{
+              textField: {
+                size: "small",
+                sx: { minWidth: 220, maxWidth: 500, flex: 1 },
+              },
+            }}
+          />
+        </LocalizationProvider>
+      );
+    }
+
     if (isTipoClienteField) {
       return (
         <TextField
