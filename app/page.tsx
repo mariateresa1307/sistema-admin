@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from 'react';
-import { useRouter } from 'next/navigation'; 
+import { useRouter, useSearchParams } from 'next/navigation'; // ✅ CORREGIDO: Agregado useSearchParams
+import { Suspense } from 'react'; 
 import {
   Button,
   CssBaseline,
@@ -9,9 +10,20 @@ import {
   Box,
   Typography,
   InputAdornment,
-  IconButton
+  IconButton,
+  Alert,
+  AlertTitle,
 } from '@mui/material';
-import { Mail, Lock, Hub as HubIcon, Visibility, VisibilityOff } from '@mui/icons-material';
+import { 
+  Mail, 
+  Lock, 
+  Hub as HubIcon, 
+  Visibility, 
+  VisibilityOff,
+  WarningAmberRounded,  
+  LockClockRounded,  
+  LogoutRounded 
+} from '@mui/icons-material';
 import { motion, Variants } from 'motion/react';
 import api from '@/../src/lib/api';
 import { useState, useMemo } from 'react';
@@ -30,11 +42,77 @@ const containerVariants: Variants = {
   animate: { opacity: 1, scale: 1, transition: { duration: 0.6 } },
 };
 
+// Componente independiente para el aviso de sesión (debe estar FUERA de LoginPage)
+const SessionNotice = () => {
+  const searchParams = useSearchParams();
+  const reason = searchParams.get("reason");
+
+  const MENSAJES: Record<string, { title: string; body: string; severity: "warning" | "info" | "success"; icon: React.ReactNode }> = {
+    inactividad: {
+      title: "Sesión cerrada por inactividad",
+      body: "Tu sesión se cerró automáticamente por inactividad. Por seguridad, inicia sesión nuevamente.",
+      severity: "warning",
+      icon: <LockClockRounded />,
+    },
+    turno: {
+      title: "Tu turno finalizó",
+      body: "Se cerró tu sesión porque terminó tu horario asignado. Inicia sesión nuevamente para continuar.",
+      severity: "info",
+      icon: <WarningAmberRounded />,
+    },
+    expirada: {
+      title: "Sesión expirada",
+      body: "Tu sesión expiró en el servidor. Inicia sesión nuevamente.",
+      severity: "warning",
+      icon: <LockClockRounded />,
+    },
+    manual: {
+      title: "Sesión cerrada",
+      body: "Cerraste tu sesión correctamente. ¡Hasta pronto!",
+      severity: "success",
+      icon: <LogoutRounded />,
+    },
+  };
+
+  if (!reason || !MENSAJES[reason]) return null;
+  const cfg = MENSAJES[reason];
+
+  return (
+    <Box sx={{ width: "100%", mb: 3 }}>
+      <Alert
+        severity={cfg.severity}
+        icon={cfg.icon}
+        sx={{
+          borderRadius: "12px",
+          boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
+          backgroundColor: "rgba(255, 255, 255, 0.85)", // Adaptable al glassmorphism
+          backdropFilter: "blur(10px)",
+          border: "1px solid rgba(255, 255, 255, 0.3)",
+          color: "#1a0033",
+          "& .MuiAlert-action": { alignItems: "center" },
+        }}
+        action={
+          <Button
+            color="inherit"
+            size="small"
+            onClick={() => window.history.replaceState(null, "", "/")} // Limpia el ?reason= de la URL
+            sx={{ color: "inherit", fontWeight: 600 }}
+          >
+            Ocultar
+          </Button>
+        }
+      >
+        <AlertTitle sx={{ fontWeight: 700, color: "inherit" }}>{cfg.title}</AlertTitle>
+        {cfg.body}
+      </Alert>
+    </Box>
+  );
+};
+
 export default function LoginPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
 
-  // ✅ useMemo DENTRO del componente (líneas 37-50)
   const bounceVariants = useMemo<Variants>(() => ({
     animate: () => ({
       x: [Math.random() * 100 - 50, Math.random() * 200 - 100, Math.random() * -200 + 100, 0],
@@ -48,7 +126,6 @@ export default function LoginPage() {
     })
   }), []);
 
-  // ✅ Burbujas memorizadas DENTRO del componente (líneas 52-59)
   const burbujas = useMemo(() => [
     { s: 350, t: '10%', l: '5%', c: glassColors.burbujaSecundaria },
     { s: 250, t: '70%', l: '15%', c: glassColors.burbujaPrimaria },
@@ -98,6 +175,7 @@ export default function LoginPage() {
     }
   };
 
+  // ✅ CORREGIDO: El return principal mantiene tu diseño original intacto
   return (
     <Box sx={{ 
       height: '100vh', width: '100vw', display: 'flex', 
@@ -140,6 +218,11 @@ export default function LoginPage() {
             </Typography>
           </Box>
           
+          {/* ✅ NUEVO: Aquí se renderiza el aviso, envuelto en Suspense (requerido por Next.js) */}
+          <Suspense fallback={null}>
+            <SessionNotice />
+          </Suspense>
+
           <Box component="form" onSubmit={handleSubmit} noValidate>
             <TextField
               fullWidth variant="standard" placeholder="Email" name="email" margin="normal"

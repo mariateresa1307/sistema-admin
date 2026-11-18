@@ -477,8 +477,8 @@ const RankingRow = ({ op, rank, delay }: { op: OperadorStats; rank: number; dela
 export default function OperationsDashboard() {
   const [filtroTurno, setFiltroTurno] = useState<Turno | "todos">("todos");
   const [operadores] = useState<OperadorStats[]>(MOCK_OPERADORES);
-  const [lastUpdate, setLastUpdate] = useState(new Date());
-  const formattedTime = lastUpdate.toLocaleTimeString("es-VE");
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const formattedTime = lastUpdate ? lastUpdate.toLocaleTimeString("es-VE") : "—";
 
   const ranking = useMemo(() => {
     let lista = [...operadores];
@@ -503,6 +503,7 @@ export default function OperationsDashboard() {
   const handleRefresh = () => setLastUpdate(new Date());
 
   useEffect(() => {
+    setLastUpdate(new Date());
     const interval = setInterval(() => setLastUpdate(new Date()), 30000);
     return () => clearInterval(interval);
   }, []);

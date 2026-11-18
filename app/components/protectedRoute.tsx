@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../context/authContext";
-import { useUserSession } from '../hooks/useUserSession';
+import { useUserSession } from '../hooks/UserSession';
 import { PageSkeleton } from './skeletons';
 
 interface ProtectedRouteProps {

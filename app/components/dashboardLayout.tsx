@@ -23,9 +23,9 @@ import TuneIcon from '@mui/icons-material/Tune';
 import { logout } from '@/lib/api'; 
 import { NotificationBell } from '../components/NotificationBell';
 import { ChangePasswordModal } from "../components/ChangePasswordModal"; 
-import api from '@/lib/api'; 
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
-
+import { clearSessionTurno } from "app/utils/sessionTurno";
+import { UserSessionTracker } from "../user/components/UserSessionTracker";
 
 const DRAWER_WIDTH = 260;
 const APP_BAR_HEIGHT = 64;
@@ -110,7 +110,6 @@ const UserMenu = React.memo<{ onThemeToggle: (mode: ThemeMode) => void; isDark: 
   }, []);
 
   const initial = userData ? userData.primerNombre[0]?.toUpperCase() : "U";
-
   const handleLogout = async () => {
     setAnchorEl(null);
     try {
@@ -118,10 +117,13 @@ const UserMenu = React.memo<{ onThemeToggle: (mode: ThemeMode) => void; isDark: 
     } catch (error) {
       console.error('Error durante el logout:', error);
     } finally {
+      
+      clearSessionTurno(); 
       localStorage.clear();
       window.location.href = '/';
     }
   };
+
 
   return (
     <Box sx={{ display: "flex", alignItems: "center" }}>
@@ -286,41 +288,31 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const handleNavigate = React.useCallback((path: string) => router.push(path), [router]);
   const handleLogout = React.useCallback(async () => {
     try { /* await logout(); */ } catch (error) { console.error('Error durante el logout:', error); } 
-    finally { localStorage.clear(); window.location.href = '/'; }
+    finally { clearSessionTurno(); localStorage.clear(); window.location.href = '/'; }
   }, []);
 
-  // ✅ HEARTBEAT: Mantiene la sesión del usuario como "activa" para recibir notificaciones
-  React.useEffect(() => {
-    const sendHeartbeat = async () => {
-      try {
-        await api.post('/user-sessions/heartbeat');
-      } catch (error) {
-        console.error('Error sending heartbeat:', error);
-      }
-    };
 
-    // Enviar heartbeat cada 2 minutos
-    sendHeartbeat();
-    const interval = setInterval(sendHeartbeat, 2 * 60 * 1000);
-    
-    return () => clearInterval(interval);
-  }, []);
 
   return (
-    <Box sx={{ display: "flex", minHeight: "100vh", transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)" }}>
-      <AppBar elevation={0} position="fixed" sx={{ zIndex: 1201, backdropFilter: "blur(15px)", transition: "background-color 0.4s, color 0.4s" }}>
-        <Toolbar sx={{ justifyContent: "space-between" }}>
-          <AcUnitIcon />
-          <UserMenu isDark={isDark} onThemeToggle={toggleTheme} onNavigate={handleNavigate} />
-        </Toolbar>
-      </AppBar>
-      <Sidebar pathname={pathname} onNavigate={handleNavigate} onLogout={handleLogout} />
-      <Box component="main" sx={{ paddingTop: `${APP_BAR_HEIGHT + 32}px`, width: "100%", minHeight: "100vh", boxSizing: "border-box" }}>
-        <Stack direction="row" justifyContent="center" sx={{ maxWidth: 1400, mx: "auto", px: 2 }}>
-          <Box sx={{ width: "91.666%" }}>{children}</Box>
-        </Stack>
+    <>
+      {/* Renderiza el tracker que gestiona heartbeat, inactividad y turnos */}
+      <UserSessionTracker />
+
+      <Box sx={{ display: "flex", minHeight: "100vh", transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)" }}>
+        <AppBar elevation={0} position="fixed" sx={{ zIndex: 1201, backdropFilter: "blur(15px)", transition: "background-color 0.4s, color 0.4s" }}>
+          <Toolbar sx={{ justifyContent: "space-between" }}>
+            <AcUnitIcon />
+            <UserMenu isDark={isDark} onThemeToggle={toggleTheme} onNavigate={handleNavigate} />
+          </Toolbar>
+        </AppBar>
+        <Sidebar pathname={pathname} onNavigate={handleNavigate} onLogout={handleLogout} />
+        <Box component="main" sx={{ paddingTop: `${APP_BAR_HEIGHT + 32}px`, width: "100%", minHeight: "100vh", boxSizing: "border-box" }}>
+          <Stack direction="row" justifyContent="center" sx={{ maxWidth: 1400, mx: "auto", px: 2 }}>
+            <Box sx={{ width: "91.666%" }}>{children}</Box>
+          </Stack>
+        </Box>
       </Box>
-    </Box>
+    </>
   );
 }
 

@@ -93,9 +93,9 @@ export default function CustomDataGrid({
     [searchField]
   );
   const isTipoClienteField = useMemo(() => searchField === 'tipoCliente', [searchField]);
+  const isRoleField = useMemo(() => searchField === 'role', [searchField]);
   const isDateField = useMemo(() => dateSearchFields.includes(searchField), [searchField, dateSearchFields]);
-  const isSelectSearchField = isUserStatusField || isStatusField || isTipoServicioField || isOperatorField || isTipoClienteField || isDateField;
-
+const isSelectSearchField = isUserStatusField || isStatusField || isTipoServicioField || isOperatorField || isTipoClienteField || isDateField || isRoleField;
   useEffect(() => { setIsMounted(true); }, []);
 
   useEffect(() => {
@@ -144,8 +144,16 @@ export default function CustomDataGrid({
       .sort((a, b) => a.label.localeCompare(b.label));
   }, [isOperatorField, searchField, rows, filterOptions]);
 
-  // ✅ TIPO CLIENTE OPTIONS - SIN searchTerm en dependencias (evita re-rendering)
-  // ✅ Extrae nombres correctamente del objeto poblado
+  const roleOptions = useMemo(() => {
+  if (!isRoleField) return [];
+  if (filterOptions?.['role']) return filterOptions['role'];
+  return [
+    { value: 'admin', label: 'Administrador' },
+    { value: 'operador', label: 'Operador' },
+    { value: 'editor', label: 'Operator Editor' },
+  ];
+}, [isRoleField, filterOptions]);
+
   const tipoClienteOptions = useMemo(() => {
     if (!isTipoClienteField) return [];
     if (filterOptions?.['tipoCliente']) return filterOptions['tipoCliente'];
@@ -406,7 +414,23 @@ export default function CustomDataGrid({
         </TextField>
       );
     }
-
+if (isRoleField) {
+  return (
+    <TextField
+      select
+      size="small"
+      value={searchTerm}
+      onChange={(e) => setSearchTerm(e.target.value)}
+      sx={{ minWidth: 200, maxWidth: 500, flex: 1 }}
+      label="Filtrar por Rol"
+    >
+      <MenuItem value="">Todos</MenuItem>
+      {roleOptions.map((opt) => (
+        <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
+      ))}
+    </TextField>
+  );
+}
     if (isTipoServicioField) {
       return (
         <TextField select size="small" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} sx={{ minWidth: 200, flex: 1, maxWidth: 500 }} label="Filtrar por tipo">

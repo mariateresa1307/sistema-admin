@@ -88,7 +88,6 @@ api.interceptors.response.use(
 );
 export default api;
 
-export const getMiscellaneousById = (id: string) => api.get(`/miscellaneous/${id}`);
 
 // ENDPOINTS DE USUARIOS
 export const getUsers = (
@@ -126,6 +125,7 @@ export const getIncidenciasReport = (params: { mes: string; tipoServicio?: strin
 
 // ENDPOINTS DE MISCELLANEOUS
 export const getMiscellaneous = (params: any) => api.get('/miscellaneous', { params });
+export const getMiscellaneousById = (id: string) => api.get(`/miscellaneous/${id}`);
 export const createMiscellaneous = (data: any) => api.post('/miscellaneous', data);
 export const updateMiscellaneous = (id: string, data: any) => api.put(`/miscellaneous/${id}`, data);
 export const deleteMiscellaneous = (id: string) => api.delete(`/miscellaneous/${id}`);
