@@ -26,7 +26,7 @@ import {
 } from '@mui/icons-material';
 import { motion, Variants } from 'motion/react';
 import api from '@/../src/lib/api';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 
 const glassColors = {
   fondoGradiente: 'linear-gradient(135deg, #1a0033 0%, #000000 100%)',
@@ -43,9 +43,16 @@ const containerVariants: Variants = {
 };
 
 // Componente independiente para el aviso de sesión (debe estar FUERA de LoginPage)
+// ✅ REEMPLAZA el componente SessionNotice actual por este
 const SessionNotice = () => {
-  const searchParams = useSearchParams();
-  const reason = searchParams.get("reason");
+  const [reason, setReason] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Leer el query param directamente del navegador (más confiable que useSearchParams)
+    const params = new URLSearchParams(window.location.search);
+    const r = params.get("reason");
+    if (r) setReason(r);
+  }, []);
 
   const MENSAJES: Record<string, { title: string; body: string; severity: "warning" | "info" | "success"; icon: React.ReactNode }> = {
     inactividad: {
@@ -85,7 +92,7 @@ const SessionNotice = () => {
         sx={{
           borderRadius: "12px",
           boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
-          backgroundColor: "rgba(255, 255, 255, 0.85)", // Adaptable al glassmorphism
+          backgroundColor: "rgba(255, 255, 255, 0.85)",
           backdropFilter: "blur(10px)",
           border: "1px solid rgba(255, 255, 255, 0.3)",
           color: "#1a0033",
@@ -95,7 +102,10 @@ const SessionNotice = () => {
           <Button
             color="inherit"
             size="small"
-            onClick={() => window.history.replaceState(null, "", "/")} // Limpia el ?reason= de la URL
+            onClick={() => {
+              window.history.replaceState(null, "", "/");
+              setReason(null); // ✅ Ocultar el banner inmediatamente
+            }}
             sx={{ color: "inherit", fontWeight: 600 }}
           >
             Ocultar

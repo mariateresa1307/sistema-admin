@@ -3,7 +3,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import theme from '@/lib/theme';
 import { AuthProvider } from './context/authContext'; 
-import NotificationProvider from './components/NotificationProvider';
+import NotificationProvider from './notifications/NotificationProvider';
 import { UserSessionTracker } from './user/components/UserSessionTracker';
 
 

@@ -21,7 +21,7 @@ import { motion } from "motion/react";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
 import TuneIcon from '@mui/icons-material/Tune';
 import { logout } from '@/lib/api'; 
-import { NotificationBell } from '../components/NotificationBell';
+import { NotificationBell } from '../notifications/NotificationBell';
 import { ChangePasswordModal } from "../components/ChangePasswordModal"; 
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import { clearSessionTurno } from "app/utils/sessionTurno";

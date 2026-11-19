@@ -22,8 +22,10 @@ import {
   markAllNotificationsAsRead,
   getUnreadNotificationsCount,
 } from "@/lib/api";
+import { useRouter } from "next/navigation";
 
 const getNotificationIcon = (type: string) => {
+   
   switch (type) {
     case 'ticket_auto_assignment':
       return <AssignmentIcon sx={{ color: '#1976d2' }} />;
@@ -43,6 +45,7 @@ const getNotificationIcon = (type: string) => {
 };
 
 export const NotificationBell = () => {
+  const router = useRouter(); 
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -51,11 +54,11 @@ export const NotificationBell = () => {
   useEffect(() => {
     fetchUnreadCount();
     fetchNotifications();
-    // ✅ POLLING cada 2 minutos (120000 ms)
+    // ✅ POLLING cada 30 segundos (30000 ms)
     const interval = setInterval(() => {
       fetchUnreadCount();
       fetchNotifications();
-    }, 120000);
+    }, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -83,22 +86,27 @@ export const NotificationBell = () => {
     fetchNotifications().finally(() => setLoading(false));
   };
 
-  // ✅ CORREGIDO: Usar .filter() para eliminarla de la vista, ya que el backend la borra
-  const handleMarkAsRead = async (id: string) => {
+  //  Usar .filter() para eliminarla de la vista, ya que el backend la borra
+ const handleMarkAsRead = async (id: string, ticketNumber?: string) => {
     try {
       await markNotificationAsRead(id);
-      setNotifications((prev) => prev.filter((n) => n._id !== id));
-      setUnreadCount((prev) => Math.max(0, prev - 1));
+      setNotifications((prev) => prev.map((n) => n._id === id ? { ...n, read: true } : n));
+    setUnreadCount((prev) => Math.max(0, prev - 1));
+      if (ticketNumber) {
+        setAnchorEl(null); // Cierra el popover
+        router.push(`/tickets?openTicket=${encodeURIComponent(ticketNumber)}`);// Ajusta la ruta a tu estructura real
+      }
     } catch (error) {
       console.error("Error marking as read:", error);
     }
   };
 
+
   // ✅ CORREGIDO: Vaciar el array local completamente
-  const handleMarkAllAsRead = async () => {
+const handleMarkAllAsRead = async () => {
     try {
       await markAllNotificationsAsRead();
-      setNotifications([]);
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
       setUnreadCount(0);
     } catch (error) {
       console.error("Error marking all as read:", error);
@@ -202,7 +210,7 @@ export const NotificationBell = () => {
             notifications.map((notif) => (
               <React.Fragment key={notif._id}>
                 <ListItemButton
-                  onClick={() => handleMarkAsRead(notif._id)}
+                  onClick={() => handleMarkAsRead(notif._id, notif.ticketNumber)}
                   sx={{
                     bgcolor: notif.read ? "transparent" : "#f0f4ff",
                     py: 1.5,

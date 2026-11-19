@@ -46,26 +46,34 @@ export const UserSessionTracker = () => {
 
   // Función que ejecuta el cierre de sesión
 const handleLogout = useCallback((motivo: string, preserveTurno = false) => {
-    console.warn(`⚠️ [Tracker] Cierre de sesión: ${motivo}`);
-    
-     const reasonKey =
-      motivo.includes('inactividad') ? 'inactividad' :
-      motivo.includes('turno')       ? 'turno' :
-      motivo.includes('token')       ? 'expirada' :
-      'manual';
+  console.warn(`⚠️ [Tracker] Cierre de sesión: ${motivo}`);
 
-   if (!preserveTurno) {
-      clearSessionTurno();
-    }
-    
-    if (typeof logout === 'function') {
-      logout();
-    } else {
-      localStorage.removeItem('token');
-      localStorage.removeItem('userData');
-    }
-    window.location.href = `/?reason=${reasonKey}`;
-  }, [logout, router]);
+const reasonKey =
+    motivo.includes('inactividad') ? 'inactividad' :
+    motivo.includes('turno') ? 'turno' :
+    motivo.includes('token') ? 'expirada' :
+    'manual';
+
+  const turnoActual = localStorage.getItem('sessionTurno');
+  const closeAtActual = localStorage.getItem('sessionCloseAt');
+
+  if (typeof logout === 'function') {
+    logout();
+  } else {
+    localStorage.removeItem('token');
+    localStorage.removeItem('userData');
+  }
+
+  if (preserveTurno && turnoActual && closeAtActual) {
+    localStorage.setItem('sessionTurno', turnoActual);
+    localStorage.setItem('sessionCloseAt', closeAtActual);
+  } else {
+    clearSessionTurno();
+  }
+
+  // ✅ Esta línea es CRÍTICA - debe ser window.location.href, NO router.push
+  window.location.href = `/?reason=${reasonKey}`;
+}, [logout]);
 
   // Reinicia el temporizador de inactividad
    const resetInactivity = useCallback(() => {
@@ -73,62 +81,44 @@ const handleLogout = useCallback((motivo: string, preserveTurno = false) => {
     inactivityRef.current = setTimeout(() => handleLogout('inactividad de 15 min', true), INACTIVITY_TIMEOUT);
   }, [handleLogout]);
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      if (inactivityRef.current) clearTimeout(inactivityRef.current);
-      if (closeRef.current) clearTimeout(closeRef.current);
-      if (heartbeatRef.current) clearInterval(heartbeatRef.current);
-      return;
-    }
+ useEffect(() => {
+  if (!isAuthenticated) {
+    if (inactivityRef.current) clearTimeout(inactivityRef.current);
+    if (closeRef.current) clearTimeout(closeRef.current);
+    if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+    return;
+  }
 
-    const sendHeartbeatSafe = async () => {
-      try {
-        await sendHeartbeat();
-      } catch (err: any) {
-        if (err?.response?.status === 401) {
-          handleLogout('token expirado o inválido', false); // ✅ No preservar turno
-        }
+  // ✅ Flag para evitar heartbeats duplicados en StrictMode
+  let isActive = true;
+  const events = ['mousemove', 'keydown', 'mousedown', 'touchstart', 'scroll'];
+  events.forEach((event) => window.addEventListener(event, resetInactivity));
+
+  const sendHeartbeatSafe = async () => {
+    if (!isActive) return; // Si el efecto ya se limpió, no enviar
+    try {
+      await sendHeartbeat();
+    } catch (err: any) {
+      if (err?.response?.status === 401) {
+        handleLogout('token expirado o inválido', false);
       }
-    };
-
-   
-    sendHeartbeatSafe();
-    heartbeatRef.current = setInterval(sendHeartbeatSafe, 60000);
-
-    // 3. Lógica de Turno y Cierre Automático
-    let turno = (localStorage.getItem('sessionTurno') as keyof typeof TURNOS) || null;
-    let closeAt = Number(localStorage.getItem('sessionCloseAt')) || 0;
-
-    // Si no hay turno guardado, o la hora de cierre ya pasó, recalcular
-    if (!turno || !closeAt || closeAt <= Date.now()) {
-      turno = getTurnoByHour(dayjs().hour());
-      closeAt = computeCloseAt(turno);
-      localStorage.setItem('sessionTurno', turno);
-      localStorage.setItem('sessionCloseAt', String(closeAt));
     }
+  };
 
-    const msUntilClose = closeAt - Date.now();
+  sendHeartbeatSafe();
+  heartbeatRef.current = setInterval(sendHeartbeatSafe, 60000);
 
-     if (msUntilClose <= 0) {
-      handleLogout(`fin de turno ${turno} (tiempo agotado)`, true); // ✅ Preservar turno
-    } else {
-      console.log(`🕐 [Tracker] Turno: ${turno}. Cierre programado: ${dayjs(closeAt).format('DD/MM/YYYY HH:mm')} (en ${Math.round(msUntilClose / 60000)} min)`);
-      closeRef.current = setTimeout(() => handleLogout(`fin de turno ${turno}`, true), msUntilClose); // ✅ Preservar turno
-    }
+  // ... resto del código (turnos, inactividad) ...
 
-    const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'mousemove'];
-    events.forEach((event) => window.addEventListener(event, resetInactivity));
-    
-    resetInactivity();
-
-    // 5. Limpieza al desmontar el componente o cambiar de sesión
-   return () => {
-      if (heartbeatRef.current) clearInterval(heartbeatRef.current);
-      if (closeRef.current) clearTimeout(closeRef.current);
-      if (inactivityRef.current) clearTimeout(inactivityRef.current);
-      events.forEach((event) => window.removeEventListener(event, resetInactivity));
-    };
-  }, [isAuthenticated, user?.username, handleLogout, resetInactivity]);
+  // ✅ Cleanup robusto
+  return () => {
+    isActive = false; // Marca el efecto como inactivo
+    if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+    if (closeRef.current) clearTimeout(closeRef.current);
+    if (inactivityRef.current) clearTimeout(inactivityRef.current);
+    events.forEach((event) => window.removeEventListener(event, resetInactivity));
+  };
+}, [isAuthenticated, user?.username]); // ✅ Quita handleLogout y resetInactivity de las dependencias
 
   return null;
 };

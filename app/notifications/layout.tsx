@@ -1,6 +1,6 @@
 import DashboardLayout from "../components/dashboardLayout";
 
-export default function MiscellaneousLayout({
+export default function NotificationsLayout({
   children,
 }: {
   children: React.ReactNode;
