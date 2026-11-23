@@ -106,6 +106,9 @@ export default function RBSPage() {
         apiParams.nodos = searchParams.value;
       } else if (searchParams?.field === "status" && searchParams.value) {
         apiParams.status = searchParams.value;
+      }  else if (searchParams?.field === "serialONT" && searchParams.value) {
+       
+        apiParams.serialONT = searchParams.value;
       } else if (
         searchParams?.field &&
         !["tipoServicio", "status", "nodos"].includes(searchParams.field) &&
@@ -181,7 +184,10 @@ export default function RBSPage() {
     { field: "tipoServicio", headerName: "Tipo", width: 140 },
     { field: "name", headerName: "Nombre / Cliente", flex: 1 },
     { field: "city", headerName: "Ciudad", width: 140 },
-    { field: "detalles", headerName: "Detalles Técnicos", flex: 1.5, renderCell: (params) => renderDetalles(params.row as Service) },
+    { field: "serialONT", headerName: "Serial", flex: 1.5, renderCell: (params) => {
+        const row = params.row as Service; return row.serialONT || "N/A"; 
+      },
+    },
     {
       field: "status", headerName: "Estado", width: 120,
       renderCell: (params) => {

@@ -87,19 +87,40 @@ export const NotificationBell = () => {
   };
 
   //  Usar .filter() para eliminarla de la vista, ya que el backend la borra
- const handleMarkAsRead = async (id: string, ticketNumber?: string) => {
-    try {
-      await markNotificationAsRead(id);
-      setNotifications((prev) => prev.map((n) => n._id === id ? { ...n, read: true } : n));
+// ✅ NUEVA FUNCIÓN: recibe el objeto completo de la notificación
+const handleNotificationClick = async (notif: any) => {
+  try {
+    await markNotificationAsRead(notif._id);
+    setNotifications((prev) => prev.map((n) => n._id === notif._id ? { ...n, read: true } : n));
     setUnreadCount((prev) => Math.max(0, prev - 1));
-      if (ticketNumber) {
-        setAnchorEl(null); // Cierra el popover
-        router.push(`/tickets?openTicket=${encodeURIComponent(ticketNumber)}`);// Ajusta la ruta a tu estructura real
-      }
-    } catch (error) {
-      console.error("Error marking as read:", error);
+
+    // ✅ DECISIÓN SEGÚN EL TIPO
+    switch (notif.type) {
+      case 'login_stale_alert':
+        // Notificación agregada → navegar a la lista de tickets SIN abrir modal
+        setAnchorEl(null);
+        router.push('/tickets');
+        break;
+
+      case 'ticket_assignment':
+      case 'ticket_auto_assignment':
+      case 'ticket_closure':
+      case 'ticket_delay_alert':
+        // Notificación individual → abrir el ticket específico
+        if (notif.ticketNumber) {
+          setAnchorEl(null);
+          router.push(`/tickets?openTicket=${encodeURIComponent(notif.ticketNumber)}`);
+        }
+        break;
+
+      default:
+        // Cualquier otro tipo → solo marca como leído, sin navegar
+        break;
     }
-  };
+  } catch (error) {
+    console.error("Error al procesar notificación:", error);
+  }
+};
 
 
   // ✅ CORREGIDO: Vaciar el array local completamente
@@ -210,7 +231,7 @@ const handleMarkAllAsRead = async () => {
             notifications.map((notif) => (
               <React.Fragment key={notif._id}>
                 <ListItemButton
-                  onClick={() => handleMarkAsRead(notif._id, notif.ticketNumber)}
+                  onClick={() => handleNotificationClick(notif)}
                   sx={{
                     bgcolor: notif.read ? "transparent" : "#f0f4ff",
                     py: 1.5,

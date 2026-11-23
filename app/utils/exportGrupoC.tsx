@@ -2,9 +2,13 @@ import dayjs, { Dayjs } from 'dayjs';
 import ExcelJS from 'exceljs';
 import { ReportePreview } from 'app/utils/types';
 
+// ✅ INTERFAZ ACTUALIZADA CON EL DESGLOSE
 interface TicketPorOperador {
   name: string;
-  cantidad: number;
+  total: number;
+  cantidad: number; // Se mantiene por compatibilidad
+  comoResponsable: number;
+  comoAsignado: number;
 }
 
 interface ExportGrupoCParams {
@@ -65,13 +69,17 @@ export const exportReporteGrupoCExcel = async ({
   const workbook = new ExcelJS.Workbook();
   const ws = workbook.addWorksheet('Grupo C - Operativos 7x24', { views: [{ showGridLines: false }] });
 
+  // ✅ 5 COLUMNAS PARA ACOMODAR EL DESGLOSE
   ws.columns = [
-    { key: 'colA', width: 55 },
-    { key: 'colB', width: 55 },
-    { key: 'colC', width: 30 },
+    { key: 'pos', width: 10 },
+    { key: 'name', width: 45 },
+    { key: 'total', width: 12 },
+    { key: 'resp', width: 18 },
+    { key: 'asig', width: 18 },
   ];
 
-  ws.mergeCells('A1:C1');
+  // ✅ MERGES ACTUALIZADOS A 5 COLUMNAS (A:E)
+  ws.mergeCells('A1:E1');
   const titulo = ws.getCell('A1');
   titulo.value = `REPORTE OPERACIONAL - GRUPO C: OPERATIVOS 7x24\nMes: ${mes.format('MMMM YYYY').toUpperCase()}`;
   titulo.font = { bold: true, size: 16, color: { argb: BLANCO } };
@@ -80,7 +88,7 @@ export const exportReporteGrupoCExcel = async ({
   titulo.border = borde(AZUL_OSCURO);
   ws.getRow(1).height = 50;
 
-  ws.mergeCells('A2:C2');
+  ws.mergeCells('A2:E2');
   const fechaGen = ws.getCell('A2');
   fechaGen.value = `Generado: ${dayjs().format('DD/MM/YYYY HH:mm')}`;
   fechaGen.font = { italic: true, size: 10, color: { argb: GRIS } };
@@ -89,7 +97,7 @@ export const exportReporteGrupoCExcel = async ({
 
   let currentRow = 4;
 
-  ws.mergeCells(currentRow, 1, currentRow, 3);
+  ws.mergeCells(currentRow, 1, currentRow, 5);
   const kpi1Titulo = ws.getCell(currentRow, 1);
   kpi1Titulo.value = '1. TASAS DE ROTACIÓN POR TURNO';
   kpi1Titulo.font = { bold: true, size: 12, color: { argb: AZUL_OSCURO } };
@@ -105,7 +113,6 @@ export const exportReporteGrupoCExcel = async ({
   const tasaRotacionNocturna = cardNocturna?.value || '0%';
   const eficienciaCierre = cardEficiencia?.value || '0%';
 
-  // Fallback inteligente por si los parámetros llegan en 0
   let fRecibidosDia = recibidosDia;
   let fRecibidosNoche = recibidosNoche;
   let fTotalCerrados = totalTicketsCerrados;
@@ -129,7 +136,6 @@ export const exportReporteGrupoCExcel = async ({
     }
   }
 
-  // ✅ CALcular cerrados POR TURNO si vienen en 0
   if (fCerradosDia === 0 && fRecibidosDia > 0 && tasaRotacionDiurna) {
     fCerradosDia = Math.round((parseFloat(tasaRotacionDiurna) / 100) * fRecibidosDia);
   }
@@ -137,7 +143,6 @@ export const exportReporteGrupoCExcel = async ({
     fCerradosNoche = Math.round((parseFloat(tasaRotacionNocturna) / 100) * fRecibidosNoche);
   }
 
-  // Calcular porcentajes de distribución
   const distribucionDia = fTotalGeneral > 0 ? (fRecibidosDia / fTotalGeneral) * 100 : 0;
   const distribucionNoche = fTotalGeneral > 0 ? (fRecibidosNoche / fTotalGeneral) * 100 : 0;
 
@@ -150,10 +155,11 @@ export const exportReporteGrupoCExcel = async ({
     c.alignment = { horizontal: 'center', vertical: 'middle' };
     c.border = borde();
   });
+  // ✅ Merge de la columna de descripción para que ocupe el espacio restante (C, D, E)
+  ws.mergeCells(currentRow, 3, currentRow, 5);
   headerTasas.height = 28;
   currentRow++;
 
-  // ✅ USA LOS VALORES CALCULADOS CORRECTAMENTE (fCerradosDia y fCerradosNoche)
   const tasasData = [
     { 
       kpi: 'Tasa Rotación Diurna', 
@@ -178,36 +184,42 @@ export const exportReporteGrupoCExcel = async ({
     r.getCell(2).value = row.valor;
     r.getCell(3).value = row.desc;
 
-    for (let i = 1; i <= 3; i++) {
-      r.getCell(i).border = borde();
-      r.getCell(i).alignment = { vertical: 'middle', wrapText: true };
+    // ✅ FUSIONAR C:E en cada fila de datos
+    ws.mergeCells(currentRow, 3, currentRow, 5);
+
+    // ✅ Aplicar borde y relleno a TODAS las celdas del rango (incluidas D y E)
+    //    ExcelJS no hereda bordes en celdas fusionadas automáticamente
+    const bgColor = idx % 2 === 0 ? GRIS_CLARO : BLANCO;
+    for (let i = 1; i <= 5; i++) {
+      const cell = r.getCell(i);
+      cell.border = borde();
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
+      cell.alignment = { vertical: 'middle', wrapText: true, horizontal: i === 1 ? 'left' : 'center' };
     }
+
+    // ✅ Alinear la descripción (celda C) a la izquierda para que se lea bien
+    r.getCell(3).alignment = { vertical: 'middle', wrapText: true, horizontal: 'left', indent: 1 };
 
     r.getCell(1).font = { bold: true };
     r.getCell(2).font = { bold: true, color: { argb: AZUL_MEDIO }, size: 11 };
-    r.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
     r.getCell(3).font = { color: { argb: GRIS } };
 
-    const bgColor = idx % 2 === 0 ? GRIS_CLARO : BLANCO;
-    for (let i = 1; i <= 3; i++) {
-      r.getCell(i).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
-    }
     r.height = 60;
     currentRow++;
   });
 
   currentRow += 2;
 
-  ws.mergeCells(currentRow, 1, currentRow, 3);
+  ws.mergeCells(currentRow, 1, currentRow, 5);
   const kpi2Titulo = ws.getCell(currentRow, 1);
-  kpi2Titulo.value = '2. RANKING DE OPERADORES';
+  kpi2Titulo.value = '2. RANKING DE OPERADORES (Desglose de Asignación)';
   kpi2Titulo.font = { bold: true, size: 12, color: { argb: AZUL_OSCURO } };
   kpi2Titulo.alignment = { horizontal: 'left' };
   kpi2Titulo.border = { bottom: { style: 'medium', color: { argb: AZUL_MEDIO } } };
   currentRow++;
 
   const headerRanking = ws.getRow(currentRow);
-  ['Posición', 'Operador', 'Tickets Atendidos'].forEach((h, i) => {
+  ['Posición', 'Operador', 'Total', 'Como Responsable', 'Como Asignado'].forEach((h, i) => {
     const c = headerRanking.getCell(i + 1);
     c.value = h;
     c.font = { bold: true, size: 10, color: { argb: BLANCO } };
@@ -218,34 +230,36 @@ export const exportReporteGrupoCExcel = async ({
   headerRanking.height = 28;
   currentRow++;
 
-  const operadoresOrdenados = [...ticketsPorOperador].sort((a, b) => b.cantidad - a.cantidad);
+  const operadoresOrdenados = [...ticketsPorOperador].sort((a, b) => b.total - a.total);
 
   operadoresOrdenados.forEach((op, idx) => {
     const r = ws.getRow(currentRow);
     r.getCell(1).value = idx + 1;
     r.getCell(2).value = op.name;
-    r.getCell(3).value = op.cantidad;
+    r.getCell(3).value = op.total;
+    r.getCell(4).value = op.comoResponsable;
+    r.getCell(5).value = op.comoAsignado;
 
-    for (let i = 1; i <= 3; i++) {
+    for (let i = 1; i <= 5; i++) {
       r.getCell(i).border = borde();
-      r.getCell(i).alignment = { vertical: 'middle' };
+      r.getCell(i).alignment = { vertical: 'middle', horizontal: i === 2 ? 'left' : 'center' };
     }
 
     r.getCell(1).font = { bold: true, color: { argb: AZUL_OSCURO } };
-    r.getCell(1).alignment = { horizontal: 'center' };
     r.getCell(2).font = { bold: true };
     r.getCell(3).font = { bold: true, color: { argb: AZUL_MEDIO } };
-    r.getCell(3).alignment = { horizontal: 'center' };
+    r.getCell(4).font = { color: { argb: GRIS } };
+    r.getCell(5).font = { color: { argb: GRIS } };
 
     const bgColor = idx % 2 === 0 ? GRIS_CLARO : BLANCO;
-    for (let i = 1; i <= 3; i++) {
+    for (let i = 1; i <= 5; i++) {
       r.getCell(i).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
     }
     currentRow++;
   });
 
   if (operadoresOrdenados.length === 0) {
-    ws.mergeCells(currentRow, 1, currentRow, 3);
+    ws.mergeCells(currentRow, 1, currentRow, 5);
     const noDataCell = ws.getCell(currentRow, 1);
     noDataCell.value = 'No hay datos de operadores disponibles';
     noDataCell.font = { italic: true, color: { argb: GRIS } };
@@ -258,7 +272,7 @@ export const exportReporteGrupoCExcel = async ({
 
   currentRow += 2;
 
-  ws.mergeCells(currentRow, 1, currentRow, 3);
+  ws.mergeCells(currentRow, 1, currentRow, 5);
   const kpi3Titulo = ws.getCell(currentRow, 1);
   kpi3Titulo.value = '3. MÉTRICAS RESUMEN';
   kpi3Titulo.font = { bold: true, size: 12, color: { argb: AZUL_OSCURO } };
@@ -267,7 +281,7 @@ export const exportReporteGrupoCExcel = async ({
   currentRow++;
 
   currentRow++;
-  const totalCalculado = fTotalGeneral > 0 ? fTotalGeneral : ticketsPorOperador.reduce((sum, op) => sum + op.cantidad, 0);
+  const totalCalculado = fTotalGeneral > 0 ? fTotalGeneral : ticketsPorOperador.reduce((sum, op) => sum + op.total, 0);
   const subtexto = fTotalGeneral > 0 ? `${totalTicketsActivos} Activos | ${fTotalCerrados} Cerrados` : '';
 
   const metrics = [
@@ -296,7 +310,7 @@ export const exportReporteGrupoCExcel = async ({
   currentRow += 4;
 
   currentRow += 1;
-  ws.mergeCells(currentRow, 1, currentRow, 3);
+  ws.mergeCells(currentRow, 1, currentRow, 5);
   const resumenTitulo = ws.getCell(currentRow, 1);
   resumenTitulo.value = 'RESUMEN VISUAL - DISTRIBUCIÓN POR OPERADOR';
   resumenTitulo.font = { bold: true, size: 12, color: { argb: AZUL_OSCURO } };
@@ -304,29 +318,46 @@ export const exportReporteGrupoCExcel = async ({
   resumenTitulo.border = { bottom: { style: 'medium', color: { argb: AZUL_MEDIO } } };
   currentRow++;
 
+  // Mini-header para el resumen visual
+  const headerVisual = ws.getRow(currentRow);
+  ['Operador', 'Distribución Gráfica', 'Total', 'Resp.', 'Asig.'].forEach((h, i) => {
+    const c = headerVisual.getCell(i + 1);
+    c.value = h;
+    c.font = { bold: true, size: 9, color: { argb: GRIS } };
+    c.alignment = { horizontal: 'center', vertical: 'middle' };
+  });
+  currentRow++;
+
   const coloresBarras = [AZUL_BAR_1, AZUL_BAR_2, LAVANDA_BAR, ROSA_BAR, AMARILLO_BAR, TURQUESA_BAR];
-  const maxTickets = Math.max(...ticketsPorOperador.map(op => op.cantidad), 1);
+  const maxTickets = Math.max(...ticketsPorOperador.map(op => op.total), 1);
   
   operadoresOrdenados.forEach((op, idx) => {
-    const porcentaje = Math.round((op.cantidad / maxTickets) * 100);
-    const bloquesLlenos = Math.round((porcentaje / 100) * 25);
-    const barra = '█'.repeat(bloquesLlenos) + '░'.repeat(25 - bloquesLlenos);
+    const porcentaje = Math.round((op.total / maxTickets) * 100);
+    const bloquesLlenos = Math.round((porcentaje / 100) * 20); 
+    const barra = '█'.repeat(bloquesLlenos) + '░'.repeat(20 - bloquesLlenos);
     
     const r = ws.getRow(currentRow);
     r.getCell(1).value = op.name;
     r.getCell(2).value = barra;
-    r.getCell(3).value = `${op.cantidad} (${porcentaje}%)`;
+    r.getCell(3).value = op.total;
+    r.getCell(4).value = op.comoResponsable;
+    r.getCell(5).value = op.comoAsignado;
     
     r.getCell(1).font = { bold: true };
     r.getCell(2).font = { color: { argb: coloresBarras[idx % coloresBarras.length] }, name: 'Consolas', size: 10 };
     r.getCell(3).font = { bold: true, color: { argb: AZUL_MEDIO } };
-    r.getCell(3).alignment = { horizontal: 'center' };
+    r.getCell(4).font = { color: { argb: GRIS } };
+    r.getCell(5).font = { color: { argb: GRIS } };
+    
+    for (let i = 3; i <= 5; i++) {
+      r.getCell(i).alignment = { horizontal: 'center' };
+    }
     
     currentRow++;
   });
 
   currentRow += 2;
-  ws.mergeCells(currentRow, 1, currentRow, 3);
+  ws.mergeCells(currentRow, 1, currentRow, 5);
   const footer = ws.getCell(currentRow, 1);
   footer.value = `Reporte generado automáticamente - ${dayjs().format('DD/MM/YYYY HH:mm:ss')}`;
   footer.font = { italic: true, size: 9, color: { argb: GRIS } };

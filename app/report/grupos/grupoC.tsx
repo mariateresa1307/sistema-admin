@@ -1,15 +1,8 @@
 'use client';
-import React from 'react';
-import { 
-  Paper, Typography, Box, alpha
-} from '@mui/material';
+import {  Paper, Typography, Box, alpha} from '@mui/material';
 import Grid from '@mui/material/Grid';
 import { motion } from 'framer-motion';
-import {
-  TrendingUp,
-  Assessment,
-  People,
-} from '@mui/icons-material';
+import {  TrendingUp, Assessment,  People} from '@mui/icons-material';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { ReportePreview } from 'app/utils/types';
 
@@ -120,6 +113,9 @@ const KpiCardGrid = (props: KpiCardProps) => (
 interface TicketPorOperador {
   name: string;
   cantidad: number;
+    total: number;     
+  comoResponsable: number; 
+  comoAsignado: number;
 }
 
 interface GrupoCReportPreview extends ReportePreview {
@@ -201,7 +197,7 @@ export const GrupoC = ({ reportPreview }: Props) => {
   const chartData = ticketsPorOperador
     .map((op, index) => ({
       name: op.name,
-      cantidad: op.cantidad,
+      cantidad: op.total, // Usamos el total acumulado
       color: COLORES_BARRA[index % COLORES_BARRA.length],
     }))
     .sort((a, b) => b.cantidad - a.cantidad);
@@ -321,18 +317,30 @@ export const GrupoC = ({ reportPreview }: Props) => {
                   Ranking de Operadores
                 </Typography>
               </Box>
-              <Box sx={{ maxHeight: 450, overflowY: 'auto' }}>
+                           <Box sx={{ maxHeight: 450, overflowY: 'auto' }}>
                 {ticketsPorOperador.length > 0 ? (
                   ticketsPorOperador.map((op, i) => (
-                    <Box key={i} sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: i < ticketsPorOperador.length - 1 ? '1px solid #f1f5f9' : 'none', '&:hover': { bgcolor: '#f8fafc' } }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <Box sx={{ width: 32, height: 32, borderRadius: '50%', bgcolor: alpha(COLORES_BARRA[i % COLORES_BARRA.length], 0.15), color: COLORES_BARRA[i % COLORES_BARRA.length], display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.85rem' }}>
-                          {i + 1}
+                    <Box key={i} sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1, borderBottom: i < ticketsPorOperador.length - 1 ? '1px solid #f1f5f9' : 'none', '&:hover': { bgcolor: '#f8fafc' } }}>
+                      
+                      {/* Fila Superior: Nombre y Total */}
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                          <Box sx={{ width: 32, height: 32, borderRadius: '50%', bgcolor: alpha(COLORES_BARRA[i % COLORES_BARRA.length], 0.15), color: COLORES_BARRA[i % COLORES_BARRA.length], display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.85rem' }}>
+                            {i + 1}
+                          </Box>
+                          <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b' }}>{op.name}</Typography>
                         </Box>
-                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b' }}>{op.name}</Typography>
+                        <Typography sx={{ fontWeight: 800, color: '#0f172a', fontSize: '1.1rem' }}>{op.total}</Typography>
                       </Box>
-                      <Box sx={{ px: 2, py: 0.5, borderRadius: 2, bgcolor: alpha('#0288d1', 0.08), border: `1px solid ${alpha('#0288d1', 0.15)}` }}>
-                        <Typography sx={{ fontWeight: 700, color: '#0288d1', fontSize: '0.95rem' }}>{op.cantidad}</Typography>
+
+                      {/* Fila Inferior: Desglose Responsable vs Asignado */}
+                      <Box sx={{ display: 'flex', gap: 3, pl: 7, fontSize: '0.75rem' }}>
+                        <Typography sx={{ color: '#0288d1', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          👑 Resp: {op.comoResponsable}
+                        </Typography>
+                        <Typography sx={{ color: '#7b1fa2', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          🎯 Asig: {op.comoAsignado}
+                        </Typography>
                       </Box>
                     </Box>
                   ))
