@@ -1,27 +1,11 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import {
-  Badge,
-  IconButton,
-  Popover,
-  List,
-  Typography,
-  Box,
-  Button,
-  Divider,
-  ListItemButton,
-  ListItemIcon,
-} from "@mui/material";
+import {  Badge,  IconButton,  Popover,  List,  Typography,  Box,  Button,  Divider,  ListItemButton,  ListItemIcon,} from "@mui/material";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import AssignmentIcon from "@mui/icons-material/Assignment";
 import WarningIcon from "@mui/icons-material/Warning";
 import ConfirmationNumberIcon from "@mui/icons-material/ConfirmationNumber";
-import {
-  getNotifications,
-  markNotificationAsRead,
-  markAllNotificationsAsRead,
-  getUnreadNotificationsCount,
-} from "@/lib/api";
+import {  getNotifications,  markNotificationAsRead,  markAllNotificationsAsRead,  getUnreadNotificationsCount,} from "@/lib/api";
 import { useRouter } from "next/navigation";
 
 const getNotificationIcon = (type: string) => {

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { Notification } from '../notifications/page';
+import { Notification } from '../notifications/Notification';
 
 export default function NotificationProvider() {
   const [notification, setNotification] = useState({ open: false, message: '', severity: 'error' as any });

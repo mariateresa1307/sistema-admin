@@ -7,7 +7,7 @@ import { getUsers, deleteUser } from "@/lib/api";
 import { Box, Chip, Typography } from "@mui/material";
 import { GridColDef, GridCellParams } from "@mui/x-data-grid";
 import { FloatingAddButton } from "../../components/FloatingAddButton";
-import { Notification } from '../../notifications/page';
+import { Notification } from '../../notifications/Notification';
 import { FullScreenUserDialog } from "../userModal";
 
 type Usuario = {
