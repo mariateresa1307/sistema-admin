@@ -102,20 +102,22 @@ export default function RBSPage() {
       if (tipoServicioParam) apiParams.tipoServicio = tipoServicioParam;
       if (excludeTipo) apiParams.excludeTipo = excludeTipo;
 
-      if (searchParams?.field === "nodos" && searchParams.value) {
+       if (searchParams?.field === "nodos" && searchParams.value) {
         apiParams.nodos = searchParams.value;
       } else if (searchParams?.field === "status" && searchParams.value) {
         apiParams.status = searchParams.value;
-      }  else if (searchParams?.field === "serialONT" && searchParams.value) {
-       
+      } else if (searchParams?.field === "serialONT" && searchParams.value) {
         apiParams.serialONT = searchParams.value;
       } else if (
         searchParams?.field &&
-        !["tipoServicio", "status", "nodos"].includes(searchParams.field) &&
+        !["tipoServicio", "status", "nodos", "serialONT"].includes(searchParams.field) &&
         searchParams.value
       ) {
         apiParams.search = searchParams.value;
       }
+
+
+            console.log("📤 [Frontend] Enviando a la API:", apiParams);
 
       const response = await getService(apiParams);
       const payload = response.data;
@@ -145,9 +147,15 @@ export default function RBSPage() {
     setPaginationModel({ page: 0, pageSize: 10 });
   };
 
-  const handleSearch = useCallback((params: SearchParams) => {
-    setSearchParams(params);
-    setPaginationModel({ page: 0, pageSize: 10 });
+   const handleSearch = useCallback((params: SearchParams) => {
+    if (!params.value?.trim()) {
+      setSearchParams(null);
+    } else {
+      setSearchParams(params);
+    }
+    setPaginationModel((prev) =>
+      prev.page === 0 ? prev : { ...prev, page: 0 }
+    );
   }, []);
 
   // ✅ Helper para obtener nombre de proveedor
